@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="FIRMA verifies native and EVM asset consistency on Portaldot V3 with pinned, read-only evidence.">
+  <title>FIRMA · Portaldot Interop Evidence</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="FIRMA home"><span class="brand-mark">F</span><span>FIRMA</span></a>
+    <div class="mode"><span aria-hidden="true"></span> Read-only mode</div>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <p class="eyebrow">Portaldot V3 · interoperability evidence</p>
+      <h1 id="hero-title">One asset.<br><em>Two surfaces.</em><br>One answer.</h1>
+      <p class="lede">FIRMA compares native Assets storage with its EVM ERC-20 view at one finalized block—using exact integers and runtime-backed account mapping.</p>
+      <div class="truth-strip" aria-label="FIRMA guarantees">
+        <span>No wallet</span><span>No signature</span><span>No transaction</span><span>Exportable proof</span>
+      </div>
+    </section>
+
+    <section class="workbench" aria-labelledby="verify-title">
+      <div class="section-heading">
+        <div><p class="eyebrow">Live verification</p><h2 id="verify-title">Ask the chain, precisely.</h2></div>
+        <p>Defaults use a previously observed asset and mapped account. Change either value to verify another pair.</p>
+      </div>
+      <form id="verify-form" novalidate>
+        <label>Native asset ID
+          <input id="asset-id" name="assetId" value="2" inputmode="numeric" pattern="[0-9]+" required aria-describedby="asset-help">
+          <small id="asset-help">Unsigned 32-bit Assets pallet identifier</small>
+        </label>
+        <label>EVM account
+          <input id="account" name="account" value="0x578f0a6155551b3b7c7ff255ea7dc2b08968e380" spellcheck="false" required>
+          <small>20-byte address mapped through Revive storage</small>
+        </label>
+        <button id="run-button" type="submit"><span>Run read-only verification</span><span aria-hidden="true">↗</span></button>
+      </form>
+      <p id="form-error" class="form-error" role="alert" hidden></p>
+    </section>
+
+    <section id="result" class="result" aria-live="polite" hidden>
+      <div class="result-topline">
+        <div><p class="eyebrow">Verdict</p><h2 id="verdict-title">Waiting</h2></div>
+        <div class="result-actions">
+          <button id="copy-button" class="quiet-button" type="button">Copy JSON</button>
+          <button id="download-button" class="quiet-button" type="button">Export evidence</button>
+        </div>
+      </div>
+      <p id="verdict-summary" class="verdict-summary"></p>
+      <dl id="context" class="context"></dl>
+      <div id="checks" class="checks"></div>
+      <details class="raw-evidence">
+        <summary>Inspect raw evidence</summary>
+        <pre id="evidence-json"></pre>
+      </details>
+    </section>
+
+    <section class="method" aria-labelledby="method-title">
+      <div><p class="eyebrow">Why this is different</p><h2 id="method-title">Evidence, not reassurance.</h2></div>
+      <ol>
+        <li><strong>Pin</strong><span>Choose the finalized Substrate block and request that exact height from EVM.</span></li>
+        <li><strong>Resolve</strong><span>Read the live runtime fingerprint, asset storage, and Revive account mapping.</span></li>
+        <li><strong>Compare</strong><span>Evaluate supply, balance, and metadata as base-unit integers—never floating point.</span></li>
+        <li><strong>Classify</strong><span>Separate a proven mismatch from missing evidence with PASS, FAIL, or UNKNOWN.</span></li>
+      </ol>
+    </section>
+  </main>
+
+  <footer><span>FIRMA v0.1.0</span><span>Verification is not an audit. No write behavior is claimed.</span></footer>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
+
