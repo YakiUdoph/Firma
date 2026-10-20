@@ -1,0 +1,1794 @@
+{
+  "endpoint": "wss://test-node-v3.portaldot.dev",
+  "observedAt": "2026-10-20T18:21:05.995Z",
+  "block": {
+    "number": "120778",
+    "hash": "0x813686e21f78a7d5a57f06a30eb31472936ceee4ddf0cf808cf0cfe1dfc86bb4"
+  },
+  "constants": {
+    "balances": {
+      "existentialDeposit": "10,000,000,000,000",
+      "maxLocks": "50",
+      "maxReserves": "50",
+      "maxFreezes": "2"
+    },
+    "assets": {
+      "removeItemsLimit": "1,000",
+      "assetDeposit": "100,000,000,000,000",
+      "assetAccountDeposit": "100,000,000,000,000",
+      "metadataDepositBase": "10,000,000,000,000",
+      "metadataDepositPerByte": "6,000,000,000,000",
+      "approvalDeposit": "10,000,000,000,000",
+      "stringLimit": "50"
+    },
+    "revive": {
+      "depositPerByte": "6,000,000,000,000",
+      "depositPerItem": "15,000,000,000,000",
+      "depositPerChildTrieItem": "150,000,000,000",
+      "codeHashLockupDepositPercent": "30.00%",
+      "allowEVMBytecode": true,
+      "chainId": "420,420,777",
+      "nativeToEthRatio": "10,000",
+      "maxEthExtrinsicWeight": "900,000,000,000,000,000",
+      "debugEnabled": false,
+      "autoMap": true,
+      "gasScale": "5"
+    },
+    "assetsPrecompilesPermit": {
+      "chainId": "420,420,777"
+    },
+    "vestingPrecompiles": null,
+    "metaTx": null
+  },
+  "calls": {
+    "revive": {
+      "ethTransact": {
+        "name": "eth_transact",
+        "fields": [
+          {
+            "name": "payload",
+            "type": "6",
+            "typeName": "Vec<u8>",
+            "docs": []
+          }
+        ],
+        "index": "0",
+        "docs": [
+          "A raw EVM transaction, typically dispatched by an Ethereum JSON-RPC server.",
+          "",
+          "# Parameters",
+          "",
+          "* `payload`: The encoded [`crate::evm::TransactionSigned`].",
+          "",
+          "# Note",
+          "",
+          "This call cannot be dispatched directly; attempting to do so will result in a failed",
+          "transaction. It serves as a wrapper for an Ethereum transaction. When submitted, the",
+          "runtime converts it into a [`sp_runtime::generic::CheckedExtrinsic`] by recovering the",
+          "signer and validating the transaction."
+        ],
+        "args": [
+          {
+            "name": "payload",
+            "type": "Bytes",
+            "typeName": "Bytes"
+          }
+        ]
+      },
+      "call": {
+        "name": "call",
+        "fields": [
+          {
+            "name": "dest",
+            "type": "344",
+            "typeName": "H160",
+            "docs": []
+          },
+          {
+            "name": "value",
+            "type": "42",
+            "typeName": "BalanceOf<T>",
+            "docs": []
+          },
+          {
+            "name": "weight_limit",
+            "type": "23",
+            "typeName": "Weight",
+            "docs": []
+          },
+          {
+            "name": "storage_deposit_limit",
+            "type": "42",
+            "typeName": "BalanceOf<T>",
+            "docs": []
+          },
+          {
+            "name": "data",
+            "type": "6",
+            "typeName": "Vec<u8>",
+            "docs": []
+          }
+        ],
+        "index": "1",
+        "docs": [
+          "Makes a call to an account, optionally transferring some balance.",
+          "",
+          "# Parameters",
+          "",
+          "* `dest`: Address of the contract to call.",
+          "* `value`: The balance to transfer from the `origin` to `dest`.",
+          "* `weight_limit`: The weight limit enforced when executing the constructor.",
+          "* `storage_deposit_limit`: The maximum amount of balance that can be charged from the",
+          "  caller to pay for the storage consumed.",
+          "* `data`: The input data to pass to the contract.",
+          "",
+          "* If the account is a smart-contract account, the associated code will be",
+          "executed and any value will be transferred.",
+          "* If the account is a regular account, any value will be transferred.",
+          "* If no account exists and the call value is not less than `existential_deposit`,",
+          "a regular account will be created and any value will be transferred."
+        ],
+        "args": [
+          {
+            "name": "dest",
+            "type": "H160",
+            "typeName": "H160"
+          },
+          {
+            "name": "value",
+            "type": "Compact<u128>",
+            "typeName": "BalanceOf"
+          },
+          {
+            "name": "weightLimit",
+            "type": "SpWeightsWeightV2Weight",
+            "typeName": "Weight"
+          },
+          {
+            "name": "storageDepositLimit",
+            "type": "Compact<u128>",
+            "typeName": "BalanceOf"
+          },
+          {
+            "name": "data",
+            "type": "Bytes",
+            "typeName": "Bytes"
+          }
+        ]
+      },
+      "instantiate": {
+        "name": "instantiate",
+        "fields": [
+          {
+            "name": "value",
+            "type": "42",
+            "typeName": "BalanceOf<T>",
+            "docs": []
+          },
+          {
+            "name": "weight_limit",
+            "type": "23",
+            "typeName": "Weight",
+            "docs": []
+          },
+          {
+            "name": "storage_deposit_limit",
+            "type": "42",
+            "typeName": "BalanceOf<T>",
+            "docs": []
+          },
+          {
+            "name": "code_hash",
+            "type": "14",
+            "typeName": "sp_core::H256",
+            "docs": []
+          },
+          {
+            "name": "data",
+            "type": "6",
+            "typeName": "Vec<u8>",
+            "docs": []
+          },
+          {
+            "name": "salt",
+            "type": "345",
+            "typeName": "Option<[u8; 32]>",
+            "docs": []
+          }
+        ],
+        "index": "2",
+        "docs": [
+          "Instantiates a contract from a previously deployed vm binary.",
+          "",
+          "This function is identical to [`Self::instantiate_with_code`] but without the",
+          "code deployment step. Instead, the `code_hash` of an on-chain deployed vm binary",
+          "must be supplied."
+        ],
+        "args": [
+          {
+            "name": "value",
+            "type": "Compact<u128>",
+            "typeName": "BalanceOf"
+          },
+          {
+            "name": "weightLimit",
+            "type": "SpWeightsWeightV2Weight",
+            "typeName": "Weight"
+          },
+          {
+            "name": "storageDepositLimit",
+            "type": "Compact<u128>",
+            "typeName": "BalanceOf"
+          },
+          {
+            "name": "codeHash",
+            "type": "H256",
+            "typeName": "H256"
+          },
+          {
+            "name": "data",
+            "type": "Bytes",
+            "typeName": "Bytes"
+          },
+          {
+            "name": "salt",
+            "type": "Option<[u8;32]>",
+            "typeName": "Option<[u8;32]>"
+          }
+        ]
+      },
+      "instantiateWithCode": {
+        "name": "instantiate_with_code",
+        "fields": [
+          {
+            "name": "value",
+            "type": "42",
+            "typeName": "BalanceOf<T>",
+            "docs": []
+          },
+          {
+            "name": "weight_limit",
+            "type": "23",
+            "typeName": "Weight",
+            "docs": []
+          },
+          {
+            "name": "storage_deposit_limit",
+            "type": "42",
+            "typeName": "BalanceOf<T>",
+            "docs": []
+          },
+          {
+            "name": "code",
+            "type": "6",
+            "typeName": "Vec<u8>",
+            "docs": []
+          },
+          {
+            "name": "data",
+            "type": "6",
+            "typeName": "Vec<u8>",
+            "docs": []
+          },
+          {
+            "name": "salt",
+            "type": "345",
+            "typeName": "Option<[u8; 32]>",
+            "docs": []
+          }
+        ],
+        "index": "3",
+        "docs": [
+          "Instantiates a new contract from the supplied `code` optionally transferring",
+          "some balance.",
+          "",
+          "This dispatchable has the same effect as calling [`Self::upload_code`] +",
+          "[`Self::instantiate`]. Bundling them together provides efficiency gains. Please",
+          "also check the documentation of [`Self::upload_code`].",
+          "",
+          "# Parameters",
+          "",
+          "* `value`: The balance to transfer from the `origin` to the newly created contract.",
+          "* `weight_limit`: The weight limit enforced when executing the constructor.",
+          "* `storage_deposit_limit`: The maximum amount of balance that can be charged/reserved",
+          "  from the caller to pay for the storage consumed.",
+          "* `code`: The contract code to deploy in raw bytes.",
+          "* `data`: The input data to pass to the contract constructor.",
+          "* `salt`: Used for the address derivation. If `Some` is supplied then `CREATE2`",
+          "\tsemantics are used. If `None` then `CRATE1` is used.",
+          "",
+          "",
+          "Instantiation is executed as follows:",
+          "",
+          "- The supplied `code` is deployed, and a `code_hash` is created for that code.",
+          "- If the `code_hash` already exists on the chain the underlying `code` will be shared.",
+          "- The destination address is computed based on the sender, code_hash and the salt.",
+          "- The smart-contract account is created at the computed address.",
+          "- The `value` is transferred to the new account.",
+          "- The `deploy` function is executed in the context of the newly-created account."
+        ],
+        "args": [
+          {
+            "name": "value",
+            "type": "Compact<u128>",
+            "typeName": "BalanceOf"
+          },
+          {
+            "name": "weightLimit",
+            "type": "SpWeightsWeightV2Weight",
+            "typeName": "Weight"
+          },
+          {
+            "name": "storageDepositLimit",
+            "type": "Compact<u128>",
+            "typeName": "BalanceOf"
+          },
+          {
+            "name": "code",
+            "type": "Bytes",
+            "typeName": "Bytes"
+          },
+          {
+            "name": "data",
+            "type": "Bytes",
+            "typeName": "Bytes"
+          },
+          {
+            "name": "salt",
+            "type": "Option<[u8;32]>",
+            "typeName": "Option<[u8;32]>"
+          }
+        ]
+      },
+      "ethInstantiateWithCode": {
+        "name": "eth_instantiate_with_code",
+        "fields": [
+          {
+            "name": "value",
+            "type": "346",
+            "typeName": "U256",
+            "docs": []
+          },
+          {
+            "name": "weight_limit",
+            "type": "23",
+            "typeName": "Weight",
+            "docs": []
+          },
+          {
+            "name": "eth_gas_limit",
+            "type": "346",
+            "typeName": "U256",
+            "docs": []
+          },
+          {
+            "name": "code",
+            "type": "6",
+            "typeName": "Vec<u8>",
+            "docs": []
+          },
+          {
+            "name": "data",
+            "type": "6",
+            "typeName": "Vec<u8>",
+            "docs": []
+          },
+          {
+            "name": "transaction_encoded",
+            "type": "6",
+            "typeName": "Vec<u8>",
+            "docs": []
+          },
+          {
+            "name": "effective_gas_price",
+            "type": "346",
+            "typeName": "U256",
+            "docs": []
+          },
+          {
+            "name": "encoded_len",
+            "type": "4",
+            "typeName": "u32",
+            "docs": []
+          }
+        ],
+        "index": "10",
+        "docs": [
+          "Same as [`Self::instantiate_with_code`], but intended to be dispatched **only**",
+          "by an EVM transaction through the EVM compatibility layer.",
+          "",
+          "# Parameters",
+          "",
+          "* `value`: The balance to transfer from the `origin` to the newly created contract.",
+          "* `weight_limit`: The gas limit used to derive the transaction weight for transaction",
+          "  payment",
+          "* `eth_gas_limit`: The Ethereum gas limit governing the resource usage of the execution",
+          "* `code`: The contract code to deploy in raw bytes.",
+          "* `data`: The input data to pass to the contract constructor.",
+          "* `transaction_encoded`: The RLP encoding of the signed Ethereum transaction,",
+          "  represented as [crate::evm::TransactionSigned], provided by the Ethereum wallet. This",
+          "  is used for building the Ethereum transaction root.",
+          "* effective_gas_price: the price of a unit of gas",
+          "* encoded len: the byte code size of the `eth_transact` extrinsic",
+          "",
+          "Calling this dispatchable ensures that the origin's nonce is bumped only once,",
+          "via the `CheckNonce` transaction extension. In contrast, [`Self::instantiate_with_code`]",
+          "also bumps the nonce after contract instantiation, since it may be invoked multiple",
+          "times within a batch call transaction."
+        ],
+        "args": [
+          {
+            "name": "value",
+            "type": "U256",
+            "typeName": "U256"
+          },
+          {
+            "name": "weightLimit",
+            "type": "SpWeightsWeightV2Weight",
+            "typeName": "Weight"
+          },
+          {
+            "name": "ethGasLimit",
+            "type": "U256",
+            "typeName": "U256"
+          },
+          {
+            "name": "code",
+            "type": "Bytes",
+            "typeName": "Bytes"
+          },
+          {
+            "name": "data",
+            "type": "Bytes",
+            "typeName": "Bytes"
+          },
+          {
+            "name": "transactionEncoded",
+            "type": "Bytes",
+            "typeName": "Bytes"
+          },
+          {
+            "name": "effectiveGasPrice",
+            "type": "U256",
+            "typeName": "U256"
+          },
+          {
+            "name": "encodedLen",
+            "type": "u32",
+            "typeName": "u32"
+          }
+        ]
+      },
+      "ethCall": {
+        "name": "eth_call",
+        "fields": [
+          {
+            "name": "dest",
+            "type": "344",
+            "typeName": "H160",
+            "docs": []
+          },
+          {
+            "name": "value",
+            "type": "346",
+            "typeName": "U256",
+            "docs": []
+          },
+          {
+            "name": "weight_limit",
+            "type": "23",
+            "typeName": "Weight",
+            "docs": []
+          },
+          {
+            "name": "eth_gas_limit",
+            "type": "346",
+            "typeName": "U256",
+            "docs": []
+          },
+          {
+            "name": "data",
+            "type": "6",
+            "typeName": "Vec<u8>",
+            "docs": []
+          },
+          {
+            "name": "transaction_encoded",
+            "type": "6",
+            "typeName": "Vec<u8>",
+            "docs": []
+          },
+          {
+            "name": "effective_gas_price",
+            "type": "346",
+            "typeName": "U256",
+            "docs": []
+          },
+          {
+            "name": "encoded_len",
+            "type": "4",
+            "typeName": "u32",
+            "docs": []
+          }
+        ],
+        "index": "11",
+        "docs": [
+          "Same as [`Self::call`], but intended to be dispatched **only**",
+          "by an EVM transaction through the EVM compatibility layer.",
+          "",
+          "# Parameters",
+          "",
+          "* `dest`: The Ethereum address of the account to be called",
+          "* `value`: The balance to transfer from the `origin` to the newly created contract.",
+          "* `weight_limit`: The gas limit used to derive the transaction weight for transaction",
+          "  payment",
+          "* `eth_gas_limit`: The Ethereum gas limit governing the resource usage of the execution",
+          "* `data`: The input data to pass to the contract constructor.",
+          "* `transaction_encoded`: The RLP encoding of the signed Ethereum transaction,",
+          "  represented as [crate::evm::TransactionSigned], provided by the Ethereum wallet. This",
+          "  is used for building the Ethereum transaction root.",
+          "* effective_gas_price: the price of a unit of gas",
+          "* encoded len: the byte code size of the `eth_transact` extrinsic"
+        ],
+        "args": [
+          {
+            "name": "dest",
+            "type": "H160",
+            "typeName": "H160"
+          },
+          {
+            "name": "value",
+            "type": "U256",
+            "typeName": "U256"
+          },
+          {
+            "name": "weightLimit",
+            "type": "SpWeightsWeightV2Weight",
+            "typeName": "Weight"
+          },
+          {
+            "name": "ethGasLimit",
+            "type": "U256",
+            "typeName": "U256"
+          },
+          {
+            "name": "data",
+            "type": "Bytes",
+            "typeName": "Bytes"
+          },
+          {
+            "name": "transactionEncoded",
+            "type": "Bytes",
+            "typeName": "Bytes"
+          },
+          {
+            "name": "effectiveGasPrice",
+            "type": "U256",
+            "typeName": "U256"
+          },
+          {
+            "name": "encodedLen",
+            "type": "u32",
+            "typeName": "u32"
+          }
+        ]
+      },
+      "ethSubstrateCall": {
+        "name": "eth_substrate_call",
+        "fields": [
+          {
+            "name": "call",
+            "type": "8",
+            "typeName": "Box<<T as Config>::RuntimeCall>",
+            "docs": []
+          },
+          {
+            "name": "transaction_encoded",
+            "type": "6",
+            "typeName": "Vec<u8>",
+            "docs": []
+          }
+        ],
+        "index": "12",
+        "docs": [
+          "Executes a Substrate runtime call from an Ethereum transaction.",
+          "",
+          "This dispatchable is intended to be called **only** through the EVM compatibility",
+          "layer. The provided call will be dispatched using `RawOrigin::Signed`.",
+          "",
+          "# Parameters",
+          "",
+          "* `origin`: Must be an [`Origin::EthTransaction`] origin.",
+          "* `call`: The Substrate runtime call to execute.",
+          "* `transaction_encoded`: The RLP encoding of the Ethereum transaction,"
+        ],
+        "args": [
+          {
+            "name": "call",
+            "type": "Call",
+            "typeName": "RuntimeCall"
+          },
+          {
+            "name": "transactionEncoded",
+            "type": "Bytes",
+            "typeName": "Bytes"
+          }
+        ]
+      },
+      "uploadCode": {
+        "name": "upload_code",
+        "fields": [
+          {
+            "name": "code",
+            "type": "6",
+            "typeName": "Vec<u8>",
+            "docs": []
+          },
+          {
+            "name": "storage_deposit_limit",
+            "type": "42",
+            "typeName": "BalanceOf<T>",
+            "docs": []
+          }
+        ],
+        "index": "4",
+        "docs": [
+          "Upload new `code` without instantiating a contract from it.",
+          "",
+          "If the code does not already exist a deposit is reserved from the caller",
+          "The size of the reserve depends on the size of the supplied `code`.",
+          "",
+          "# Note",
+          "",
+          "Anyone can instantiate a contract from any uploaded code and thus prevent its removal.",
+          "To avoid this situation a constructor could employ access control so that it can",
+          "only be instantiated by permissioned entities. The same is true when uploading",
+          "through [`Self::instantiate_with_code`].",
+          "",
+          "If the refcount of the code reaches zero after terminating the last contract that",
+          "references this code, the code will be removed automatically."
+        ],
+        "args": [
+          {
+            "name": "code",
+            "type": "Bytes",
+            "typeName": "Bytes"
+          },
+          {
+            "name": "storageDepositLimit",
+            "type": "Compact<u128>",
+            "typeName": "BalanceOf"
+          }
+        ]
+      },
+      "mapAccount": {
+        "name": "map_account",
+        "fields": [],
+        "index": "7",
+        "docs": [
+          "Register the callers account id so that it can be used in contract interactions.",
+          "",
+          "This will error if the origin is already mapped or is a eth native `Address20`. It will",
+          "take a deposit that can be released by calling [`Self::unmap_account`].",
+          "",
+          "Noop when [`Config::AutoMap`] is enabled, as accounts are automatically mapped",
+          "on creation via [`AutoMapper`]."
+        ],
+        "args": []
+      },
+      "batchMapAccounts": {
+        "name": "batch_map_accounts",
+        "fields": [
+          {
+            "name": "accounts",
+            "type": "44",
+            "typeName": "Vec<T::AccountId>",
+            "docs": []
+          }
+        ],
+        "index": "13",
+        "docs": [
+          "Map many accounts and make the TX free if at least 90% were unmapped or held deposits."
+        ],
+        "args": [
+          {
+            "name": "accounts",
+            "type": "Vec<AccountId32>",
+            "typeName": "Vec<AccountId>"
+          }
+        ]
+      },
+      "unmapAccount": {
+        "name": "unmap_account",
+        "fields": [],
+        "index": "8",
+        "docs": [
+          "Unregister the callers account id in order to free the deposit.",
+          "",
+          "There is no reason to ever call this function other than freeing up the deposit.",
+          "This is only useful when the account should no longer be used.",
+          "",
+          "Disabled when [`Config::AutoMap`] is enabled, as accounts are automatically unmapped",
+          "on kill via [`AutoMapper`]."
+        ],
+        "args": []
+      },
+      "dispatchAsFallbackAccount": {
+        "name": "dispatch_as_fallback_account",
+        "fields": [
+          {
+            "name": "call",
+            "type": "8",
+            "typeName": "Box<<T as Config>::RuntimeCall>",
+            "docs": []
+          }
+        ],
+        "index": "9",
+        "docs": [
+          "Dispatch an `call` with the origin set to the callers fallback address.",
+          "",
+          "Every `AccountId32` can control its corresponding fallback account. The fallback account",
+          "is the `AccountId20` with the last 12 bytes set to `0xEE`. This is essentially a",
+          "recovery function in case an `AccountId20` was used without creating a mapping first."
+        ],
+        "args": [
+          {
+            "name": "call",
+            "type": "Call",
+            "typeName": "RuntimeCall"
+          }
+        ]
+      }
+    },
+    "metaTx": {
+      "dispatch": {
+        "name": "dispatch",
+        "fields": [
+          {
+            "name": "meta_tx",
+            "type": "353",
+            "typeName": "Box<MetaTxFor<T>>",
+            "docs": []
+          },
+          {
+            "name": "meta_tx_encoded_len",
+            "type": "4",
+            "typeName": "u32",
+            "docs": []
+          }
+        ],
+        "index": "0",
+        "docs": [
+          "Dispatch a given meta transaction.",
+          "",
+          "- `_origin`: Can be any kind of origin.",
+          "- `meta_tx`: Meta Transaction with a target call to be dispatched.",
+          "- `meta_tx_encoded_len`: The size of the encoded meta transaction in bytes."
+        ],
+        "args": [
+          {
+            "name": "metaTx",
+            "type": "PalletMetaTxMetaTx",
+            "typeName": "MetaTxFor"
+          },
+          {
+            "name": "metaTxEncodedLen",
+            "type": "u32",
+            "typeName": "u32"
+          }
+        ]
+      }
+    },
+    "assets": {
+      "create": {
+        "name": "create",
+        "fields": [
+          {
+            "name": "id",
+            "type": "5",
+            "typeName": "T::AssetIdParameter",
+            "docs": []
+          },
+          {
+            "name": "admin",
+            "type": "0",
+            "typeName": "AccountIdLookupOf<T>",
+            "docs": []
+          },
+          {
+            "name": "min_balance",
+            "type": "43",
+            "typeName": "T::Balance",
+            "docs": []
+          }
+        ],
+        "index": "0",
+        "docs": [
+          "Issue a new class of fungible assets from a public origin.",
+          "",
+          "This new asset class has no assets initially and its owner is the origin.",
+          "",
+          "The origin must conform to the configured `CreateOrigin` and have sufficient funds free.",
+          "",
+          "Funds of sender are reserved by `AssetDeposit`.",
+          "",
+          "Parameters:",
+          "- `id`: The identifier of the new asset. This must not be currently in use to identify",
+          "an existing asset. If [`Config::AssetIdAllocator`] requires a specific id, this must",
+          "equal it.",
+          "- `admin`: The admin of this class of assets. The admin is the initial address of each",
+          "member of the asset class's admin team.",
+          "- `min_balance`: The minimum balance of this new asset that any single account must",
+          "have. If an account's balance is reduced below this, then it collapses to zero.",
+          "",
+          "Emits `Created` event when successful.",
+          "",
+          "Weight: `O(1)`"
+        ],
+        "args": [
+          {
+            "name": "id",
+            "type": "Compact<u32>",
+            "typeName": "AssetIdParameter"
+          },
+          {
+            "name": "admin",
+            "type": "MultiAddress",
+            "typeName": "AccountIdLookupOf"
+          },
+          {
+            "name": "minBalance",
+            "type": "u128",
+            "typeName": "Balance"
+          }
+        ]
+      },
+      "mint": {
+        "name": "mint",
+        "fields": [
+          {
+            "name": "id",
+            "type": "5",
+            "typeName": "T::AssetIdParameter",
+            "docs": []
+          },
+          {
+            "name": "beneficiary",
+            "type": "0",
+            "typeName": "AccountIdLookupOf<T>",
+            "docs": []
+          },
+          {
+            "name": "amount",
+            "type": "42",
+            "typeName": "T::Balance",
+            "docs": []
+          }
+        ],
+        "index": "6",
+        "docs": [
+          "Mint assets of a particular class.",
+          "",
+          "The origin must be Signed and the sender must be the Issuer of the asset `id`.",
+          "",
+          "- `id`: The identifier of the asset to have some amount minted.",
+          "- `beneficiary`: The account to be credited with the minted assets.",
+          "- `amount`: The amount of the asset to be minted.",
+          "",
+          "Emits `Issued` event when successful.",
+          "",
+          "Weight: `O(1)`",
+          "Modes: Pre-existing balance of `beneficiary`; Account pre-existence of `beneficiary`."
+        ],
+        "args": [
+          {
+            "name": "id",
+            "type": "Compact<u32>",
+            "typeName": "AssetIdParameter"
+          },
+          {
+            "name": "beneficiary",
+            "type": "MultiAddress",
+            "typeName": "AccountIdLookupOf"
+          },
+          {
+            "name": "amount",
+            "type": "Compact<u128>",
+            "typeName": "Balance"
+          }
+        ]
+      },
+      "transfer": {
+        "name": "transfer",
+        "fields": [
+          {
+            "name": "id",
+            "type": "5",
+            "typeName": "T::AssetIdParameter",
+            "docs": []
+          },
+          {
+            "name": "target",
+            "type": "0",
+            "typeName": "AccountIdLookupOf<T>",
+            "docs": []
+          },
+          {
+            "name": "amount",
+            "type": "42",
+            "typeName": "T::Balance",
+            "docs": []
+          }
+        ],
+        "index": "8",
+        "docs": [
+          "Move some assets from the sender account to another.",
+          "",
+          "Origin must be Signed.",
+          "",
+          "- `id`: The identifier of the asset to have some amount transferred.",
+          "- `target`: The account to be credited.",
+          "- `amount`: The amount by which the sender's balance of assets should be reduced and",
+          "`target`'s balance increased. The amount actually transferred may be slightly greater in",
+          "the case that the transfer would otherwise take the sender balance above zero but below",
+          "the minimum balance. Must be greater than zero.",
+          "",
+          "Emits `Transferred` with the actual amount transferred. If this takes the source balance",
+          "to below the minimum for the asset, then the amount transferred is increased to take it",
+          "to zero.",
+          "",
+          "Weight: `O(1)`",
+          "Modes: Pre-existence of `target`; Post-existence of sender; Account pre-existence of",
+          "`target`."
+        ],
+        "args": [
+          {
+            "name": "id",
+            "type": "Compact<u32>",
+            "typeName": "AssetIdParameter"
+          },
+          {
+            "name": "target",
+            "type": "MultiAddress",
+            "typeName": "AccountIdLookupOf"
+          },
+          {
+            "name": "amount",
+            "type": "Compact<u128>",
+            "typeName": "Balance"
+          }
+        ]
+      },
+      "approveTransfer": {
+        "name": "approve_transfer",
+        "fields": [
+          {
+            "name": "id",
+            "type": "5",
+            "typeName": "T::AssetIdParameter",
+            "docs": []
+          },
+          {
+            "name": "delegate",
+            "type": "0",
+            "typeName": "AccountIdLookupOf<T>",
+            "docs": []
+          },
+          {
+            "name": "amount",
+            "type": "42",
+            "typeName": "T::Balance",
+            "docs": []
+          }
+        ],
+        "index": "22",
+        "docs": [
+          "Approve an amount of asset for transfer by a delegated third-party account.",
+          "",
+          "Origin must be Signed.",
+          "",
+          "Ensures that `ApprovalDeposit` worth of `Currency` is reserved from signing account",
+          "for the purpose of holding the approval. If some non-zero amount of assets is already",
+          "approved from signing account to `delegate`, then it is topped up or unreserved to",
+          "meet the right value.",
+          "",
+          "NOTE: The signing account does not need to own `amount` of assets at the point of",
+          "making this call.",
+          "",
+          "- `id`: The identifier of the asset.",
+          "- `delegate`: The account to delegate permission to transfer asset.",
+          "- `amount`: The amount of asset that may be transferred by `delegate`. If there is",
+          "already an approval in place, then this acts additively.",
+          "",
+          "Emits `ApprovedTransfer` on success.",
+          "",
+          "Weight: `O(1)`"
+        ],
+        "args": [
+          {
+            "name": "id",
+            "type": "Compact<u32>",
+            "typeName": "AssetIdParameter"
+          },
+          {
+            "name": "delegate",
+            "type": "MultiAddress",
+            "typeName": "AccountIdLookupOf"
+          },
+          {
+            "name": "amount",
+            "type": "Compact<u128>",
+            "typeName": "Balance"
+          }
+        ]
+      },
+      "transferApproved": {
+        "name": "transfer_approved",
+        "fields": [
+          {
+            "name": "id",
+            "type": "5",
+            "typeName": "T::AssetIdParameter",
+            "docs": []
+          },
+          {
+            "name": "owner",
+            "type": "0",
+            "typeName": "AccountIdLookupOf<T>",
+            "docs": []
+          },
+          {
+            "name": "destination",
+            "type": "0",
+            "typeName": "AccountIdLookupOf<T>",
+            "docs": []
+          },
+          {
+            "name": "amount",
+            "type": "42",
+            "typeName": "T::Balance",
+            "docs": []
+          }
+        ],
+        "index": "25",
+        "docs": [
+          "Transfer some asset balance from a previously delegated account to some third-party",
+          "account.",
+          "",
+          "Origin must be Signed and there must be an approval in place by the `owner` to the",
+          "signer.",
+          "",
+          "If the entire amount approved for transfer is transferred, then any deposit previously",
+          "reserved by `approve_transfer` is unreserved.",
+          "",
+          "- `id`: The identifier of the asset.",
+          "- `owner`: The account which previously approved for a transfer of at least `amount` and",
+          "from which the asset balance will be withdrawn.",
+          "- `destination`: The account to which the asset balance of `amount` will be transferred.",
+          "- `amount`: The amount of assets to transfer.",
+          "",
+          "Emits `TransferredApproved` on success.",
+          "",
+          "Weight: `O(1)`"
+        ],
+        "args": [
+          {
+            "name": "id",
+            "type": "Compact<u32>",
+            "typeName": "AssetIdParameter"
+          },
+          {
+            "name": "owner",
+            "type": "MultiAddress",
+            "typeName": "AccountIdLookupOf"
+          },
+          {
+            "name": "destination",
+            "type": "MultiAddress",
+            "typeName": "AccountIdLookupOf"
+          },
+          {
+            "name": "amount",
+            "type": "Compact<u128>",
+            "typeName": "Balance"
+          }
+        ]
+      }
+    }
+  },
+  "storage": {
+    "assets": {
+      "count": 3,
+      "truncated": false,
+      "sample": [
+        {
+          "key": [
+            "2"
+          ],
+          "value": {
+            "owner": "5Grj5uKAoduL2EDfgizp2MMbURJKa4rL6Q5pGUnVhhhjhwjk",
+            "issuer": "5Grj5uKAoduL2EDfgizp2MMbURJKa4rL6Q5pGUnVhhhjhwjk",
+            "admin": "5Grj5uKAoduL2EDfgizp2MMbURJKa4rL6Q5pGUnVhhhjhwjk",
+            "freezer": "5Grj5uKAoduL2EDfgizp2MMbURJKa4rL6Q5pGUnVhhhjhwjk",
+            "supply": "15,000,000,000,000,000,000",
+            "deposit": "100,000,000,000,000",
+            "minBalance": "1,000,000,000,000,000,000",
+            "isSufficient": false,
+            "accounts": "1",
+            "sufficients": "0",
+            "approvals": "0",
+            "status": "Live"
+          }
+        },
+        {
+          "key": [
+            "806,707"
+          ],
+          "value": {
+            "owner": "5ExjaoAwuDG42GbnX6GQBdhNugSv59nXj2HKiUXoS7qkhFV1",
+            "issuer": "5ExjaoAwuDG42GbnX6GQBdhNugSv59nXj2HKiUXoS7qkhFV1",
+            "admin": "5ExjaoAwuDG42GbnX6GQBdhNugSv59nXj2HKiUXoS7qkhFV1",
+            "freezer": "5ExjaoAwuDG42GbnX6GQBdhNugSv59nXj2HKiUXoS7qkhFV1",
+            "supply": "1,000,000,007",
+            "deposit": "100,000,000,000,000",
+            "minBalance": "1",
+            "isSufficient": false,
+            "accounts": "4",
+            "sufficients": "0",
+            "approvals": "0",
+            "status": "Live"
+          }
+        },
+        {
+          "key": [
+            "1"
+          ],
+          "value": {
+            "owner": "5F4ZyJJ8R3QHZKRLAfDXdUuVE4w3Q7uq7tCNfAtvf2XEBfYY",
+            "issuer": "5F4ZyJJ8R3QHZKRLAfDXdUuVE4w3Q7uq7tCNfAtvf2XEBfYY",
+            "admin": "5F4ZyJJ8R3QHZKRLAfDXdUuVE4w3Q7uq7tCNfAtvf2XEBfYY",
+            "freezer": "5F4ZyJJ8R3QHZKRLAfDXdUuVE4w3Q7uq7tCNfAtvf2XEBfYY",
+            "supply": "0",
+            "deposit": "10,000,000,000,000,000",
+            "minBalance": "1,000,000,000,000,000,000",
+            "isSufficient": false,
+            "accounts": "0",
+            "sufficients": "0",
+            "approvals": "0",
+            "status": "Live"
+          }
+        }
+      ]
+    },
+    "assetMetadata": {
+      "count": 2,
+      "truncated": false,
+      "sample": [
+        {
+          "key": [
+            "2"
+          ],
+          "value": {
+            "deposit": "94,000,000,000,000",
+            "name": "test asset",
+            "symbol": "TEST",
+            "decimals": "18",
+            "isFrozen": false
+          }
+        },
+        {
+          "key": [
+            "1"
+          ],
+          "value": {
+            "deposit": "3,800,000,000,000,000",
+            "name": "example asset for testnet",
+            "symbol": "TST",
+            "decimals": "18",
+            "isFrozen": false
+          }
+        }
+      ]
+    },
+    "assetAccounts": {
+      "count": 5,
+      "truncated": false,
+      "sample": [
+        {
+          "key": [
+            "2",
+            "5Grj5uKAoduL2EDfgizp2MMbURJKa4rL6Q5pGUnVhhhjhwjk"
+          ],
+          "value": {
+            "balance": "15,000,000,000,000,000,000",
+            "status": "Liquid",
+            "reason": "Consumer",
+            "extra": null
+          }
+        },
+        {
+          "key": [
+            "806,707",
+            "5DFz6NsQPrHU61VWJJxaEjBKYd3ND4bDJzNMcKrLcqCihi3v"
+          ],
+          "value": {
+            "balance": "7",
+            "status": "Liquid",
+            "reason": "Consumer",
+            "extra": null
+          }
+        },
+        {
+          "key": [
+            "806,707",
+            "5HEuRGmZgmP86h4MPUcCmYWRi5dE8QKCSgf3JMGCTveyqKpE"
+          ],
+          "value": {
+            "balance": "2",
+            "status": "Liquid",
+            "reason": "Consumer",
+            "extra": null
+          }
+        },
+        {
+          "key": [
+            "806,707",
+            "5ExjaoAwuDG42GbnX6GQBdhNugSv59nXj2HKiUXoS7qkhFV1"
+          ],
+          "value": {
+            "balance": "999,997,495",
+            "status": "Liquid",
+            "reason": "Consumer",
+            "extra": null
+          }
+        },
+        {
+          "key": [
+            "806,707",
+            "5EkVZovjHsUQ2YLa2CnaVND8259u5c9h8eBtmRVweBpBVHXB"
+          ],
+          "value": {
+            "balance": "2,503",
+            "status": "Liquid",
+            "reason": "Consumer",
+            "extra": null
+          }
+        }
+      ]
+    },
+    "assetConversionPools": {
+      "count": 0,
+      "truncated": false,
+      "sample": []
+    },
+    "assetIndexToForeignAssetId": {
+      "count": 3,
+      "truncated": false,
+      "sample": [
+        {
+          "key": [
+            "0"
+          ],
+          "value": "1"
+        },
+        {
+          "key": [
+            "1"
+          ],
+          "value": "2"
+        },
+        {
+          "key": [
+            "2"
+          ],
+          "value": "806,707"
+        }
+      ]
+    },
+    "foreignAssetIdToAssetIndex": {
+      "count": 3,
+      "truncated": false,
+      "sample": [
+        {
+          "key": [
+            "2"
+          ],
+          "value": "1"
+        },
+        {
+          "key": [
+            "806,707"
+          ],
+          "value": "2"
+        },
+        {
+          "key": [
+            "1"
+          ],
+          "value": "0"
+        }
+      ]
+    },
+    "permitNonces": {
+      "count": 0,
+      "truncated": false,
+      "sample": []
+    },
+    "reviveOriginalAccount": {
+      "count": 864,
+      "truncated": true,
+      "sample": [
+        {
+          "key": [
+            "0x000f13670270828c00fb680ae49f3e3125fe549a"
+          ],
+          "value": "5D79T5i2jgLyjFNnBLjCyNJk6xPRoJkM8nEWAmSBQTaZmuPn"
+        },
+        {
+          "key": [
+            "0x0012d46c8d1ee9bc43461e8ba1d55b7198d84e21"
+          ],
+          "value": "5ERfbeJhpJM5QgR4v1tphJjnDsEQwoP6pnBR3TawCK2ziGQJ"
+        },
+        {
+          "key": [
+            "0x00308e6cd9fde23ceb67dcebdbcc8b956d258a58"
+          ],
+          "value": "5Hg5ejBeLm53LV39yymm1BwAvSP1h1TAV7JmXxvP7EW4EmDR"
+        },
+        {
+          "key": [
+            "0x005566f5ceec8ec89c7a5040c1a6070c41773b82"
+          ],
+          "value": "5GhQEPPiZ8gSRmQycQUfydcejMAPo2zPjHQhkjBSFzYc2ogR"
+        },
+        {
+          "key": [
+            "0x00b1e89aa5d8707088c0832f3285276f13d87db8"
+          ],
+          "value": "5GYTYst3nqonhKXURRmCgHHL9dzooc2CewqT3gW8BvXcfmPh"
+        },
+        {
+          "key": [
+            "0x0136df14acd804b8c39cd1ca7c3fc23c2c707e8f"
+          ],
+          "value": "5HNik1i7odh7GxYRWjfUQ2isRbXay11jsPS2rWVfXj7R6CVv"
+        },
+        {
+          "key": [
+            "0x0204e8876613e2f647734f9797096d721eb52332"
+          ],
+          "value": "5DqeJtLNCUbjc7LR5nviCMZR4ato8kvNDmVx76ZA6dPuYwe9"
+        },
+        {
+          "key": [
+            "0x025b8f5fe84440a24254334c74d630ea54b23ed2"
+          ],
+          "value": "5H3HwG9AgEq2oByiXRzwx4pu7bq6Tt6BMDigEotAJZPXn8v2"
+        },
+        {
+          "key": [
+            "0x025e7bb67e528f90d54876ec9f33ffa0717fdbac"
+          ],
+          "value": "5CdHEVNAxqSxVg3MrKxQi96hA9zBC6KWzRDTUg1Hfe8dcvQe"
+        },
+        {
+          "key": [
+            "0x0264622788a2d47b08c62c6df1aa379bd284421a"
+          ],
+          "value": "5CDC97ijLcEqij3DrrVtzVpnrwcrHtPneNaZKeSm4KBfxZGL"
+        },
+        {
+          "key": [
+            "0x02a740809485da3777e1bdd9f9aaf6872655a9e5"
+          ],
+          "value": "5CCkT46qeYRrD53Wp4zPLtJYQExyFroVBADgHWiYYX3Rs3qp"
+        },
+        {
+          "key": [
+            "0x02a97b511a38c0803e8591a174dde99c76024dc9"
+          ],
+          "value": "5D4QJtewpWWr3n39UC5X6ctyWQdzoP249buk5LTTyU2Vi1v1"
+        },
+        {
+          "key": [
+            "0x03060bef52d89a0f18661051e05f8f887756b875"
+          ],
+          "value": "5D735NQfF1CV6iR7BhQT1Ja1nX3JcvtFkfkfXoBRWDKVmFvT"
+        },
+        {
+          "key": [
+            "0x0358ebd3631596717c8ced3e20df8ed4f5fbca05"
+          ],
+          "value": "5D84352vm2GTYtVwXQ2CZa5b1msJVy7wjUUZZ9YyJH8457hx"
+        },
+        {
+          "key": [
+            "0x0361b15e72ec8e2f4b6a9bdb20d1ea1d790a50ca"
+          ],
+          "value": "5DUvV8QaUrVRb6cdpW4P98V1zud5DEAdkfYb6PdUzLhVSm12"
+        },
+        {
+          "key": [
+            "0x03bd5d428de96fac91155ed18c051532118419df"
+          ],
+          "value": "5CiCcSZuvJWqkiMkJaPjovnw9EpWCngXLadyX2mFd2v6PgVK"
+        },
+        {
+          "key": [
+            "0x03da8a3f3c4f364bec02aa5ac8d4a25854d62299"
+          ],
+          "value": "5GRVPFXFimiBbZDg3iX1mDgW6bV23YNKgqa89ytp5BVfaBs3"
+        },
+        {
+          "key": [
+            "0x041168c93e1441a535361ed3f4f52c8fda8eec18"
+          ],
+          "value": "5CcDACzSFct1D7Mc5qWKfe8zV3svDNa4xPih4Gn5FKahDJwD"
+        },
+        {
+          "key": [
+            "0x042bc943883fdcdc2b32e5279f38a0c5b8185d25"
+          ],
+          "value": "5E4pUyRTnB7bKmxRiu9TkuQ3WUb61NYHRduEr9eandz8yfEy"
+        },
+        {
+          "key": [
+            "0x0433d6b0e522470a962225ac5a7c38e2cbdc595d"
+          ],
+          "value": "5GWEwfm2LGzLtUyenn6BJo33wfHwszzUtZ4ogaVx8nDktMSs"
+        }
+      ]
+    },
+    "reviveAccountInfo": {
+      "count": 28,
+      "truncated": true,
+      "sample": [
+        {
+          "key": [
+            "0x001f79c06e2f58bd9861e4a8592b90dacc1a82ab"
+          ],
+          "value": {
+            "accountType": "EOA",
+            "dust": "7,420"
+          }
+        },
+        {
+          "key": [
+            "0x16d4f59084948bf5b3f768f51b043a399ea023d2"
+          ],
+          "value": {
+            "accountType": {
+              "Contract": {
+                "trieId": "0xd69be3c4a64f8325f90cecbe71229709f9ba72d8e155c10508773b2838cba1ca",
+                "codeHash": "0x841f9e52e9e8b53787c07eb8d836f03f1dba2fdf2d2fe5076a264c8fe09612a6",
+                "storageBytes": "0",
+                "storageItems": "0",
+                "storageByteDeposit": "0",
+                "storageItemDeposit": "0",
+                "storageBaseDeposit": "1,038,600,000,000,000",
+                "immutableDataLen": "0"
+              }
+            },
+            "dust": "0"
+          }
+        },
+        {
+          "key": [
+            "0x1807dbe0e8d790e63c4b2a90b9a108afa14f8547"
+          ],
+          "value": {
+            "accountType": "EOA",
+            "dust": "3,795"
+          }
+        },
+        {
+          "key": [
+            "0x19d5aa109cbf0d4e0a126f1438ea73b619cb7725"
+          ],
+          "value": {
+            "accountType": {
+              "Contract": {
+                "trieId": "0x58c75ecc30dd03b241343512b6bdf37f27d63b00f4eb8dc94a118ae01ef15be2",
+                "codeHash": "0x70cffabb789e0a67b0f4efc2abebbf493e6651dfcf7fecfa2ed3e284924aaf42",
+                "storageBytes": "192",
+                "storageItems": "3",
+                "storageByteDeposit": "1,152,000,000,000,000",
+                "storageItemDeposit": "450,000,000,000",
+                "storageBaseDeposit": "2,125,800,000,000,000",
+                "immutableDataLen": "0"
+              }
+            },
+            "dust": "0"
+          }
+        },
+        {
+          "key": [
+            "0x1f8a235387763a67e4f293e1bdfc65e149437120"
+          ],
+          "value": {
+            "accountType": {
+              "Contract": {
+                "trieId": "0xa43b72b83b982fe93cd015a690f867e3a885c1479a1ce4ecf11a7b7dbd313c90",
+                "codeHash": "0xa7ddc2bc59b5e4d8e7c9dd58fac1ff118fb2bbb7f3a0e8fd60978a8f584de6fb",
+                "storageBytes": "0",
+                "storageItems": "0",
+                "storageByteDeposit": "0",
+                "storageItemDeposit": "0",
+                "storageBaseDeposit": "3,175,200,000,000,000",
+                "immutableDataLen": "0"
+              }
+            },
+            "dust": "0"
+          }
+        },
+        {
+          "key": [
+            "0x1fce7b29cb138f878b672ebadfcf54a1b87ac140"
+          ],
+          "value": {
+            "accountType": {
+              "Contract": {
+                "trieId": "0x00dfab351f6d52611fe7737c31db8f14a7f41fa86e2fbdd739a834d4e205f70d",
+                "codeHash": "0x160eac40d55f5d32780812f2723f881544241f6669ff8ac7008b78773790c095",
+                "storageBytes": "64",
+                "storageItems": "1",
+                "storageByteDeposit": "384,000,000,000,000",
+                "storageItemDeposit": "150,000,000,000",
+                "storageBaseDeposit": "1,378,800,000,000,000",
+                "immutableDataLen": "0"
+              }
+            },
+            "dust": "0"
+          }
+        },
+        {
+          "key": [
+            "0x2a60003e16ba15be6654faccd3f62cbdbd8e61fe"
+          ],
+          "value": {
+            "accountType": "EOA",
+            "dust": "5,730"
+          }
+        },
+        {
+          "key": [
+            "0x3c26351ad8b9dc7bb4f837c5b921879c35e20fb7"
+          ],
+          "value": {
+            "accountType": {
+              "Contract": {
+                "trieId": "0xadaf69be405020d5a451da34718fafec87ae8fcdbc957f879bcf018b99279ba3",
+                "codeHash": "0xa026f878763f129a5792d5faecf1e9f3f15d7a0b073c1dd7b3ac20f7178f5577",
+                "storageBytes": "512",
+                "storageItems": "8",
+                "storageByteDeposit": "3,072,000,000,000,001",
+                "storageItemDeposit": "1,200,000,000,001",
+                "storageBaseDeposit": "7,929,000,000,000,000",
+                "immutableDataLen": "0"
+              }
+            },
+            "dust": "0"
+          }
+        },
+        {
+          "key": [
+            "0x3f2f484484fbe6e224d058fdfdb6b5a14f09655b"
+          ],
+          "value": {
+            "accountType": {
+              "Contract": {
+                "trieId": "0x8cf16f0a868c9a26f93929eaed7039c7684724cd732cf6582d41a79960c039f2",
+                "codeHash": "0xb3d71ff82b4b654c7bafe855ce13b0dc277627a046e3190f6f6e0ee5eb7f7671",
+                "storageBytes": "0",
+                "storageItems": "0",
+                "storageByteDeposit": "0",
+                "storageItemDeposit": "0",
+                "storageBaseDeposit": "4,766,400,000,000,000",
+                "immutableDataLen": "0"
+              }
+            },
+            "dust": "0"
+          }
+        },
+        {
+          "key": [
+            "0x4c07b4f328fa738290db96bce2f9cbc4d020d2cb"
+          ],
+          "value": {
+            "accountType": "EOA",
+            "dust": "2,250"
+          }
+        },
+        {
+          "key": [
+            "0x4de2308d558e01b0aa1b5371a4d0b26d2e2988d1"
+          ],
+          "value": {
+            "accountType": "EOA",
+            "dust": "180"
+          }
+        },
+        {
+          "key": [
+            "0x6e79287f62b47307b5b7349072c51adaf8833d54"
+          ],
+          "value": {
+            "accountType": {
+              "Contract": {
+                "trieId": "0xd637eecd0e737a309200df7ad0c5407dc98a47d5cf1526894ac6513de149b19e",
+                "codeHash": "0xe999c2123eb6c78eb6201c5ac2d2471cfb3c3de124cb347b32d4f86e9bfc9ed8",
+                "storageBytes": "640",
+                "storageItems": "10",
+                "storageByteDeposit": "3,840,000,000,000,000",
+                "storageItemDeposit": "1,500,000,000,000",
+                "storageBaseDeposit": "6,445,800,000,000,000",
+                "immutableDataLen": "0"
+              }
+            },
+            "dust": "0"
+          }
+        },
+        {
+          "key": [
+            "0x86b9cc2d456eed16a6872e1d5646f606a59cd95b"
+          ],
+          "value": {
+            "accountType": {
+              "Contract": {
+                "trieId": "0x41daeea164ccec7f6f4e644b559c7ecd79066be60f7e2f370584acd9f82f2dd3",
+                "codeHash": "0x6a81ea8307e3415bf79a339455e3767ec3ac15c9b76393f786ee78327929a0e4",
+                "storageBytes": "0",
+                "storageItems": "0",
+                "storageByteDeposit": "0",
+                "storageItemDeposit": "0",
+                "storageBaseDeposit": "914,400,000,000,000",
+                "immutableDataLen": "0"
+              }
+            },
+            "dust": "0"
+          }
+        },
+        {
+          "key": [
+            "0x9c0e1f786b38923519df2cec05464f95ccd29009"
+          ],
+          "value": {
+            "accountType": "EOA",
+            "dust": "7,840"
+          }
+        },
+        {
+          "key": [
+            "0xa02ee16eb03d2cf1aef199f7658fb8c8e3188ffd"
+          ],
+          "value": {
+            "accountType": {
+              "Contract": {
+                "trieId": "0xbe307c2d11dbc9391cda93d17e9772542d1300c9af14e7431918fb49e2f47c3a",
+                "codeHash": "0xa72553f50cdf645fb343b2cf089e431a1b26fb07e80f4e2236d55bf9811c663f",
+                "storageBytes": "320",
+                "storageItems": "5",
+                "storageByteDeposit": "1,920,000,000,000,000",
+                "storageItemDeposit": "750,000,000,000",
+                "storageBaseDeposit": "2,509,200,000,000,000",
+                "immutableDataLen": "0"
+              }
+            },
+            "dust": "0"
+          }
+        },
+        {
+          "key": [
+            "0xb64be4189dc4f0f105369d02ca91c485199d6fcd"
+          ],
+          "value": {
+            "accountType": {
+              "Contract": {
+                "trieId": "0x22a05fe9727ca3e3b85f9db21d0349b0d6f30f58918d05f58eaa9eaa8515a382",
+                "codeHash": "0x0cb74a2593bbf644f6b7a126b281b00d743f93db4489015bfe0c2269eb3fcd4b",
+                "storageBytes": "320",
+                "storageItems": "5",
+                "storageByteDeposit": "1,920,000,000,000,000",
+                "storageItemDeposit": "750,000,000,000",
+                "storageBaseDeposit": "4,266,000,000,000,000",
+                "immutableDataLen": "0"
+              }
+            },
+            "dust": "0"
+          }
+        },
+        {
+          "key": [
+            "0xbae8933886e1520e5fca3eded119c08b29022d79"
+          ],
+          "value": {
+            "accountType": {
+              "Contract": {
+                "trieId": "0xef41b8c3b85d5f1da7ae0deb46155bb90de7b89c76492c6627655f4e8eaf9ab9",
+                "codeHash": "0x7133ebc949e7710da69c8bb9ef4d89e43b7ad7bbb747b1253df81d64d6913fd0",
+                "storageBytes": "0",
+                "storageItems": "0",
+                "storageByteDeposit": "0",
+                "storageItemDeposit": "0",
+                "storageBaseDeposit": "2,179,800,000,000,000",
+                "immutableDataLen": "0"
+              }
+            },
+            "dust": "0"
+          }
+        },
+        {
+          "key": [
+            "0xbc9d2e1de06ab813a7f2c56ac8b67eb7607909fd"
+          ],
+          "value": {
+            "accountType": "EOA",
+            "dust": "6,370"
+          }
+        },
+        {
+          "key": [
+            "0xc05a1f041a42ffa96fc24a3aebc576b1157aa7f6"
+          ],
+          "value": {
+            "accountType": {
+              "Contract": {
+                "trieId": "0x9acd335826801abfa09f401523cb30a33bf25f0539f5da30e8840b63bb32ce47",
+                "codeHash": "0x46e7be347a501d4958751872f2a6b54ccbfb7c16559c28e109c7a489c1115ac5",
+                "storageBytes": "384",
+                "storageItems": "6",
+                "storageByteDeposit": "2,304,000,000,000,000",
+                "storageItemDeposit": "900,000,000,000",
+                "storageBaseDeposit": "6,453,000,000,000,000",
+                "immutableDataLen": "0"
+              }
+            },
+            "dust": "0"
+          }
+        },
+        {
+          "key": [
+            "0xcf0a9de1aee018647c16094caf7238e263659c6c"
+          ],
+          "value": {
+            "accountType": "EOA",
+            "dust": "6,890"
+          }
+        }
+      ]
+    },
+    "assetHolderMappings": [
+      {
+        "assetId": "2",
+        "accountId": "5Grj5uKAoduL2EDfgizp2MMbURJKa4rL6Q5pGUnVhhhjhwjk",
+        "h160": "0x578f0a6155551b3b7c7ff255ea7dc2b08968e380",
+        "balance": "15000000000000000000"
+      },
+      {
+        "assetId": "806707",
+        "accountId": "5DFz6NsQPrHU61VWJJxaEjBKYd3ND4bDJzNMcKrLcqCihi3v",
+        "h160": "0x6e285606e63c3359b58e6d106e92d92cd8f7a23a",
+        "balance": "7"
+      },
+      {
+        "assetId": "806707",
+        "accountId": "5HEuRGmZgmP86h4MPUcCmYWRi5dE8QKCSgf3JMGCTveyqKpE",
+        "h160": "0x553d36d0af8dec5704849a87f8a79689511199f1",
+        "balance": "2"
+      },
+      {
+        "assetId": "806707",
+        "accountId": "5ExjaoAwuDG42GbnX6GQBdhNugSv59nXj2HKiUXoS7qkhFV1",
+        "h160": "0x81ed1dfbec067703fdca3daa7efcbeff4ba101ec",
+        "balance": "999997495"
+      },
+      {
+        "assetId": "806707",
+        "accountId": "5EkVZovjHsUQ2YLa2CnaVND8259u5c9h8eBtmRVweBpBVHXB",
+        "h160": "0x162c454a039b4c5c7c1d16868fa1a8d68568957b",
+        "balance": "2503"
+      }
+    ]
+  }
+}
