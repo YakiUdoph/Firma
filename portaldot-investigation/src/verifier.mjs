@@ -1,0 +1,146 @@
+import { createHash } from "node:crypto";
+import { ApiPromise, WsProvider } from "@polkadot/api";
+import { DEFAULTS, READ_ONLY_EVM_METHODS, SCHEMA_VERSION, VERSION } from "./constants.mjs";
+import { assetPrecompileAddress, compactError, decodeAbiString, decodeUint256, encodeBalanceOf, numberToHex } from "./codec.mjs";
+import { evaluateSnapshot } from "./evaluate.mjs";
+import { EvmRpcClient, RpcError, withTimeout } from "./rpc.mjs";
+import { normalizeOptions } from "./validation.mjs";
+
+const SELECTORS = Object.freeze({ name: "0x06fdde03", symbol: "0x95d89b41", decimals: "0x313ce567", totalSupply: "0x18160ddd" });
+
+function metadataMissing(error) {
+  return error instanceof RpcError && /metadata not found/i.test(JSON.stringify(error.detail));
+}
+
+async function readEvmCall(client, to, data, blockTag, decoder) {
+  try {
+    const raw = await client.call("eth_call", [{ to, data }, blockTag]);
+    return { ok: true, value: decoder(raw), raw };
+  } catch (error) {
+    return { ok: false, kind: metadataMissing(error) ? "metadata-missing" : "rpc-error", error: compactError(error), rpcError: error.detail };
+  }
+}
+
+async function collectEvm(options, blockNumber) {
+  const client = new EvmRpcClient(options.evmEndpoint, options);
+  const evidence = { reachable: false, endpoint: options.evmEndpoint, identity: null, block: null, calls: {}, requests: client.history };
+  try {
+    const [chainIdHex, clientVersion] = await Promise.all([
+      client.call("eth_chainId"),
+      client.call("web3_clientVersion"),
+    ]);
+    evidence.reachable = true;
+    evidence.identity = { chainId: BigInt(chainIdHex).toString(), chainIdHex, clientVersion };
+    if (blockNumber == null) return evidence;
+    const blockTag = numberToHex(blockNumber);
+    const block = await client.call("eth_getBlockByNumber", [blockTag, false]);
+    if (!block) {
+      evidence.block = { requestedNumber: String(blockNumber), available: false };
+      return evidence;
+    }
+    evidence.block = { number: BigInt(block.number).toString(), hash: block.hash, requestedTag: blockTag, available: true };
+    const address = assetPrecompileAddress(options.assetId);
+    evidence.precompileAddress = address;
+    evidence.calls = {
+      totalSupply: await readEvmCall(client, address, SELECTORS.totalSupply, blockTag, decodeUint256),
+      balanceOf: await readEvmCall(client, address, encodeBalanceOf(options.account), blockTag, decodeUint256),
+      name: await readEvmCall(client, address, SELECTORS.name, blockTag, decodeAbiString),
+      symbol: await readEvmCall(client, address, SELECTORS.symbol, blockTag, decodeAbiString),
+      decimals: await readEvmCall(client, address, SELECTORS.decimals, blockTag, decodeUint256),
+    };
+    return evidence;
+  } catch (error) {
+    evidence.error = compactError(error);
+    return evidence;
+  }
+}
+
+async function storageExists(api, key, hash) {
+  const value = await api.rpc.state.getStorage(key, hash);
+  return Boolean(value?.isSome ?? (value && value.toHex?.() !== "0x"));
+}
+
+async function collectSubstrate(options) {
+  const provider = new WsProvider(options.substrateEndpoint, 2_500);
+  let api;
+  try {
+    api = await withTimeout(ApiPromise.create({ provider, throwOnConnect: true, noInitWarn: true }), options.timeoutMs, "Substrate connection");
+    const finalizedHash = await withTimeout(api.rpc.chain.getFinalizedHead(), options.timeoutMs, "Finalized-head query");
+    const [header, chain, nodeName, nodeVersion, properties, runtimeVersion, metadata] = await Promise.all([
+      api.rpc.chain.getHeader(finalizedHash), api.rpc.system.chain(), api.rpc.system.name(), api.rpc.system.version(),
+      api.rpc.system.properties(), api.rpc.state.getRuntimeVersion(finalizedHash), api.rpc.state.getMetadata(finalizedHash),
+    ]);
+    const apiAt = await withTimeout(api.at(finalizedHash), options.timeoutMs, "Historic runtime decoration");
+    const pallets = metadata.asLatest.pallets.map((pallet) => pallet.name.toString().toLowerCase());
+    const assetOption = await apiAt.query.assets.asset(options.assetId);
+    const assetExists = assetOption.isSome;
+    const asset = assetExists ? assetOption.unwrap() : null;
+    const metadataKey = apiAt.query.assets.metadata.key(options.assetId);
+    const metadataExists = await storageExists(api, metadataKey, finalizedHash);
+    const nativeMetadata = await apiAt.query.assets.metadata(options.assetId);
+    const mappingOption = await apiAt.query.revive.originalAccount(options.account);
+    const mappingExists = mappingOption.isSome;
+    const accountId = mappingExists ? mappingOption.unwrap().toString() : null;
+    let balance = { exists: false, value: null };
+    let accountStorageKey = null;
+    if (assetExists && accountId) {
+      accountStorageKey = apiAt.query.assets.account.key(options.assetId, accountId);
+      const entry = await apiAt.query.assets.account(options.assetId, accountId);
+      const exists = entry.isSome;
+      balance = { exists, value: exists ? entry.unwrap().balance.toString() : "0", storageKey: accountStorageKey };
+    }
+    const metadataHex = metadata.toHex();
+    return {
+      reachable: true,
+      endpoint: options.substrateEndpoint,
+      identity: { chain: chain.toString(), nodeName: nodeName.toString(), nodeVersion: nodeVersion.toString(), properties: properties.toJSON() },
+      finalized: { number: header.number.toString(), hash: finalizedHash.toHex() },
+      runtime: {
+        specName: runtimeVersion.specName.toString(), specVersion: runtimeVersion.specVersion.toString(),
+        transactionVersion: runtimeVersion.transactionVersion.toString(), metadataVersion: metadata.version,
+        metadataSha256: createHash("sha256").update(metadataHex).digest("hex"), pallets,
+      },
+      asset: {
+        exists: assetExists, id: options.assetId, storageKey: apiAt.query.assets.asset.key(options.assetId),
+        supply: assetExists ? asset.supply.toString() : null,
+        metadata: {
+          exists: metadataExists, storageKey: metadataKey,
+          name: metadataExists ? nativeMetadata.name.toUtf8() : null,
+          symbol: metadataExists ? nativeMetadata.symbol.toUtf8() : null,
+          decimals: metadataExists ? nativeMetadata.decimals.toString() : null,
+        },
+      },
+      accountMapping: { exists: mappingExists, h160: options.account, accountId, storageKey: apiAt.query.revive.originalAccount.key(options.account) },
+      balance,
+    };
+  } catch (error) {
+    return { reachable: false, endpoint: options.substrateEndpoint, error: compactError(error) };
+  } finally {
+    if (api) await api.disconnect().catch(() => {});
+    else await provider.disconnect().catch(() => {});
+  }
+}
+
+export async function verify(input = {}) {
+  const options = normalizeOptions({ ...DEFAULTS, ...input });
+  const startedAt = new Date().toISOString();
+  const substrate = await collectSubstrate(options);
+  const evm = await collectEvm(options, substrate.finalized?.number);
+  const snapshot = { input: options, substrate, evm };
+  const verdict = evaluateSnapshot(snapshot);
+  return {
+    schema: SCHEMA_VERSION,
+    tool: { name: "FIRMA", version: VERSION, mode: "read-only", allowedEvmMethods: READ_ONLY_EVM_METHODS },
+    startedAt,
+    completedAt: new Date().toISOString(),
+    input: { expectedChainId: options.expectedChainId, assetId: options.assetId, account: options.account },
+    verdict,
+    evidence: snapshot,
+    limitations: [
+      "This report proves only the listed reads at the pinned block; it does not prove write, event, permit, or fee behavior.",
+      "The asset-precompile address rule is supported only for the verified Portaldot V3 runtime envelope.",
+      "An unavailable endpoint, unsupported runtime, missing mapping, timeout, or unavailable historical block is UNKNOWN—not FAIL.",
+    ],
+  };
+}
+

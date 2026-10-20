@@ -1,0 +1,107 @@
+import { REQUIRED_PALLETS, STATUS } from "./constants.mjs";
+
+const check = (id, title, status, summary, evidence = {}) => ({ id, title, status, summary, evidence });
+const unavailable = (id, title, summary, evidence = {}) => check(id, title, STATUS.UNKNOWN, summary, evidence);
+
+function callValue(call) {
+  return call?.ok ? call.value : undefined;
+}
+
+function metadataOutcome(nativeMetadata, evmCalls) {
+  const fields = ["name", "symbol", "decimals"];
+  if (!nativeMetadata?.exists) {
+    const allMissing = fields.every((field) => evmCalls?.[field]?.kind === "metadata-missing");
+    if (allMissing) return [STATUS.PASS, "Both surfaces report that asset metadata is absent."];
+    const anyValue = fields.some((field) => evmCalls?.[field]?.ok);
+    if (anyValue) return [STATUS.FAIL, "EVM metadata exists while native metadata storage is absent."];
+    return [STATUS.UNKNOWN, "Native metadata is absent, but the EVM response was not a recognized metadata-missing result."];
+  }
+  const unavailableField = fields.find((field) => !evmCalls?.[field]?.ok);
+  if (unavailableField) {
+    if (evmCalls?.[unavailableField]?.kind === "metadata-missing") {
+      return [STATUS.FAIL, `Native ${unavailableField} metadata exists but the EVM precompile reports it missing.`];
+    }
+    return [STATUS.UNKNOWN, `EVM ${unavailableField} metadata could not be decoded.`];
+  }
+  const mismatches = fields.filter((field) => String(nativeMetadata[field]) !== String(evmCalls[field].value));
+  return mismatches.length
+    ? [STATUS.FAIL, `Metadata differs for: ${mismatches.join(", ")}.`]
+    : [STATUS.PASS, "Name, symbol, and decimals match exactly across both surfaces."];
+}
+
+export function evaluateSnapshot(snapshot) {
+  const checks = [];
+  const substrate = snapshot.substrate;
+  const evm = snapshot.evm;
+
+  checks.push(substrate?.reachable
+    ? check("network.substrate", "Substrate endpoint", STATUS.PASS, "The Substrate endpoint returned a finalized block.", substrate.identity)
+    : unavailable("network.substrate", "Substrate endpoint", "The Substrate endpoint did not provide usable evidence.", substrate?.error));
+  checks.push(evm?.reachable
+    ? check("network.evm", "EVM endpoint", STATUS.PASS, "The EVM endpoint answered standard read-only JSON-RPC methods.", evm.identity)
+    : unavailable("network.evm", "EVM endpoint", "The EVM endpoint did not provide usable evidence.", evm?.error));
+
+  if (evm?.identity?.chainId) {
+    const matches = evm.identity.chainId === snapshot.input.expectedChainId;
+    checks.push(check("identity.chainId", "Expected EVM chain ID", matches ? STATUS.PASS : STATUS.FAIL,
+      matches ? `Chain ID is ${evm.identity.chainId}.` : `Expected ${snapshot.input.expectedChainId}, received ${evm.identity.chainId}.`,
+      { expected: snapshot.input.expectedChainId, actual: evm.identity.chainId }));
+  } else checks.push(unavailable("identity.chainId", "Expected EVM chain ID", "No chain ID response was available."));
+
+  if (substrate?.runtime) {
+    const pallets = substrate.runtime.pallets ?? [];
+    const missing = REQUIRED_PALLETS.filter((name) => !pallets.includes(name));
+    const supported = substrate.runtime.specName === "portaldot-v3" && missing.length === 0;
+    checks.push(check("runtime.support", "Runtime support", supported ? STATUS.PASS : STATUS.UNKNOWN,
+      supported ? `Runtime ${substrate.runtime.specName}/${substrate.runtime.specVersion} exposes Assets and Revive.` : "This runtime is not in FIRMA's verified support envelope.",
+      { ...substrate.runtime, missingPallets: missing }));
+  } else checks.push(unavailable("runtime.support", "Runtime support", "Runtime metadata was unavailable."));
+
+  const sameBlock = Boolean(substrate?.finalized?.number && evm?.block?.number && substrate.finalized.number === evm.block.number);
+  checks.push(check("context.block", "Shared block context", sameBlock ? STATUS.PASS : STATUS.UNKNOWN,
+    sameBlock ? `Both reads are pinned to finalized block ${substrate.finalized.number}.` : "The EVM endpoint could not serve the finalized Substrate block; parity was not evaluated across different blocks.",
+    { substrate: substrate?.finalized ?? null, evm: evm?.block ?? null }));
+
+  if (!substrate?.asset?.exists) {
+    checks.push(unavailable("asset.supply", "Total supply parity", "The native asset does not exist or could not be read."));
+    checks.push(unavailable("account.mapping", "Runtime account mapping", "Account mapping could not be evaluated without native asset evidence."));
+    checks.push(unavailable("asset.balance", "Account balance parity", "Balance parity could not be evaluated."));
+    checks.push(unavailable("asset.metadata", "Metadata parity", "Metadata parity could not be evaluated."));
+  } else {
+    const supply = evm?.calls?.totalSupply;
+    if (!sameBlock || !supply?.ok) checks.push(unavailable("asset.supply", "Total supply parity", "A same-block EVM totalSupply result was unavailable.", supply?.error));
+    else {
+      const matches = substrate.asset.supply === callValue(supply);
+      checks.push(check("asset.supply", "Total supply parity", matches ? STATUS.PASS : STATUS.FAIL,
+        matches ? "Native supply and EVM totalSupply match exactly." : "Native supply and EVM totalSupply differ.",
+        { native: substrate.asset.supply, evm: callValue(supply), unit: "base units" }));
+    }
+
+    const mapping = substrate.accountMapping;
+    checks.push(mapping?.exists
+      ? check("account.mapping", "Runtime account mapping", STATUS.PASS, "Revive storage maps the EVM address to a native AccountId.", mapping)
+      : unavailable("account.mapping", "Runtime account mapping", "No runtime-backed EVM-to-native account mapping was found.", mapping ?? {}));
+
+    const balance = evm?.calls?.balanceOf;
+    if (!sameBlock || !mapping?.exists || !substrate.balance?.exists || !balance?.ok) {
+      checks.push(unavailable("asset.balance", "Account balance parity", "A mapped, same-block balance pair was unavailable.", balance?.error));
+    } else {
+      const matches = substrate.balance.value === callValue(balance);
+      checks.push(check("asset.balance", "Account balance parity", matches ? STATUS.PASS : STATUS.FAIL,
+        matches ? "Native and EVM account balances match exactly." : "Native and EVM account balances differ.",
+        { native: substrate.balance.value, evm: callValue(balance), unit: "base units" }));
+    }
+
+    if (!sameBlock) checks.push(unavailable("asset.metadata", "Metadata parity", "Metadata was not compared across different block contexts."));
+    else {
+      const [status, summary] = metadataOutcome(substrate.asset.metadata, evm?.calls);
+      checks.push(check("asset.metadata", "Metadata parity", status, summary, { native: substrate.asset.metadata, evm: evm?.calls }));
+    }
+  }
+
+  const overall = checks.some((item) => item.status === STATUS.FAIL)
+    ? STATUS.FAIL
+    : checks.some((item) => item.status === STATUS.UNKNOWN) ? STATUS.UNKNOWN : STATUS.PASS;
+  return { overall, counts: Object.fromEntries(Object.values(STATUS).map((status) => [status, checks.filter((item) => item.status === status).length])), checks };
+}
+

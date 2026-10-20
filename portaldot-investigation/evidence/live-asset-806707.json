@@ -1,0 +1,738 @@
+{
+  "schema": "firma.report.v1",
+  "tool": {
+    "name": "FIRMA",
+    "version": "0.1.0",
+    "mode": "read-only",
+    "allowedEvmMethods": [
+      "eth_chainId",
+      "web3_clientVersion",
+      "eth_getBlockByNumber",
+      "eth_call"
+    ]
+  },
+  "startedAt": "2026-10-20T18:31:10.614Z",
+  "completedAt": "2026-10-20T18:31:25.436Z",
+  "input": {
+    "expectedChainId": "420420777",
+    "assetId": "806707",
+    "account": "0x81ed1dfbec067703fdca3daa7efcbeff4ba101ec"
+  },
+  "verdict": {
+    "overall": "PASS",
+    "counts": {
+      "PASS": 9,
+      "FAIL": 0,
+      "UNKNOWN": 0
+    },
+    "checks": [
+      {
+        "id": "network.substrate",
+        "title": "Substrate endpoint",
+        "status": "PASS",
+        "summary": "The Substrate endpoint returned a finalized block.",
+        "evidence": {
+          "chain": "PortaldotV3 Test",
+          "nodeName": "PortaldotV3 Node",
+          "nodeVersion": "3.0.0-dev-fddd43141f2",
+          "properties": {
+            "isEthereum": false,
+            "ss58Format": 42,
+            "tokenDecimals": [
+              14
+            ],
+            "tokenSymbol": [
+              "tPOT"
+            ]
+          }
+        }
+      },
+      {
+        "id": "network.evm",
+        "title": "EVM endpoint",
+        "status": "PASS",
+        "summary": "The EVM endpoint answered standard read-only JSON-RPC methods.",
+        "evidence": {
+          "chainId": "420420777",
+          "chainIdHex": "0x190f1ca9",
+          "clientVersion": "eth-rpc/main-fddd431/x86_64-unknown-linux-gnu/rustc1.98.0"
+        }
+      },
+      {
+        "id": "identity.chainId",
+        "title": "Expected EVM chain ID",
+        "status": "PASS",
+        "summary": "Chain ID is 420420777.",
+        "evidence": {
+          "expected": "420420777",
+          "actual": "420420777"
+        }
+      },
+      {
+        "id": "runtime.support",
+        "title": "Runtime support",
+        "status": "PASS",
+        "summary": "Runtime portaldot-v3/3002 exposes Assets and Revive.",
+        "evidence": {
+          "specName": "portaldot-v3",
+          "specVersion": "3002",
+          "transactionVersion": "2",
+          "metadataVersion": 14,
+          "metadataSha256": "23aff2a611bb0b5fbfebd32ac1dc7601ba2fd12c4c10ec332e5c31dac2b75d3e",
+          "pallets": [
+            "system",
+            "utility",
+            "babe",
+            "timestamp",
+            "authorship",
+            "indices",
+            "balances",
+            "transactionpayment",
+            "assetconversiontxpayment",
+            "electionprovidermultiphase",
+            "staking",
+            "session",
+            "technicalcommittee",
+            "technicalmembership",
+            "grandpa",
+            "treasury",
+            "assetrate",
+            "contracts",
+            "sudo",
+            "imonline",
+            "authoritydiscovery",
+            "offences",
+            "historical",
+            "identity",
+            "recovery",
+            "vesting",
+            "scheduler",
+            "preimage",
+            "proxy",
+            "multisig",
+            "bounties",
+            "assets",
+            "poolassets",
+            "beefy",
+            "mmr",
+            "mmrleaf",
+            "lottery",
+            "uniques",
+            "nfts",
+            "nftfractionalization",
+            "transactionstorage",
+            "voterlist",
+            "childbounties",
+            "remark",
+            "nominationpools",
+            "assetconversion",
+            "fastunstake",
+            "messagequeue",
+            "txpause",
+            "safemode",
+            "statement",
+            "multiblockmigrations",
+            "broker",
+            "mixnet",
+            "parameters",
+            "skipfeelesspayment",
+            "assetconversionmigration",
+            "revive",
+            "verifysignature",
+            "delegatedstaking",
+            "assetsfreezer",
+            "oracle",
+            "metatx",
+            "multiassetbounties",
+            "assetsprecompiles",
+            "assetsprecompilespermit",
+            "vestingprecompiles",
+            "registrarpara",
+            "registrarrelay"
+          ],
+          "missingPallets": []
+        }
+      },
+      {
+        "id": "context.block",
+        "title": "Shared block context",
+        "status": "PASS",
+        "summary": "Both reads are pinned to finalized block 120878.",
+        "evidence": {
+          "substrate": {
+            "number": "120878",
+            "hash": "0x7168f33a7125497f1390997bb77a776a36e17ad2294a95e8fe9aeeb75f4859cb"
+          },
+          "evm": {
+            "number": "120878",
+            "hash": "0x55f845308aa13d2ae0080340e12f4d7e8d89c487a607b42154fa1846f62814ed",
+            "requestedTag": "0x1d82e",
+            "available": true
+          }
+        }
+      },
+      {
+        "id": "asset.supply",
+        "title": "Total supply parity",
+        "status": "PASS",
+        "summary": "Native supply and EVM totalSupply match exactly.",
+        "evidence": {
+          "native": "1000000007",
+          "evm": "1000000007",
+          "unit": "base units"
+        }
+      },
+      {
+        "id": "account.mapping",
+        "title": "Runtime account mapping",
+        "status": "PASS",
+        "summary": "Revive storage maps the EVM address to a native AccountId.",
+        "evidence": {
+          "exists": true,
+          "h160": "0x81ed1dfbec067703fdca3daa7efcbeff4ba101ec",
+          "accountId": "5ExjaoAwuDG42GbnX6GQBdhNugSv59nXj2HKiUXoS7qkhFV1",
+          "storageKey": "0x735f040a5d490f1107ad9c56f5ca00d2c56ab6c1f203b345fe5879f81962772381ed1dfbec067703fdca3daa7efcbeff4ba101ec"
+        }
+      },
+      {
+        "id": "asset.balance",
+        "title": "Account balance parity",
+        "status": "PASS",
+        "summary": "Native and EVM account balances match exactly.",
+        "evidence": {
+          "native": "999997495",
+          "evm": "999997495",
+          "unit": "base units"
+        }
+      },
+      {
+        "id": "asset.metadata",
+        "title": "Metadata parity",
+        "status": "PASS",
+        "summary": "Both surfaces report that asset metadata is absent.",
+        "evidence": {
+          "native": {
+            "exists": false,
+            "storageKey": "0x682a59d51ab9e48a8c8cc418ff9708d2b5f3822e35ca2f31ce3526eab1363fd2a167209685837364d7fad45f0c59bc2b334f0c00",
+            "name": null,
+            "symbol": null,
+            "decimals": null
+          },
+          "evm": {
+            "totalSupply": {
+              "ok": true,
+              "value": "1000000007",
+              "raw": "0x000000000000000000000000000000000000000000000000000000003b9aca07"
+            },
+            "balanceOf": {
+              "ok": true,
+              "value": "999997495",
+              "raw": "0x000000000000000000000000000000000000000000000000000000003b9ac037"
+            },
+            "name": {
+              "ok": false,
+              "kind": "metadata-missing",
+              "error": {
+                "name": "RpcError",
+                "message": "eth_call: execution reverted: revert: Metadata not found",
+                "code": 3,
+                "stack": [
+                  "RpcError: eth_call: execution reverted: revert: Metadata not found",
+                  "    at EvmRpcClient.call (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/rpc.mjs:49:31)",
+                  "    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)",
+                  "    at async readEvmCall (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:17:17)",
+                  "    at async collectEvm (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:47:13)",
+                  "    at async verify (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:128:15)"
+                ]
+              },
+              "rpcError": {
+                "code": 3,
+                "message": "execution reverted: revert: Metadata not found",
+                "data": "0x08c379a0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000124d65746164617461206e6f7420666f756e640000000000000000000000000000"
+              }
+            },
+            "symbol": {
+              "ok": false,
+              "kind": "metadata-missing",
+              "error": {
+                "name": "RpcError",
+                "message": "eth_call: execution reverted: revert: Metadata not found",
+                "code": 3,
+                "stack": [
+                  "RpcError: eth_call: execution reverted: revert: Metadata not found",
+                  "    at EvmRpcClient.call (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/rpc.mjs:49:31)",
+                  "    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)",
+                  "    at async readEvmCall (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:17:17)",
+                  "    at async collectEvm (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:48:15)",
+                  "    at async verify (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:128:15)"
+                ]
+              },
+              "rpcError": {
+                "code": 3,
+                "message": "execution reverted: revert: Metadata not found",
+                "data": "0x08c379a0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000124d65746164617461206e6f7420666f756e640000000000000000000000000000"
+              }
+            },
+            "decimals": {
+              "ok": false,
+              "kind": "metadata-missing",
+              "error": {
+                "name": "RpcError",
+                "message": "eth_call: execution reverted: revert: Metadata not found",
+                "code": 3,
+                "stack": [
+                  "RpcError: eth_call: execution reverted: revert: Metadata not found",
+                  "    at EvmRpcClient.call (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/rpc.mjs:49:31)",
+                  "    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)",
+                  "    at async readEvmCall (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:17:17)",
+                  "    at async collectEvm (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:49:17)",
+                  "    at async verify (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:128:15)"
+                ]
+              },
+              "rpcError": {
+                "code": 3,
+                "message": "execution reverted: revert: Metadata not found",
+                "data": "0x08c379a0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000124d65746164617461206e6f7420666f756e640000000000000000000000000000"
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "evidence": {
+    "input": {
+      "substrateEndpoint": "wss://test-node-v3.portaldot.dev",
+      "evmEndpoint": "https://test-evm-rpc-v3.portaldot.dev",
+      "expectedChainId": "420420777",
+      "assetId": "806707",
+      "account": "0x81ed1dfbec067703fdca3daa7efcbeff4ba101ec",
+      "timeoutMs": 15000,
+      "retries": 1
+    },
+    "substrate": {
+      "reachable": true,
+      "endpoint": "wss://test-node-v3.portaldot.dev",
+      "identity": {
+        "chain": "PortaldotV3 Test",
+        "nodeName": "PortaldotV3 Node",
+        "nodeVersion": "3.0.0-dev-fddd43141f2",
+        "properties": {
+          "isEthereum": false,
+          "ss58Format": 42,
+          "tokenDecimals": [
+            14
+          ],
+          "tokenSymbol": [
+            "tPOT"
+          ]
+        }
+      },
+      "finalized": {
+        "number": "120878",
+        "hash": "0x7168f33a7125497f1390997bb77a776a36e17ad2294a95e8fe9aeeb75f4859cb"
+      },
+      "runtime": {
+        "specName": "portaldot-v3",
+        "specVersion": "3002",
+        "transactionVersion": "2",
+        "metadataVersion": 14,
+        "metadataSha256": "23aff2a611bb0b5fbfebd32ac1dc7601ba2fd12c4c10ec332e5c31dac2b75d3e",
+        "pallets": [
+          "system",
+          "utility",
+          "babe",
+          "timestamp",
+          "authorship",
+          "indices",
+          "balances",
+          "transactionpayment",
+          "assetconversiontxpayment",
+          "electionprovidermultiphase",
+          "staking",
+          "session",
+          "technicalcommittee",
+          "technicalmembership",
+          "grandpa",
+          "treasury",
+          "assetrate",
+          "contracts",
+          "sudo",
+          "imonline",
+          "authoritydiscovery",
+          "offences",
+          "historical",
+          "identity",
+          "recovery",
+          "vesting",
+          "scheduler",
+          "preimage",
+          "proxy",
+          "multisig",
+          "bounties",
+          "assets",
+          "poolassets",
+          "beefy",
+          "mmr",
+          "mmrleaf",
+          "lottery",
+          "uniques",
+          "nfts",
+          "nftfractionalization",
+          "transactionstorage",
+          "voterlist",
+          "childbounties",
+          "remark",
+          "nominationpools",
+          "assetconversion",
+          "fastunstake",
+          "messagequeue",
+          "txpause",
+          "safemode",
+          "statement",
+          "multiblockmigrations",
+          "broker",
+          "mixnet",
+          "parameters",
+          "skipfeelesspayment",
+          "assetconversionmigration",
+          "revive",
+          "verifysignature",
+          "delegatedstaking",
+          "assetsfreezer",
+          "oracle",
+          "metatx",
+          "multiassetbounties",
+          "assetsprecompiles",
+          "assetsprecompilespermit",
+          "vestingprecompiles",
+          "registrarpara",
+          "registrarrelay"
+        ]
+      },
+      "asset": {
+        "exists": true,
+        "id": "806707",
+        "storageKey": "0x682a59d51ab9e48a8c8cc418ff9708d2d34371a193a751eea5883e9553457b2ea167209685837364d7fad45f0c59bc2b334f0c00",
+        "supply": "1000000007",
+        "metadata": {
+          "exists": false,
+          "storageKey": "0x682a59d51ab9e48a8c8cc418ff9708d2b5f3822e35ca2f31ce3526eab1363fd2a167209685837364d7fad45f0c59bc2b334f0c00",
+          "name": null,
+          "symbol": null,
+          "decimals": null
+        }
+      },
+      "accountMapping": {
+        "exists": true,
+        "h160": "0x81ed1dfbec067703fdca3daa7efcbeff4ba101ec",
+        "accountId": "5ExjaoAwuDG42GbnX6GQBdhNugSv59nXj2HKiUXoS7qkhFV1",
+        "storageKey": "0x735f040a5d490f1107ad9c56f5ca00d2c56ab6c1f203b345fe5879f81962772381ed1dfbec067703fdca3daa7efcbeff4ba101ec"
+      },
+      "balance": {
+        "exists": true,
+        "value": "999997495",
+        "storageKey": "0x682a59d51ab9e48a8c8cc418ff9708d2b99d880ec681799c0cf30e8886371da9a167209685837364d7fad45f0c59bc2b334f0c00cc5c3d2aebd7aa42bc3b834427fa216d80270a11d7b2e2b8b2dfb1ca3a45ab3b3f2339613709108c72f04074a8048467"
+      }
+    },
+    "evm": {
+      "reachable": true,
+      "endpoint": "https://test-evm-rpc-v3.portaldot.dev",
+      "identity": {
+        "chainId": "420420777",
+        "chainIdHex": "0x190f1ca9",
+        "clientVersion": "eth-rpc/main-fddd431/x86_64-unknown-linux-gnu/rustc1.98.0"
+      },
+      "block": {
+        "number": "120878",
+        "hash": "0x55f845308aa13d2ae0080340e12f4d7e8d89c487a607b42154fa1846f62814ed",
+        "requestedTag": "0x1d82e",
+        "available": true
+      },
+      "calls": {
+        "totalSupply": {
+          "ok": true,
+          "value": "1000000007",
+          "raw": "0x000000000000000000000000000000000000000000000000000000003b9aca07"
+        },
+        "balanceOf": {
+          "ok": true,
+          "value": "999997495",
+          "raw": "0x000000000000000000000000000000000000000000000000000000003b9ac037"
+        },
+        "name": {
+          "ok": false,
+          "kind": "metadata-missing",
+          "error": {
+            "name": "RpcError",
+            "message": "eth_call: execution reverted: revert: Metadata not found",
+            "code": 3,
+            "stack": [
+              "RpcError: eth_call: execution reverted: revert: Metadata not found",
+              "    at EvmRpcClient.call (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/rpc.mjs:49:31)",
+              "    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)",
+              "    at async readEvmCall (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:17:17)",
+              "    at async collectEvm (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:47:13)",
+              "    at async verify (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:128:15)"
+            ]
+          },
+          "rpcError": {
+            "code": 3,
+            "message": "execution reverted: revert: Metadata not found",
+            "data": "0x08c379a0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000124d65746164617461206e6f7420666f756e640000000000000000000000000000"
+          }
+        },
+        "symbol": {
+          "ok": false,
+          "kind": "metadata-missing",
+          "error": {
+            "name": "RpcError",
+            "message": "eth_call: execution reverted: revert: Metadata not found",
+            "code": 3,
+            "stack": [
+              "RpcError: eth_call: execution reverted: revert: Metadata not found",
+              "    at EvmRpcClient.call (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/rpc.mjs:49:31)",
+              "    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)",
+              "    at async readEvmCall (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:17:17)",
+              "    at async collectEvm (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:48:15)",
+              "    at async verify (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:128:15)"
+            ]
+          },
+          "rpcError": {
+            "code": 3,
+            "message": "execution reverted: revert: Metadata not found",
+            "data": "0x08c379a0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000124d65746164617461206e6f7420666f756e640000000000000000000000000000"
+          }
+        },
+        "decimals": {
+          "ok": false,
+          "kind": "metadata-missing",
+          "error": {
+            "name": "RpcError",
+            "message": "eth_call: execution reverted: revert: Metadata not found",
+            "code": 3,
+            "stack": [
+              "RpcError: eth_call: execution reverted: revert: Metadata not found",
+              "    at EvmRpcClient.call (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/rpc.mjs:49:31)",
+              "    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)",
+              "    at async readEvmCall (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:17:17)",
+              "    at async collectEvm (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:49:17)",
+              "    at async verify (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:128:15)"
+            ]
+          },
+          "rpcError": {
+            "code": 3,
+            "message": "execution reverted: revert: Metadata not found",
+            "data": "0x08c379a0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000124d65746164617461206e6f7420666f756e640000000000000000000000000000"
+          }
+        }
+      },
+      "requests": [
+        {
+          "startedAt": "2026-10-20T18:31:21.219Z",
+          "attempt": 0,
+          "request": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "eth_chainId",
+            "params": []
+          },
+          "httpStatus": 200,
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "result": "0x190f1ca9"
+          }
+        },
+        {
+          "startedAt": "2026-10-20T18:31:21.225Z",
+          "attempt": 0,
+          "request": {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "web3_clientVersion",
+            "params": []
+          },
+          "httpStatus": 200,
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "result": "eth-rpc/main-fddd431/x86_64-unknown-linux-gnu/rustc1.98.0"
+          }
+        },
+        {
+          "startedAt": "2026-10-20T18:31:22.488Z",
+          "attempt": 0,
+          "request": {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "eth_getBlockByNumber",
+            "params": [
+              "0x1d82e",
+              false
+            ]
+          },
+          "httpStatus": 200,
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "result": {
+              "baseFeePerGas": "0x905b",
+              "blobGasUsed": "0x0",
+              "difficulty": "0x0",
+              "excessBlobGas": "0x0",
+              "extraData": "0x",
+              "gasLimit": "0xffffffffffffffff",
+              "gasUsed": "0x0",
+              "hash": "0x55f845308aa13d2ae0080340e12f4d7e8d89c487a607b42154fa1846f62814ed",
+              "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+              "miner": "0x9234511ee6f98f944b846d19d4013a81f93bd5f9",
+              "mixHash": "0x0000000000000000000000000000000000000000000000000008e1bc9bf04000",
+              "nonce": "0x0000000000000000",
+              "number": "0x1d82e",
+              "parentHash": "0xbf381e492176a96984dfbc352213d31b36b06b669266a3ef1e7612bfb3e5e2c9",
+              "receiptsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "sha3Uncles": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "size": "0x0",
+              "stateRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "timestamp": "0x6ad7b364",
+              "transactions": [],
+              "transactionsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "uncles": [],
+              "withdrawals": [],
+              "withdrawalsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            }
+          }
+        },
+        {
+          "startedAt": "2026-10-20T18:31:23.400Z",
+          "attempt": 0,
+          "request": {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "eth_call",
+            "params": [
+              {
+                "to": "0x000c4f3300000000000000000000000000010000",
+                "data": "0x18160ddd"
+              },
+              "0x1d82e"
+            ]
+          },
+          "httpStatus": 200,
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "result": "0x000000000000000000000000000000000000000000000000000000003b9aca07"
+          }
+        },
+        {
+          "startedAt": "2026-10-20T18:31:23.800Z",
+          "attempt": 0,
+          "request": {
+            "jsonrpc": "2.0",
+            "id": 5,
+            "method": "eth_call",
+            "params": [
+              {
+                "to": "0x000c4f3300000000000000000000000000010000",
+                "data": "0x70a0823100000000000000000000000081ed1dfbec067703fdca3daa7efcbeff4ba101ec"
+              },
+              "0x1d82e"
+            ]
+          },
+          "httpStatus": 200,
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 5,
+            "result": "0x000000000000000000000000000000000000000000000000000000003b9ac037"
+          }
+        },
+        {
+          "startedAt": "2026-10-20T18:31:24.189Z",
+          "attempt": 0,
+          "request": {
+            "jsonrpc": "2.0",
+            "id": 6,
+            "method": "eth_call",
+            "params": [
+              {
+                "to": "0x000c4f3300000000000000000000000000010000",
+                "data": "0x06fdde03"
+              },
+              "0x1d82e"
+            ]
+          },
+          "httpStatus": 200,
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 6,
+            "error": {
+              "code": 3,
+              "message": "execution reverted: revert: Metadata not found",
+              "data": "0x08c379a0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000124d65746164617461206e6f7420666f756e640000000000000000000000000000"
+            }
+          }
+        },
+        {
+          "startedAt": "2026-10-20T18:31:24.619Z",
+          "attempt": 0,
+          "request": {
+            "jsonrpc": "2.0",
+            "id": 7,
+            "method": "eth_call",
+            "params": [
+              {
+                "to": "0x000c4f3300000000000000000000000000010000",
+                "data": "0x95d89b41"
+              },
+              "0x1d82e"
+            ]
+          },
+          "httpStatus": 200,
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 7,
+            "error": {
+              "code": 3,
+              "message": "execution reverted: revert: Metadata not found",
+              "data": "0x08c379a0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000124d65746164617461206e6f7420666f756e640000000000000000000000000000"
+            }
+          }
+        },
+        {
+          "startedAt": "2026-10-20T18:31:25.052Z",
+          "attempt": 0,
+          "request": {
+            "jsonrpc": "2.0",
+            "id": 8,
+            "method": "eth_call",
+            "params": [
+              {
+                "to": "0x000c4f3300000000000000000000000000010000",
+                "data": "0x313ce567"
+              },
+              "0x1d82e"
+            ]
+          },
+          "httpStatus": 200,
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 8,
+            "error": {
+              "code": 3,
+              "message": "execution reverted: revert: Metadata not found",
+              "data": "0x08c379a0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000124d65746164617461206e6f7420666f756e640000000000000000000000000000"
+            }
+          }
+        }
+      ],
+      "precompileAddress": "0x000c4f3300000000000000000000000000010000"
+    }
+  },
+  "limitations": [
+    "This report proves only the listed reads at the pinned block; it does not prove write, event, permit, or fee behavior.",
+    "The asset-precompile address rule is supported only for the verified Portaldot V3 runtime envelope.",
+    "An unavailable endpoint, unsupported runtime, missing mapping, timeout, or unavailable historical block is UNKNOWN—not FAIL."
+  ]
+}
