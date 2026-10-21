@@ -14,33 +14,40 @@
   </header>
 
   <main>
-    <section class="hero" aria-labelledby="hero-title">
-      <p class="eyebrow">Portaldot V3 · interoperability evidence</p>
-      <h1 id="hero-title">One asset.<br><em>Two surfaces.</em><br>One answer.</h1>
-      <p class="lede">FIRMA checks whether Portaldot shows the same token balance in its native system and its Ethereum-compatible interface. Both sides are read at the same finalized block, so the answer is evidence—not a timing guess.</p>
-      <div class="truth-strip" aria-label="FIRMA guarantees">
-        <span>No wallet</span><span>No signature</span><span>No transaction</span><span>Exportable proof</span>
-      </div>
-    </section>
+    <div class="intro-shell">
+      <section class="hero" aria-labelledby="hero-title">
+        <p class="eyebrow">Portaldot V3 · read-only verification</p>
+        <h1 id="hero-title">Does the token agree on <em>both sides?</em></h1>
+        <p class="lede">FIRMA checks whether the same token information agrees across Portaldot’s native and Ethereum-compatible interfaces. It reads both sides at one finalized block and gives you evidence you can inspect or export.</p>
+        <div class="truth-strip" aria-label="FIRMA guarantees">
+          <span>No wallet</span><span>No signature</span><span>No transaction</span><span>Exportable proof</span>
+        </div>
+      </section>
 
-    <section class="workbench" aria-labelledby="verify-title">
-      <div class="section-heading">
-        <div><p class="eyebrow">Live verification</p><h2 id="verify-title">Ask the chain, precisely.</h2></div>
-        <p>Enter a token’s native asset ID and an Ethereum-style account address, then select Run. A pass means every required value matched at one finalized block.</p>
-      </div>
+      <section class="workbench" aria-labelledby="verify-title">
+        <div class="workbench-heading">
+          <p class="eyebrow">Try the working verifier</p>
+          <h2 id="verify-title">Check a token now.</h2>
+          <p>Use the known-good example below, or enter another native asset ID and EVM account.</p>
+        </div>
       <form id="verify-form" novalidate>
         <label>Native asset ID
           <input id="asset-id" name="assetId" value="2" inputmode="numeric" pattern="[0-9]+" required aria-describedby="asset-help">
-          <small id="asset-help">Unsigned 32-bit Assets pallet identifier</small>
+          <small id="asset-help">The token’s numeric ID</small>
         </label>
         <label>EVM account
           <input id="account" name="account" value="0x578f0a6155551b3b7c7ff255ea7dc2b08968e380" spellcheck="false" required>
-          <small>20-byte address mapped through Revive storage</small>
+          <small>The 0x account whose balance should be checked</small>
         </label>
         <button id="run-button" type="submit"><span>Run read-only verification</span><span aria-hidden="true">↗</span></button>
       </form>
+      <details class="field-help">
+        <summary>What do these fields mean?</summary>
+        <p>The asset ID identifies an entry in Substrate’s Assets pallet. The EVM account is a 20-byte address that Portaldot maps to a native account through Revive storage.</p>
+      </details>
       <p id="form-error" class="form-error" role="alert" hidden></p>
-    </section>
+      </section>
+    </div>
 
     <section id="result" class="result" aria-live="polite" hidden>
       <div class="result-topline">
@@ -61,13 +68,17 @@
     </section>
 
     <section class="method" aria-labelledby="method-title">
-      <div><p class="eyebrow">Why this is different</p><h2 id="method-title">Evidence, not reassurance.</h2></div>
+      <div class="method-heading"><p class="eyebrow">How it works</p><h2 id="method-title">One check, four clear steps.</h2><p>FIRMA does not ask you to trust a green badge. It keeps the observations behind every result.</p></div>
       <ol>
-        <li><strong>Pin</strong><span>Choose the finalized Substrate block and request that exact height from EVM.</span></li>
-        <li><strong>Resolve</strong><span>Read the live runtime fingerprint, asset storage, and Revive account mapping.</span></li>
-        <li><strong>Compare</strong><span>Evaluate supply, balance, and metadata as base-unit integers—never floating point.</span></li>
-        <li><strong>Classify</strong><span>Separate a proven mismatch from missing evidence with PASS, FAIL, or UNKNOWN.</span></li>
+        <li><strong>Lock one moment</strong><span>Choose one finalized block so timing cannot create a false mismatch.</span></li>
+        <li><strong>Read both sides</strong><span>Collect the token and account information from Portaldot’s native and EVM interfaces.</span></li>
+        <li><strong>Compare exactly</strong><span>Check supply, balance, name, symbol, and decimals without rounding large numbers.</span></li>
+        <li><strong>Explain the answer</strong><span>Show Passed, Failed, or Couldn’t verify and keep the evidence behind every check.</span></li>
       </ol>
+      <details class="technical-details">
+        <summary>See the technical method</summary>
+        <p>FIRMA fingerprints the live runtime, reads Assets and Revive storage, maps the EVM account to its native account, and calls the ERC-20 surface with <code>eth_call</code> at the same finalized height. Exact base-unit values stay as arbitrary-precision integers. The evidence retains the nine technical <code>PASS</code>, <code>FAIL</code>, or <code>UNKNOWN</code> classifications.</p>
+      </details>
     </section>
   </main>
 

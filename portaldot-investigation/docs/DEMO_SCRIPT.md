@@ -1,49 +1,39 @@
 # Three-minute demo script
 
-## 0:00–0:25 — The problem
+## 0:00–0:25 — The question
 
-“Portaldot exposes a native Substrate asset and an EVM-facing representation. A value can look correct on either side while the two surfaces disagree. FIRMA turns that ambiguity into a reproducible PASS, FAIL, or UNKNOWN verdict without asking for a wallet.”
+“FIRMA checks whether the same token information agrees across Portaldot’s native and Ethereum-compatible interfaces. It reads both sides at one finalized block and never asks for a wallet.”
 
-Show the landing page and point out that all operations are read-only.
+Open the page. Point out the public repository link and the read-only label.
 
-## 0:25–1:05 — Verify the default asset
+## 0:25–1:05 — Run the default check
 
-Use asset ID 2 and the prefilled holder/address values. Start verification.
+Keep asset ID `2` and the documented default account. Select **Verify on Portaldot V3**.
 
-While it runs, explain that the service checks endpoint identity, runtime compatibility, native storage, the pinned EVM block and ERC-20 reads, then compares metadata, holder balance, and total supply.
+While it runs: “FIRMA locks one chain moment, reads both interfaces, compares exact values, and explains the outcome.”
 
-Show the nine PASS checks. Do not imply the check covers transfers, historical state, or every possible account.
+Show **Passed** and the nine technical `PASS` codes. Do not imply that FIRMA tests transfers, historical availability, or every account.
 
-## 1:05–1:40 — Inspect the evidence
+## 1:05–1:40 — Inspect and export proof
 
-Open the evidence view. Highlight:
+Open **View raw evidence**. Highlight the timestamp, finalized block, runtime, chain ID, native/EVM observations, named checks, and endpoint provenance.
 
-- timestamps and observed block;
-- runtime and chain ID;
-- native and EVM raw observations;
-- named check results;
-- explicit assumptions and endpoint provenance.
+Use **Copy JSON** or **Download JSON**. Explain that the exported report is the reproducible artifact, while the large label is the beginner-friendly summary.
 
-Explain that a future or unsupported runtime produces UNKNOWN instead of a false green result.
+## 1:40–2:10 — Explain uncertainty
 
-## 1:40–2:15 — Show the edge case
+Open the technical details near the four-step explanation.
 
-Load the asset 806707 evidence record. Explain that absent optional metadata is handled as a defined state rather than converted into an empty-string coincidence.
+“A proven agreement is PASS. A proven mismatch is FAIL. If an endpoint times out, history is missing, or a runtime is unsupported, FIRMA reports UNKNOWN—shown as Couldn't verify—instead of giving a false green result.”
 
-Point to the captured absent-value observations and the corresponding parity checks.
+## 2:10–2:35 — Show the metadata edge case
 
-## 2:15–2:40 — Reproducibility
+Use asset `806707` with account `0x81ed1dfbec067703fdca3daa7efcbeff4ba101ec` if live conditions and demo time permit. Explain that absent optional metadata is preserved as an explicit state, not silently converted into matching empty text.
 
-Show the CLI command and exit contract:
+If the network is slow, use the fresh check-in evidence and clearly identify it as a time-stamped prior observation.
 
-- 0: every check passed;
-- 1: a proven mismatch failed;
-- 2: the verifier could not reach a defensible conclusion.
+## 2:35–3:00 — Close
 
-Mention the 22 tests, sanitized evidence, bounded requests, and clean dependency audit.
+“FIRMA does not move assets or deploy contracts. It answers one operational question: do Portaldot’s two token views agree right now, and can I inspect the proof?”
 
-## 2:40–3:00 — Close
-
-“FIRMA does not move assets. It gives integrators, operators, and reviewers a compact answer to a narrower but consequential question: do these two Portaldot V3 asset surfaces agree right now, and can I inspect the proof?”
-
-End on the result summary. If the live network is unavailable, use the committed evidence and say clearly that it is a prior time-stamped observation.
+End on the result and repository link. Do not show or claim a contract address or transaction hash; neither exists in this read-only design.
