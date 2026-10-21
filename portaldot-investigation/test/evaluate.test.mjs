@@ -5,17 +5,62 @@ import { matchingSnapshot } from "../test-support/fixtures.mjs";
 
 const byId = (result, id) => result.checks.find((item) => item.id === id);
 
-test("matching same-block values pass", () => {
+test("both balances present and equal pass", () => {
   const result = evaluateSnapshot(matchingSnapshot());
   assert.equal(result.overall, "PASS");
   assert.equal(result.counts.FAIL, 0);
   assert.equal(byId(result, "asset.balance").status, "PASS");
 });
 
-test("confirmed integer mismatch fails", () => {
+test("both balances present and unequal fail", () => {
   const result = evaluateSnapshot(matchingSnapshot({ evm: { calls: { balanceOf: { ok: true, value: "14999999999999999999" } } } }));
   assert.equal(result.overall, "FAIL");
   assert.equal(byId(result, "asset.balance").status, "FAIL");
+});
+
+test("absent native balance record and EVM zero remain unknown with explicit evidence", () => {
+  const result = evaluateSnapshot(matchingSnapshot({
+    substrate: { balance: { exists: false, value: "0", storageKey: "0xnative-balance" } },
+    evm: { calls: { balanceOf: { ok: true, value: "0", raw: "0x0" } } },
+  }));
+  const balance = byId(result, "asset.balance");
+  assert.equal(balance.status, "UNKNOWN");
+  assert.equal(balance.summary, "The EVM balance is zero, but no native balance record was found. FIRMA cannot confirm whether both balances agree.");
+  assert.deepEqual(balance.evidence.native, { exists: false, value: "0", storageKey: "0xnative-balance" });
+  assert.deepEqual(balance.evidence.evm, { ok: true, value: "0", raw: "0x0" });
+  assert.equal(balance.evidence.sameBlock, true);
+  assert.equal(balance.evidence.mapping.exists, true);
+  assert.deepEqual(balance.evidence.unavailableReasons, ["native-balance-record-absent"]);
+});
+
+test("absent native balance record and nonzero EVM balance remain unknown", () => {
+  const result = evaluateSnapshot(matchingSnapshot({
+    substrate: { balance: { exists: false, value: "0" } },
+    evm: { calls: { balanceOf: { ok: true, value: "7" } } },
+  }));
+  const balance = byId(result, "asset.balance");
+  assert.equal(balance.status, "UNKNOWN");
+  assert.equal(balance.summary, "The EVM balance is 7 base units, but no native balance record was found. FIRMA cannot confirm whether both balances agree.");
+  assert.equal(balance.evidence.native.exists, false);
+  assert.equal(balance.evidence.evm.value, "7");
+  assert.deepEqual(balance.evidence.unavailableReasons, ["native-balance-record-absent"]);
+});
+
+test("RPC errors and missing balance observations remain unknown with explicit evidence", () => {
+  const observations = [
+    { ok: false, kind: "rpc-error", error: { message: "timed out" } },
+    undefined,
+  ];
+  for (const observation of observations) {
+    const snapshot = matchingSnapshot();
+    snapshot.evm.calls.balanceOf = observation;
+    const balance = byId(evaluateSnapshot(snapshot), "asset.balance");
+    assert.equal(balance.status, "UNKNOWN");
+    assert.equal(balance.summary, "A mapped, same-block balance pair was unavailable.");
+    assert.deepEqual(balance.evidence.evm, observation ?? null);
+    assert.equal(balance.evidence.native.exists, true);
+    assert.deepEqual(balance.evidence.unavailableReasons, ["evm-balance-observation-unavailable"]);
+  }
 });
 
 test("missing metadata on both surfaces is a supported passing state", () => {
