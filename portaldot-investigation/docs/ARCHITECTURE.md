@@ -2,7 +2,10 @@
 
 ```mermaid
 flowchart LR
-    U[CLI or local web UI] --> V[Input validation]
+    B[Public browser] --> F[Static frontend]
+    F --> A[POST /api/verify]
+    A --> V[Input validation + limits]
+    U[CLI or local server] --> V
     V --> S[Substrate collector]
     S -->|finalized hash + height| C[Shared block context]
     C --> E[EVM read-only collector]
@@ -13,6 +16,8 @@ flowchart LR
     C --> P
     P --> J[JSON evidence + exit code]
     J --> U
+    J --> A
+    A --> F
 ```
 
 ## Trust boundaries
@@ -28,4 +33,12 @@ flowchart LR
 EVM: `eth_chainId`, `web3_clientVersion`, `eth_getBlockByNumber`, and `eth_call`.
 
 Substrate: system identity, finalized head/header, runtime version, runtime metadata, and storage queries for `Assets` and `Revive`. The implementation never accesses `api.tx`, `author_submitExtrinsic`, transaction broadcast APIs, signing APIs, or wallet extensions.
+
+## Deployment shape
+
+- `public/` is copied to `dist/` as immutable build output.
+- `api/verify.mjs` is a stateless Node.js Vercel Function using the Web Request/Response API.
+- The function owns no durable state and closes its outbound Substrate connection after each request.
+- Application limits protect each warm instance. A platform firewall rule is required for a global public rate limit because function memory is not shared across instances.
+- `server.mjs` remains the loopback-only local development adapter; it is not the production entrypoint.
 

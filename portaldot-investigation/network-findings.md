@@ -4,7 +4,7 @@
 
 The original endpoint checks were repeated before implementation at `2026-10-20T18:20:41.011Z` (EVM) and `2026-10-20T18:20:47.651Z` (Substrate). Both remained reachable. EVM again returned `0x190f1ca9` / `420420777`; Substrate again returned `PortaldotV3 Test`, node version `3.0.0-dev-fddd43141f2`, runtime `portaldot-v3/3002`, and metadata v14.
 
-The completed FIRMA verifier then performed stronger same-height reads. It passed all nine required checks for asset `2` at finalized height `120873` and asset `806707` at finalized height `120878`. See `evidence/` for exact requests and responses.
+The completed FIRMA verifier then performed stronger same-height reads. Production-readiness revalidation passed all nine required checks for asset `2` at finalized height `121096` and asset `806707` at finalized height `121099`. See `evidence/` for exact requests and responses.
 
 Investigation date: 2026-10-20. Scope: read-only RPC and public-source research. No extrinsic, Ethereum transaction, contract deployment, signature, key request, or token spend was attempted.
 

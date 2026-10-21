@@ -3,7 +3,7 @@
 ## FIRMA pinned verifier (implemented 2026-10-20)
 
 ```powershell
-Set-Location 'C:\Users\PC\Desktop\PROJECTS\Firma\Firma-1\portaldot-investigation'
+Set-Location .\portaldot-investigation
 npm ci --ignore-scripts
 npm run check
 node bin/firma.mjs --output evidence\live-asset-2-final.json
@@ -12,9 +12,11 @@ node bin/firma.mjs --asset 806707 --account 0x81ed1dfbec067703fdca3daa7efcbeff4b
 
 Actual completed outcomes:
 
-- asset `2`: `PASS`, pinned finalized block `120873`;
-- asset `806707`: `PASS`, pinned finalized block `120878`, with absent metadata consistently reported on both surfaces;
-- test suite: 14 tests passed, 0 failed at the implementation checkpoint.
+- asset `2`: `PASS`, pinned finalized block `121096`;
+- asset `806707`: `PASS`, pinned finalized block `121099`, with absent metadata consistently reported on both surfaces;
+- production-readiness suite: 22 tests passed, 0 failed;
+- production build: `npm run build` succeeded;
+- unreachable local endpoints: `UNKNOWN`, exit code `2`.
 
 Exact JSON-RPC requests, responses, timestamps, runtime metadata hash, storage keys, and decoded values are in `evidence/*.json`. Exit codes are `0` PASS, `1` FAIL, and `2` UNKNOWN.
 
@@ -23,7 +25,7 @@ All commands below are read-only with respect to Portaldot. They write only loca
 ## Prerequisites
 
 ```powershell
-Set-Location 'C:\Users\PC\Desktop\PROJECTS\Firma\Firma-1\portaldot-investigation'
+Set-Location .\portaldot-investigation
 npm ci --ignore-scripts
 ```
 

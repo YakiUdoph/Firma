@@ -52,6 +52,7 @@ form button:disabled { opacity: .55; cursor: wait; }
 .quiet-button { padding: 11px 14px; border: 1px solid var(--line); color: var(--ink); background: transparent; }
 .quiet-button:hover { border-color: var(--ink); }
 .verdict-summary { max-width: 760px; margin: -16px 0 42px; color: var(--muted); font-size: 1.08rem; line-height: 1.6; }
+.evidence-hint { max-width: 760px; margin: -24px 0 38px; color: #c4c8bf; font-size: .9rem; line-height: 1.55; }
 .context { display: grid; grid-template-columns: repeat(4, 1fr); margin: 0 0 40px; border: solid var(--line); border-width: 1px 0; }
 .context div { min-width: 0; padding: 18px; border-right: 1px solid var(--line); }
 .context div:last-child { border-right: 0; }

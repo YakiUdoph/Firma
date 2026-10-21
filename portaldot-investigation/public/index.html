@@ -17,7 +17,7 @@
     <section class="hero" aria-labelledby="hero-title">
       <p class="eyebrow">Portaldot V3 · interoperability evidence</p>
       <h1 id="hero-title">One asset.<br><em>Two surfaces.</em><br>One answer.</h1>
-      <p class="lede">FIRMA compares native Assets storage with its EVM ERC-20 view at one finalized block—using exact integers and runtime-backed account mapping.</p>
+      <p class="lede">FIRMA checks whether Portaldot shows the same token balance in its native system and its Ethereum-compatible interface. Both sides are read at the same finalized block, so the answer is evidence—not a timing guess.</p>
       <div class="truth-strip" aria-label="FIRMA guarantees">
         <span>No wallet</span><span>No signature</span><span>No transaction</span><span>Exportable proof</span>
       </div>
@@ -26,7 +26,7 @@
     <section class="workbench" aria-labelledby="verify-title">
       <div class="section-heading">
         <div><p class="eyebrow">Live verification</p><h2 id="verify-title">Ask the chain, precisely.</h2></div>
-        <p>Defaults use a previously observed asset and mapped account. Change either value to verify another pair.</p>
+        <p>Enter a token’s native asset ID and an Ethereum-style account address, then select Run. A pass means every required value matched at one finalized block.</p>
       </div>
       <form id="verify-form" novalidate>
         <label>Native asset ID
@@ -51,6 +51,7 @@
         </div>
       </div>
       <p id="verdict-summary" class="verdict-summary"></p>
+      <p class="evidence-hint">Each row explains one check. Open “Inspect raw evidence” or export the JSON to review the supporting RPC responses.</p>
       <dl id="context" class="context"></dl>
       <div id="checks" class="checks"></div>
       <details class="raw-evidence">

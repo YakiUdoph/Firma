@@ -6,8 +6,11 @@
 - Inputs accept only a u32 asset ID and a 20-byte EVM address.
 - Remote plaintext `http://` and `ws://` endpoints are rejected; plaintext is allowed only for localhost development.
 - Credentials embedded in endpoint URLs are rejected.
-- Network operations have bounded timeouts and at most two retries.
-- The web server listens on `127.0.0.1`, limits requests to 8 KiB, permits one active verification per client, and applies a five-per-minute rate limit.
+- Every Substrate and EVM operation has a bounded timeout; EVM transport retries are capped at two.
+- Public request bodies cannot select RPC endpoints. Endpoint overrides are operator-controlled environment settings and are validated before use.
+- Local and production HTTP adapters limit requests to 8 KiB, cap concurrent work per instance, and apply a bounded five-per-minute client limiter.
+- Exported errors omit stack traces so evidence cannot leak deployment or developer filesystem paths.
+- Unsupported runtimes suppress all parity verdicts instead of displaying misleading individual passes.
 - The CLI refuses to overwrite an existing evidence file.
 - Balances and supplies remain decimal strings backed by `BigInt`; JavaScript floating-point numbers are never used for asset arithmetic.
 - The browser renders response text with DOM `textContent`, not HTML injection.
@@ -26,7 +29,12 @@
 - Runtime upgrades can invalidate address, storage, or ABI assumptions. FIRMA records spec/transaction/metadata versions and the metadata SHA-256 to make drift visible.
 - Public endpoints can rate-limit, prune history, or return transient errors. Those outcomes are `UNKNOWN`.
 - The current account check depends on a pre-existing Revive mapping. Missing mapping is `UNKNOWN`, not evidence of a zero balance or a broken chain.
-- The local web server is a demo interface, not an internet-hardened multi-tenant service.
+- Function-memory rate limits are per instance and per region. A Vercel Firewall rate-limit rule is a required public-launch control, not an optional optimization.
+- The CLI intentionally writes an operator-selected evidence path with no-overwrite semantics. Do not expose CLI arguments to untrusted remote users.
+
+## Publication gate
+
+Before sharing a public URL, stage a Vercel Firewall rule for `POST /api/verify`, observe it in log mode, test enforcement on a preview, and only then publish the production rate limit. See `DEPLOYMENT.md`. Vercel's automatic DDoS mitigation does not replace this endpoint-specific usage control.
 
 ## Responsible extension
 
