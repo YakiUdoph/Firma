@@ -47,4 +47,3 @@ Mention the 22 tests, sanitized evidence, bounded requests, and clean dependency
 “FIRMA does not move assets. It gives integrators, operators, and reviewers a compact answer to a narrower but consequential question: do these two Portaldot V3 asset surfaces agree right now, and can I inspect the proof?”
 
 End on the result summary. If the live network is unavailable, use the committed evidence and say clearly that it is a prior time-stamped observation.
-

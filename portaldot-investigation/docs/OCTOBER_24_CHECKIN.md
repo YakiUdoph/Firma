@@ -41,4 +41,3 @@ Not applicable by design. FIRMA is a read-only verification product. It has not 
 ## Check-in status
 
 The local prototype, evidence, tests, architecture, security notes, and demo script are ready. A public live URL is still outstanding and requires explicit approval to push the reviewed commits and create a protected Vercel preview. Public promotion additionally requires deployed smoke tests and a reviewed platform firewall rule.
-

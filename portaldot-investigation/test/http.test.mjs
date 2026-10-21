@@ -46,4 +46,3 @@ test("production handler applies a per-instance request limit", async () => {
   assert.equal(limited.status, 429);
   assert.ok(Number(limited.headers.get("retry-after")) >= 1);
 });
-

@@ -15,4 +15,3 @@ test("rate limiter bounds attacker-controlled keys", () => {
   for (let index = 0; index < 20; index += 1) limiter.consume(`client-${index}`, index);
   assert.ok(limiter.entries.size <= 3);
 });
-

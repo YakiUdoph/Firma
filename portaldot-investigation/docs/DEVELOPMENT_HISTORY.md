@@ -21,4 +21,3 @@ The final pass corrected non-object JSON error classification and documentation 
 ## Release history
 
 No remote push or deployment was performed during this audit. No smart contract was deployed and no blockchain transaction was submitted.
-

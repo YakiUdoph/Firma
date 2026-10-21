@@ -21,6 +21,7 @@ The product remains read-only. It does not request a wallet, sign messages, subm
 | Unreachable-network behavior | Overall UNKNOWN; all nine checks UNKNOWN; exit code 2 |
 | Fresh live CLI recheck (2026-10-21) | Asset 2: 9 PASS at block 129347; asset 806707: 9 PASS at block 129350 |
 | Local browser/API smoke check (2026-10-21) | Page rendered in headless Chrome; API: 9 PASS at block 129376 |
+| Production-function adapter smoke (2026-10-21) | HTTP 200 and PASS at block 129401; request ID returned |
 | Embedded secret scan | No embedded credentials found |
 | Product write-operation scan | No signing, wallet, transaction-submission, or deployment path found |
 
@@ -57,4 +58,3 @@ Proceed only after all of the following pass on a protected preview:
 - function duration stays below 60 seconds in repeated trials;
 - no credentials, internal paths, or stack traces appear in responses or logs;
 - the platform firewall rule is first observed in log mode, then enabled with a reviewed threshold.
-

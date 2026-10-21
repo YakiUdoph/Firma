@@ -14,4 +14,3 @@ await rm(destination, { recursive: true, force: true });
 await mkdir(destination, { recursive: true });
 await cp(source, destination, { recursive: true });
 console.log(`Built static production assets in ${destination}`);
-

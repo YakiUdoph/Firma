@@ -63,4 +63,3 @@ Also verify HTTP 405 for GET on the API, HTTP 400 for malformed input, HTTP 413 
 ## Rollback
 
 If the preview exposes secrets, paths, stack traces, excessive latency, or inconsistent parity results, do not promote it. Keep the last known-good deployment, save sanitized logs, reproduce locally, and issue a normal corrective commit. Do not weaken the runtime gate or convert UNKNOWN into PASS to make the demo appear successful.
-
