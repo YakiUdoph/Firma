@@ -2,6 +2,9 @@
 
 FIRMA is a read-only interoperability verifier for Portaldot V3. It answers a narrow but consequential question: **does one native asset have the same observable state through the Substrate and EVM interfaces at the same finalized block?**
 
+- Source: https://github.com/YakiUdoph/Firma
+- Live deployment: https://firma-lemon.vercel.app/
+
 It is not an explorer, wallet, token checker, deployment tool, or audit. It never creates, signs, simulates, or submits a transaction.
 
 ## What the MVP proves
@@ -17,7 +20,7 @@ For a native asset ID and EVM account, FIRMA:
 7. compares base-unit values as arbitrary-precision integers; and
 8. emits a machine-readable report with `PASS`, `FAIL`, or `UNKNOWN` for every check.
 
-`FAIL` means FIRMA proved a contradiction. A timeout, missing historical block, unsupported runtime, unavailable endpoint, or undecodable response is `UNKNOWN` (“Couldn't Verify”), not a failure.
+`FAIL` means FIRMA proved a contradiction. A timeout, missing historical block, unsupported runtime, unavailable endpoint, or undecodable response is `UNKNOWN` (“Couldn't verify”), not a failure.
 
 ## Quick start
 
@@ -77,12 +80,14 @@ See [the repository workflow](../.github/workflows/firma.yml) for a runnable Git
 
 ## Verified live results
 
-On 2026-10-20, the completed implementation produced:
+Historical evidence committed on 2026-10-20 includes:
 
 - `PASS` for asset `2` at finalized block `121096`, including exact supply (`15000000000000000000`), mapped-account balance, and metadata parity.
 - `PASS` for asset `806707` at finalized block `121099`, including exact supply/balance parity and consistent absence of metadata.
 
 The complete, raw request/response evidence is in [evidence](evidence/). These are historical observations, not promises about future runtime state.
+
+Fresh deployed acceptance checks on 2026-10-21 also returned 9/9 PASS for asset `2` at block `130112` and asset `806707` at block `130114`, both on runtime `portaldot-v3/3002` and chain ID `420420777`. See the [October 24 check-in](docs/OCTOBER_24_CHECKIN.md) for durations, validation results, and current deployment limitations.
 
 ## Repository map
 

@@ -4,7 +4,7 @@ Audit date: 2026-10-21 (Atlantic/Cape Verde)
 
 ## Release decision
 
-FIRMA is ready for a protected Vercel preview. It is not yet cleared for an unrestricted public release because the deployed function, outbound WebSocket access, and platform-level rate limit have not been verified on Vercel.
+FIRMA's verifier is functioning on the current Vercel deployment, and the improved UI is verified locally. It is not cleared for public promotion: the improved commit has not been deployed to a protected preview, the current production URL is publicly reachable, and the project-specific Vercel firewall configuration could not be inspected with the available authorization.
 
 The product remains read-only. It does not request a wallet, sign messages, submit transactions, deploy contracts, or require private keys.
 
@@ -12,49 +12,53 @@ The product remains read-only. It does not request a wallet, sign messages, subm
 
 | Check | Result |
 |---|---|
-| Clean dependency install | `npm ci --ignore-scripts` succeeded |
-| Automated checks | 22 tests passed; 0 failed |
+| Automated checks | 26 tests passed; 0 failed |
 | Static production build | `npm run build` succeeded |
 | Dependency audit | 0 known production vulnerabilities |
-| Live default verification | PASS at Substrate block 121096 |
-| Live absent-metadata verification | PASS at Substrate block 121099 |
-| Unreachable-network behavior | Overall UNKNOWN; all nine checks UNKNOWN; exit code 2 |
-| Fresh live CLI recheck (2026-10-21) | Asset 2: 9 PASS at block 129347; asset 806707: 9 PASS at block 129350 |
-| Local browser/API smoke check (2026-10-21) | Page rendered in headless Chrome; API: 9 PASS at block 129376 |
-| Production-function adapter smoke (2026-10-21) | HTTP 200 and PASS at block 129401; request ID returned |
-| Embedded secret scan | No embedded credentials found |
-| Product write-operation scan | No signing, wallet, transaction-submission, or deployment path found |
+| Deployed frontend | HTTP 200 in 0.971 s |
+| Deployed asset 2 verification | HTTP 200; 9 PASS at block 130112 in 8.097 s |
+| Deployed asset 806707 verification | HTTP 200; 9 PASS at block 130114 in 7.939 s |
+| Deployed identity | Runtime `portaldot-v3/3002`; EVM chain ID 420420777 |
+| Deployed API errors | GET returned 405; malformed JSON returned 400 |
+| Local real-browser verification | Asset 2 Passed with 9 technical PASS checks at block 130100 |
+| Responsive browser review | Chrome at 1440, 768, and 375 px; no horizontal overflow |
+| Embedded secret/path scan | No known credential signatures or workstation paths in changed files |
+| Verifier integrity | No changes to `src`, `api`, CLI, or server verifier paths in the UI commit |
 
-The two generated evidence records were replaced during this review. The previous records included local stack paths in captured connection errors. Public errors are now sanitized, and the regenerated records contain no workstation paths.
+Successful deployed Substrate and EVM endpoint checks demonstrate outbound WSS and HTTPS connectivity from the function. The two complete requests stayed below the configured 60-second function limit.
 
-## Repairs made
+## UI repairs made
 
-- Bounded every Substrate identity, metadata, storage, and disconnect operation with a timeout.
-- Sanitized public errors so stack traces and local filesystem paths are not written to evidence.
-- Made unsupported runtimes suppress dependent parity checks instead of reporting misleading PASS results.
-- Added bounded per-IP and global concurrency controls for the local and serverless APIs.
-- Added request-size limits, server timeouts, generic unexpected-error responses, and security headers.
-- Added a Vercel Web API function, reproducible static build, environment validation, and a live function smoke test.
-- Corrected the metadata digest to hash decoded metadata bytes rather than the printable hex string.
-- Pinned CI actions by commit SHA and restricted workflow permissions to read-only repository contents.
-- Added failure-path, rate-limit, request-validation, and unsupported-runtime tests.
-- Classified syntactically valid non-object JSON request bodies as HTTP 400 instead of HTTP 500.
+- Put the working verification form near the top of the page.
+- Reduced oversized hero typography and unused vertical space while preserving the dark/lime identity.
+- Rebuilt the four-step explanation as readable two-column cards with a one-column mobile layout.
+- Explained the core task in plain English and moved protocol terminology into expandable details.
+- Added human labels—Passed, Failed, Couldn't verify—without changing technical `PASS`, `FAIL`, or `UNKNOWN` evidence.
+- Preserved validation, raw evidence, copy/download actions, focus handling, and keyboard use.
+- Added four UI regression tests.
 
-## Remaining release blockers
+## Verifier behavior left unchanged
 
-1. No Vercel project or public URL has been created, by design.
-2. The Vercel-built function bundle and its outbound HTTPS/WSS connectivity have not been tested in a protected preview.
-3. The in-process limiter is instance-local. A platform firewall rate limit must be staged and reviewed before public promotion.
-4. Automated browser pixel/layout review was unavailable in this environment; the static page and API behavior were tested, but responsive visual QA still needs a human pass.
-5. The organizer's native-asset address convention remains an external assumption. FIRMA proves read parity for the supplied addresses; it does not independently prove that the mapping convention is canonical.
+Same-finalized-block comparison, runtime compatibility gate, account mapping, exact integer handling, all nine checks, the evidence schema, error classifications, bounded timeouts/retries, and application rate/concurrency limits are unchanged.
 
-## Public release gate
+## Security status and remaining blockers
 
-Proceed only after all of the following pass on a protected preview:
+1. `https://firma-lemon.vercel.app/` is publicly reachable without deployment authentication.
+2. The in-process limiter is instance-local: five requests per minute per client and four active requests per instance.
+3. The active Vercel firewall configuration could not be retrieved. The Vercel API connection returned 403 for the owning team, while the local Vercel CLI reported no credentials. No custom WAF or platform rate limit is claimed.
+4. The updated UI exists only in local commit `92f77ed` until push and deployment are approved.
+5. The organizer's native-asset address convention remains an external assumption. FIRMA proves read parity for the supplied addresses; it does not independently establish the convention as canonical.
 
-- landing page and evidence views render on desktop and mobile;
-- `POST /api/verify` returns a PASS result for asset 2;
-- malformed, oversized, and excess requests fail with the documented status codes;
-- function duration stays below 60 seconds in repeated trials;
-- no credentials, internal paths, or stack traces appear in responses or logs;
-- the platform firewall rule is first observed in log mode, then enabled with a reviewed threshold.
+## Protected-preview gate
+
+Before wider promotion:
+
+- push the reviewed commits with a normal, non-force push after approval;
+- create a protected preview rather than altering the public production deployment;
+- repeat both assets and error cases against that exact preview;
+- inspect the preview on desktop, tablet, and narrow mobile;
+- grant the Vercel connection access to the owning team;
+- inspect the active firewall configuration;
+- stage a path-specific `/api/verify` platform rate rule in log mode, review legitimate traffic, and enable it only after separate approval.
+
+No DoraHacks submission or public production change is authorized by this review.
