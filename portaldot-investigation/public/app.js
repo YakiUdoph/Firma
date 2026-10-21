@@ -9,7 +9,7 @@ const verdictSummary = document.querySelector("#verdict-summary");
 const evidenceJson = document.querySelector("#evidence-json");
 let latestReport = null;
 
-const LABEL = { PASS: "Passed", FAIL: "Failed", UNKNOWN: "Couldn't Verify" };
+const LABEL = { PASS: "Passed", FAIL: "Failed", UNKNOWN: "Couldn't verify" };
 
 function contextItem(label, value, title = value) {
   const wrapper = document.createElement("div");
@@ -46,7 +46,12 @@ function render(report) {
     row.dataset.status = item.status;
     const badge = document.createElement("div");
     badge.className = "badge";
-    badge.textContent = LABEL[item.status];
+    const statusLabel = document.createElement("span");
+    statusLabel.textContent = LABEL[item.status];
+    const statusCode = document.createElement("span");
+    statusCode.className = "status-code";
+    statusCode.textContent = item.status;
+    badge.append(statusLabel, statusCode);
     const body = document.createElement("div");
     const title = document.createElement("h3");
     title.textContent = item.title;
@@ -58,12 +63,15 @@ function render(report) {
   }));
   evidenceJson.textContent = JSON.stringify(report, null, 2);
   result.scrollIntoView({ behavior: "smooth", block: "start" });
+  verdictTitle.setAttribute("tabindex", "-1");
+  verdictTitle.focus({ preventScroll: true });
 }
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   errorBox.hidden = true;
   button.disabled = true;
+  form.setAttribute("aria-busy", "true");
   button.firstElementChild.textContent = "Reading finalized state…";
   try {
     const response = await fetch("/api/verify", {
@@ -79,6 +87,7 @@ form.addEventListener("submit", async (event) => {
     errorBox.hidden = false;
   } finally {
     button.disabled = false;
+    form.removeAttribute("aria-busy");
     button.firstElementChild.textContent = "Run read-only verification";
   }
 });
