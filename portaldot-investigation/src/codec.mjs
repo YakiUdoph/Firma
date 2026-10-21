@@ -35,7 +35,6 @@ export function compactError(error) {
     name: String(error.name ?? "Error"),
     message: String(error.message ?? error),
     code: error.code ?? undefined,
-    stack: typeof error.stack === "string" ? error.stack.split("\n").slice(0, 6) : undefined,
   };
 }
 

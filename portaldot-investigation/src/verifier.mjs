@@ -66,26 +66,42 @@ async function collectSubstrate(options) {
   try {
     api = await withTimeout(ApiPromise.create({ provider, throwOnConnect: true, noInitWarn: true }), options.timeoutMs, "Substrate connection");
     const finalizedHash = await withTimeout(api.rpc.chain.getFinalizedHead(), options.timeoutMs, "Finalized-head query");
-    const [header, chain, nodeName, nodeVersion, properties, runtimeVersion, metadata] = await Promise.all([
+    const [header, chain, nodeName, nodeVersion, properties, runtimeVersion, metadata] = await withTimeout(Promise.all([
       api.rpc.chain.getHeader(finalizedHash), api.rpc.system.chain(), api.rpc.system.name(), api.rpc.system.version(),
       api.rpc.system.properties(), api.rpc.state.getRuntimeVersion(finalizedHash), api.rpc.state.getMetadata(finalizedHash),
-    ]);
+    ]), options.timeoutMs, "Substrate identity and metadata queries");
     const apiAt = await withTimeout(api.at(finalizedHash), options.timeoutMs, "Historic runtime decoration");
     const pallets = metadata.asLatest.pallets.map((pallet) => pallet.name.toString().toLowerCase());
-    const assetOption = await apiAt.query.assets.asset(options.assetId);
+    if (!apiAt.query.assets?.asset || !apiAt.query.assets?.metadata || !apiAt.query.assets?.account || !apiAt.query.revive?.originalAccount) {
+      return {
+        reachable: true,
+        endpoint: options.substrateEndpoint,
+        identity: { chain: chain.toString(), nodeName: nodeName.toString(), nodeVersion: nodeVersion.toString(), properties: properties.toJSON() },
+        finalized: { number: header.number.toString(), hash: finalizedHash.toHex() },
+        runtime: {
+          specName: runtimeVersion.specName.toString(), specVersion: runtimeVersion.specVersion.toString(),
+          transactionVersion: runtimeVersion.transactionVersion.toString(), metadataVersion: metadata.version,
+          metadataSha256: createHash("sha256").update(Buffer.from(metadata.toHex().slice(2), "hex")).digest("hex"), pallets,
+        },
+        asset: { exists: false, unsupportedRuntime: true },
+        accountMapping: { exists: false, unsupportedRuntime: true },
+        balance: { exists: false, value: null },
+      };
+    }
+    const assetOption = await withTimeout(apiAt.query.assets.asset(options.assetId), options.timeoutMs, "Native asset query");
     const assetExists = assetOption.isSome;
     const asset = assetExists ? assetOption.unwrap() : null;
     const metadataKey = apiAt.query.assets.metadata.key(options.assetId);
-    const metadataExists = await storageExists(api, metadataKey, finalizedHash);
-    const nativeMetadata = await apiAt.query.assets.metadata(options.assetId);
-    const mappingOption = await apiAt.query.revive.originalAccount(options.account);
+    const metadataExists = await withTimeout(storageExists(api, metadataKey, finalizedHash), options.timeoutMs, "Native metadata-presence query");
+    const nativeMetadata = await withTimeout(apiAt.query.assets.metadata(options.assetId), options.timeoutMs, "Native metadata query");
+    const mappingOption = await withTimeout(apiAt.query.revive.originalAccount(options.account), options.timeoutMs, "Revive account-mapping query");
     const mappingExists = mappingOption.isSome;
     const accountId = mappingExists ? mappingOption.unwrap().toString() : null;
     let balance = { exists: false, value: null };
     let accountStorageKey = null;
     if (assetExists && accountId) {
       accountStorageKey = apiAt.query.assets.account.key(options.assetId, accountId);
-      const entry = await apiAt.query.assets.account(options.assetId, accountId);
+      const entry = await withTimeout(apiAt.query.assets.account(options.assetId, accountId), options.timeoutMs, "Native account-balance query");
       const exists = entry.isSome;
       balance = { exists, value: exists ? entry.unwrap().balance.toString() : "0", storageKey: accountStorageKey };
     }
@@ -98,7 +114,7 @@ async function collectSubstrate(options) {
       runtime: {
         specName: runtimeVersion.specName.toString(), specVersion: runtimeVersion.specVersion.toString(),
         transactionVersion: runtimeVersion.transactionVersion.toString(), metadataVersion: metadata.version,
-        metadataSha256: createHash("sha256").update(metadataHex).digest("hex"), pallets,
+        metadataSha256: createHash("sha256").update(Buffer.from(metadataHex.slice(2), "hex")).digest("hex"), pallets,
       },
       asset: {
         exists: assetExists, id: options.assetId, storageKey: apiAt.query.assets.asset.key(options.assetId),
@@ -116,8 +132,8 @@ async function collectSubstrate(options) {
   } catch (error) {
     return { reachable: false, endpoint: options.substrateEndpoint, error: compactError(error) };
   } finally {
-    if (api) await api.disconnect().catch(() => {});
-    else await provider.disconnect().catch(() => {});
+    if (api) await withTimeout(api.disconnect(), 2_000, "Substrate disconnect").catch(() => {});
+    else await withTimeout(provider.disconnect(), 2_000, "Substrate provider disconnect").catch(() => {});
   }
 }
 

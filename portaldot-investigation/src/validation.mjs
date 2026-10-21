@@ -8,6 +8,13 @@ export class InputError extends Error {
   }
 }
 
+export function parseRequestBody(value) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new InputError("Request body must be a JSON object.");
+  }
+  return value;
+}
+
 export function parseAssetId(value) {
   if (!/^(0|[1-9][0-9]*)$/.test(String(value))) {
     throw new InputError("Asset ID must be an unsigned base-10 integer.");

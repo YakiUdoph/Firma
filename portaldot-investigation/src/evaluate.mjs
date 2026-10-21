@@ -48,12 +48,13 @@ export function evaluateSnapshot(snapshot) {
       { expected: snapshot.input.expectedChainId, actual: evm.identity.chainId }));
   } else checks.push(unavailable("identity.chainId", "Expected EVM chain ID", "No chain ID response was available."));
 
+  let runtimeSupported = false;
   if (substrate?.runtime) {
     const pallets = substrate.runtime.pallets ?? [];
     const missing = REQUIRED_PALLETS.filter((name) => !pallets.includes(name));
-    const supported = substrate.runtime.specName === "portaldot-v3" && missing.length === 0;
-    checks.push(check("runtime.support", "Runtime support", supported ? STATUS.PASS : STATUS.UNKNOWN,
-      supported ? `Runtime ${substrate.runtime.specName}/${substrate.runtime.specVersion} exposes Assets and Revive.` : "This runtime is not in FIRMA's verified support envelope.",
+    runtimeSupported = substrate.runtime.specName === "portaldot-v3" && missing.length === 0;
+    checks.push(check("runtime.support", "Runtime support", runtimeSupported ? STATUS.PASS : STATUS.UNKNOWN,
+      runtimeSupported ? `Runtime ${substrate.runtime.specName}/${substrate.runtime.specVersion} exposes Assets and Revive.` : "This runtime is not in FIRMA's verified support envelope.",
       { ...substrate.runtime, missingPallets: missing }));
   } else checks.push(unavailable("runtime.support", "Runtime support", "Runtime metadata was unavailable."));
 
@@ -62,7 +63,12 @@ export function evaluateSnapshot(snapshot) {
     sameBlock ? `Both reads are pinned to finalized block ${substrate.finalized.number}.` : "The EVM endpoint could not serve the finalized Substrate block; parity was not evaluated across different blocks.",
     { substrate: substrate?.finalized ?? null, evm: evm?.block ?? null }));
 
-  if (!substrate?.asset?.exists) {
+  if (!runtimeSupported) {
+    checks.push(unavailable("asset.supply", "Total supply parity", "Parity is suppressed because this runtime is outside FIRMA's verified support envelope."));
+    checks.push(unavailable("account.mapping", "Runtime account mapping", "Mapping interpretation is suppressed for an unsupported runtime."));
+    checks.push(unavailable("asset.balance", "Account balance parity", "Balance parity is suppressed for an unsupported runtime."));
+    checks.push(unavailable("asset.metadata", "Metadata parity", "Metadata parity is suppressed for an unsupported runtime."));
+  } else if (!substrate?.asset?.exists) {
     checks.push(unavailable("asset.supply", "Total supply parity", "The native asset does not exist or could not be read."));
     checks.push(unavailable("account.mapping", "Runtime account mapping", "Account mapping could not be evaluated without native asset evidence."));
     checks.push(unavailable("asset.balance", "Account balance parity", "Balance parity could not be evaluated."));

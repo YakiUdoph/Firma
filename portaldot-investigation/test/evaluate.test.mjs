@@ -48,6 +48,8 @@ test("wrong chain ID is a confirmed failure", () => {
 test("unsupported runtime is unknown", () => {
   const result = evaluateSnapshot(matchingSnapshot({ substrate: { runtime: { specName: "other-chain", specVersion: "1", pallets: ["assets"] } } }));
   assert.equal(byId(result, "runtime.support").status, "UNKNOWN");
+  assert.equal(byId(result, "asset.supply").status, "UNKNOWN");
+  assert.equal(byId(result, "asset.balance").status, "UNKNOWN");
   assert.equal(result.overall, "UNKNOWN");
 });
 

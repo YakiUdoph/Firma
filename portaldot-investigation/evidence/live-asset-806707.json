@@ -11,8 +11,8 @@
       "eth_call"
     ]
   },
-  "startedAt": "2026-10-20T18:31:10.614Z",
-  "completedAt": "2026-10-20T18:31:25.436Z",
+  "startedAt": "2026-10-20T18:53:23.283Z",
+  "completedAt": "2026-10-20T18:53:36.471Z",
   "input": {
     "expectedChainId": "420420777",
     "assetId": "806707",
@@ -78,7 +78,7 @@
           "specVersion": "3002",
           "transactionVersion": "2",
           "metadataVersion": 14,
-          "metadataSha256": "23aff2a611bb0b5fbfebd32ac1dc7601ba2fd12c4c10ec332e5c31dac2b75d3e",
+          "metadataSha256": "b364fc364072f77549c5746c63eedc7a6d65ce2d35e78e9c554454a4e8bb8a52",
           "pallets": [
             "system",
             "utility",
@@ -157,16 +157,16 @@
         "id": "context.block",
         "title": "Shared block context",
         "status": "PASS",
-        "summary": "Both reads are pinned to finalized block 120878.",
+        "summary": "Both reads are pinned to finalized block 121099.",
         "evidence": {
           "substrate": {
-            "number": "120878",
-            "hash": "0x7168f33a7125497f1390997bb77a776a36e17ad2294a95e8fe9aeeb75f4859cb"
+            "number": "121099",
+            "hash": "0xe95c37a31493ae2aaf79acd5aa67d46a795312b05d557c9404f9fd134edb9cb8"
           },
           "evm": {
-            "number": "120878",
-            "hash": "0x55f845308aa13d2ae0080340e12f4d7e8d89c487a607b42154fa1846f62814ed",
-            "requestedTag": "0x1d82e",
+            "number": "121099",
+            "hash": "0x882026f9a8950e8b4a61bd0cd1ef5a9bf1b3663f882d776c27235fc2338b0dc6",
+            "requestedTag": "0x1d90b",
             "available": true
           }
         }
@@ -200,8 +200,8 @@
         "status": "PASS",
         "summary": "Native and EVM account balances match exactly.",
         "evidence": {
-          "native": "999997495",
-          "evm": "999997495",
+          "native": "999997490",
+          "evm": "999997490",
           "unit": "base units"
         }
       },
@@ -226,8 +226,8 @@
             },
             "balanceOf": {
               "ok": true,
-              "value": "999997495",
-              "raw": "0x000000000000000000000000000000000000000000000000000000003b9ac037"
+              "value": "999997490",
+              "raw": "0x000000000000000000000000000000000000000000000000000000003b9ac032"
             },
             "name": {
               "ok": false,
@@ -235,15 +235,7 @@
               "error": {
                 "name": "RpcError",
                 "message": "eth_call: execution reverted: revert: Metadata not found",
-                "code": 3,
-                "stack": [
-                  "RpcError: eth_call: execution reverted: revert: Metadata not found",
-                  "    at EvmRpcClient.call (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/rpc.mjs:49:31)",
-                  "    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)",
-                  "    at async readEvmCall (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:17:17)",
-                  "    at async collectEvm (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:47:13)",
-                  "    at async verify (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:128:15)"
-                ]
+                "code": 3
               },
               "rpcError": {
                 "code": 3,
@@ -257,15 +249,7 @@
               "error": {
                 "name": "RpcError",
                 "message": "eth_call: execution reverted: revert: Metadata not found",
-                "code": 3,
-                "stack": [
-                  "RpcError: eth_call: execution reverted: revert: Metadata not found",
-                  "    at EvmRpcClient.call (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/rpc.mjs:49:31)",
-                  "    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)",
-                  "    at async readEvmCall (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:17:17)",
-                  "    at async collectEvm (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:48:15)",
-                  "    at async verify (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:128:15)"
-                ]
+                "code": 3
               },
               "rpcError": {
                 "code": 3,
@@ -279,15 +263,7 @@
               "error": {
                 "name": "RpcError",
                 "message": "eth_call: execution reverted: revert: Metadata not found",
-                "code": 3,
-                "stack": [
-                  "RpcError: eth_call: execution reverted: revert: Metadata not found",
-                  "    at EvmRpcClient.call (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/rpc.mjs:49:31)",
-                  "    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)",
-                  "    at async readEvmCall (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:17:17)",
-                  "    at async collectEvm (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:49:17)",
-                  "    at async verify (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:128:15)"
-                ]
+                "code": 3
               },
               "rpcError": {
                 "code": 3,
@@ -329,15 +305,15 @@
         }
       },
       "finalized": {
-        "number": "120878",
-        "hash": "0x7168f33a7125497f1390997bb77a776a36e17ad2294a95e8fe9aeeb75f4859cb"
+        "number": "121099",
+        "hash": "0xe95c37a31493ae2aaf79acd5aa67d46a795312b05d557c9404f9fd134edb9cb8"
       },
       "runtime": {
         "specName": "portaldot-v3",
         "specVersion": "3002",
         "transactionVersion": "2",
         "metadataVersion": 14,
-        "metadataSha256": "23aff2a611bb0b5fbfebd32ac1dc7601ba2fd12c4c10ec332e5c31dac2b75d3e",
+        "metadataSha256": "b364fc364072f77549c5746c63eedc7a6d65ce2d35e78e9c554454a4e8bb8a52",
         "pallets": [
           "system",
           "utility",
@@ -431,7 +407,7 @@
       },
       "balance": {
         "exists": true,
-        "value": "999997495",
+        "value": "999997490",
         "storageKey": "0x682a59d51ab9e48a8c8cc418ff9708d2b99d880ec681799c0cf30e8886371da9a167209685837364d7fad45f0c59bc2b334f0c00cc5c3d2aebd7aa42bc3b834427fa216d80270a11d7b2e2b8b2dfb1ca3a45ab3b3f2339613709108c72f04074a8048467"
       }
     },
@@ -444,9 +420,9 @@
         "clientVersion": "eth-rpc/main-fddd431/x86_64-unknown-linux-gnu/rustc1.98.0"
       },
       "block": {
-        "number": "120878",
-        "hash": "0x55f845308aa13d2ae0080340e12f4d7e8d89c487a607b42154fa1846f62814ed",
-        "requestedTag": "0x1d82e",
+        "number": "121099",
+        "hash": "0x882026f9a8950e8b4a61bd0cd1ef5a9bf1b3663f882d776c27235fc2338b0dc6",
+        "requestedTag": "0x1d90b",
         "available": true
       },
       "calls": {
@@ -457,8 +433,8 @@
         },
         "balanceOf": {
           "ok": true,
-          "value": "999997495",
-          "raw": "0x000000000000000000000000000000000000000000000000000000003b9ac037"
+          "value": "999997490",
+          "raw": "0x000000000000000000000000000000000000000000000000000000003b9ac032"
         },
         "name": {
           "ok": false,
@@ -466,15 +442,7 @@
           "error": {
             "name": "RpcError",
             "message": "eth_call: execution reverted: revert: Metadata not found",
-            "code": 3,
-            "stack": [
-              "RpcError: eth_call: execution reverted: revert: Metadata not found",
-              "    at EvmRpcClient.call (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/rpc.mjs:49:31)",
-              "    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)",
-              "    at async readEvmCall (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:17:17)",
-              "    at async collectEvm (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:47:13)",
-              "    at async verify (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:128:15)"
-            ]
+            "code": 3
           },
           "rpcError": {
             "code": 3,
@@ -488,15 +456,7 @@
           "error": {
             "name": "RpcError",
             "message": "eth_call: execution reverted: revert: Metadata not found",
-            "code": 3,
-            "stack": [
-              "RpcError: eth_call: execution reverted: revert: Metadata not found",
-              "    at EvmRpcClient.call (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/rpc.mjs:49:31)",
-              "    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)",
-              "    at async readEvmCall (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:17:17)",
-              "    at async collectEvm (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:48:15)",
-              "    at async verify (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:128:15)"
-            ]
+            "code": 3
           },
           "rpcError": {
             "code": 3,
@@ -510,15 +470,7 @@
           "error": {
             "name": "RpcError",
             "message": "eth_call: execution reverted: revert: Metadata not found",
-            "code": 3,
-            "stack": [
-              "RpcError: eth_call: execution reverted: revert: Metadata not found",
-              "    at EvmRpcClient.call (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/rpc.mjs:49:31)",
-              "    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)",
-              "    at async readEvmCall (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:17:17)",
-              "    at async collectEvm (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:49:17)",
-              "    at async verify (file:///C:/Users/PC/Desktop/PROJECTS/Firma/Firma-1/portaldot-investigation/src/verifier.mjs:128:15)"
-            ]
+            "code": 3
           },
           "rpcError": {
             "code": 3,
@@ -529,7 +481,7 @@
       },
       "requests": [
         {
-          "startedAt": "2026-10-20T18:31:21.219Z",
+          "startedAt": "2026-10-20T18:53:32.528Z",
           "attempt": 0,
           "request": {
             "jsonrpc": "2.0",
@@ -545,7 +497,7 @@
           }
         },
         {
-          "startedAt": "2026-10-20T18:31:21.225Z",
+          "startedAt": "2026-10-20T18:53:32.533Z",
           "attempt": 0,
           "request": {
             "jsonrpc": "2.0",
@@ -561,14 +513,14 @@
           }
         },
         {
-          "startedAt": "2026-10-20T18:31:22.488Z",
+          "startedAt": "2026-10-20T18:53:33.781Z",
           "attempt": 0,
           "request": {
             "jsonrpc": "2.0",
             "id": 3,
             "method": "eth_getBlockByNumber",
             "params": [
-              "0x1d82e",
+              "0x1d90b",
               false
             ]
           },
@@ -577,25 +529,25 @@
             "jsonrpc": "2.0",
             "id": 3,
             "result": {
-              "baseFeePerGas": "0x905b",
+              "baseFeePerGas": "0x9047",
               "blobGasUsed": "0x0",
               "difficulty": "0x0",
               "excessBlobGas": "0x0",
               "extraData": "0x",
               "gasLimit": "0xffffffffffffffff",
               "gasUsed": "0x0",
-              "hash": "0x55f845308aa13d2ae0080340e12f4d7e8d89c487a607b42154fa1846f62814ed",
+              "hash": "0x882026f9a8950e8b4a61bd0cd1ef5a9bf1b3663f882d776c27235fc2338b0dc6",
               "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
               "miner": "0x9234511ee6f98f944b846d19d4013a81f93bd5f9",
               "mixHash": "0x0000000000000000000000000000000000000000000000000008e1bc9bf04000",
               "nonce": "0x0000000000000000",
-              "number": "0x1d82e",
-              "parentHash": "0xbf381e492176a96984dfbc352213d31b36b06b669266a3ef1e7612bfb3e5e2c9",
+              "number": "0x1d90b",
+              "parentHash": "0xc230c3251edaa8c64c7ff917035008498703ea24f7ae6ad48a726630ad9ddd17",
               "receiptsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
               "sha3Uncles": "0x0000000000000000000000000000000000000000000000000000000000000000",
               "size": "0x0",
               "stateRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
-              "timestamp": "0x6ad7b364",
+              "timestamp": "0x6ad7b898",
               "transactions": [],
               "transactionsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
               "uncles": [],
@@ -605,7 +557,7 @@
           }
         },
         {
-          "startedAt": "2026-10-20T18:31:23.400Z",
+          "startedAt": "2026-10-20T18:53:34.219Z",
           "attempt": 0,
           "request": {
             "jsonrpc": "2.0",
@@ -616,7 +568,7 @@
                 "to": "0x000c4f3300000000000000000000000000010000",
                 "data": "0x18160ddd"
               },
-              "0x1d82e"
+              "0x1d90b"
             ]
           },
           "httpStatus": 200,
@@ -627,7 +579,7 @@
           }
         },
         {
-          "startedAt": "2026-10-20T18:31:23.800Z",
+          "startedAt": "2026-10-20T18:53:34.624Z",
           "attempt": 0,
           "request": {
             "jsonrpc": "2.0",
@@ -638,18 +590,18 @@
                 "to": "0x000c4f3300000000000000000000000000010000",
                 "data": "0x70a0823100000000000000000000000081ed1dfbec067703fdca3daa7efcbeff4ba101ec"
               },
-              "0x1d82e"
+              "0x1d90b"
             ]
           },
           "httpStatus": 200,
           "response": {
             "jsonrpc": "2.0",
             "id": 5,
-            "result": "0x000000000000000000000000000000000000000000000000000000003b9ac037"
+            "result": "0x000000000000000000000000000000000000000000000000000000003b9ac032"
           }
         },
         {
-          "startedAt": "2026-10-20T18:31:24.189Z",
+          "startedAt": "2026-10-20T18:53:35.046Z",
           "attempt": 0,
           "request": {
             "jsonrpc": "2.0",
@@ -660,7 +612,7 @@
                 "to": "0x000c4f3300000000000000000000000000010000",
                 "data": "0x06fdde03"
               },
-              "0x1d82e"
+              "0x1d90b"
             ]
           },
           "httpStatus": 200,
@@ -675,7 +627,7 @@
           }
         },
         {
-          "startedAt": "2026-10-20T18:31:24.619Z",
+          "startedAt": "2026-10-20T18:53:35.543Z",
           "attempt": 0,
           "request": {
             "jsonrpc": "2.0",
@@ -686,7 +638,7 @@
                 "to": "0x000c4f3300000000000000000000000000010000",
                 "data": "0x95d89b41"
               },
-              "0x1d82e"
+              "0x1d90b"
             ]
           },
           "httpStatus": 200,
@@ -701,7 +653,7 @@
           }
         },
         {
-          "startedAt": "2026-10-20T18:31:25.052Z",
+          "startedAt": "2026-10-20T18:53:35.955Z",
           "attempt": 0,
           "request": {
             "jsonrpc": "2.0",
@@ -712,7 +664,7 @@
                 "to": "0x000c4f3300000000000000000000000000010000",
                 "data": "0x313ce567"
               },
-              "0x1d82e"
+              "0x1d90b"
             ]
           },
           "httpStatus": 200,

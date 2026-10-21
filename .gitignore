@@ -1,5 +1,7 @@
 node_modules/
 portaldot-investigation/evidence/ci-live.json
+portaldot-investigation/dist/
+portaldot-investigation/.vercel/
 npm-debug.log*
 .DS_Store
 

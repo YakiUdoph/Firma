@@ -4,14 +4,16 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
-import { DEFAULTS } from "./src/constants.mjs";
+import { configuredDefaults } from "./src/config.mjs";
+import { BoundedRateLimiter } from "./src/limiter.mjs";
 import { verify } from "./src/verifier.mjs";
-import { InputError } from "./src/validation.mjs";
+import { InputError, parseRequestBody } from "./src/validation.mjs";
 
 const root = fileURLToPath(new URL("./public/", import.meta.url));
 const port = Number(process.env.PORT ?? 4173);
 const active = new Set();
-const recent = new Map();
+let globalActive = 0;
+const limiter = new BoundedRateLimiter();
 const MIME = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml" };
 
 function sendJson(response, status, body) {
@@ -23,16 +25,9 @@ function clientKey(request) {
   return request.socket.remoteAddress ?? "local";
 }
 
-function allowed(key) {
-  const now = Date.now();
-  const timestamps = (recent.get(key) ?? []).filter((value) => now - value < 60_000);
-  if (timestamps.length >= 5) return false;
-  timestamps.push(now);
-  recent.set(key, timestamps);
-  return true;
-}
-
 async function readBody(request) {
+  const declared = Number(request.headers["content-length"] ?? 0);
+  if (Number.isFinite(declared) && declared > 8_192) throw new InputError("Request body exceeds 8 KiB.");
   const chunks = [];
   let size = 0;
   for await (const chunk of request) {
@@ -48,17 +43,31 @@ const server = createServer(async (request, response) => {
   response.setHeader("content-security-policy", "default-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; frame-ancestors 'none'");
   if (request.method === "POST" && request.url === "/api/verify") {
     const key = clientKey(request);
-    if (!allowed(key)) return sendJson(response, 429, { error: "Rate limit exceeded. Try again in one minute." });
+    const rate = limiter.consume(key);
+    if (!rate.allowed) {
+      response.setHeader("retry-after", String(rate.retryAfterSeconds));
+      return sendJson(response, 429, { error: "Too many verification requests. Please wait and try again." });
+    }
     if (active.has(key)) return sendJson(response, 429, { error: "A verification is already running for this client." });
+    if (globalActive >= 4) return sendJson(response, 503, { error: "The verifier is busy. Please try again shortly." });
     active.add(key);
+    globalActive += 1;
     try {
-      const body = await readBody(request);
-      const report = await verify({ ...DEFAULTS, assetId: body.assetId, account: body.account });
+      const body = parseRequestBody(await readBody(request));
+      const defaults = configuredDefaults();
+      const report = await verify({
+        ...defaults,
+        assetId: body.assetId ?? defaults.assetId,
+        account: body.account ?? defaults.account,
+      });
       return sendJson(response, 200, report);
     } catch (error) {
-      return sendJson(response, error instanceof InputError || error instanceof SyntaxError ? 400 : 500, { error: error.message ?? "Verification failed." });
+      const expected = error instanceof InputError || error instanceof SyntaxError;
+      if (!expected) console.error("Verification request failed", { name: error?.name, message: error?.message });
+      return sendJson(response, expected ? 400 : 500, { error: expected ? error.message : "Verification failed unexpectedly." });
     } finally {
       active.delete(key);
+      globalActive -= 1;
     }
   }
   if (request.method !== "GET" && request.method !== "HEAD") return sendJson(response, 405, { error: "Method not allowed." });
@@ -79,4 +88,9 @@ server.listen(port, "127.0.0.1", () => {
   console.log(`FIRMA is available at http://127.0.0.1:${port}`);
   console.log("Read-only verifier; endpoints are fixed by server configuration.");
 });
+
+server.requestTimeout = 20_000;
+server.headersTimeout = 10_000;
+server.keepAliveTimeout = 5_000;
+server.maxRequestsPerSocket = 100;
 

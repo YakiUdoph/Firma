@@ -11,8 +11,8 @@
       "eth_call"
     ]
   },
-  "startedAt": "2026-10-20T18:30:39.461Z",
-  "completedAt": "2026-10-20T18:30:52.595Z",
+  "startedAt": "2026-10-20T18:53:03.952Z",
+  "completedAt": "2026-10-20T18:53:18.344Z",
   "input": {
     "expectedChainId": "420420777",
     "assetId": "2",
@@ -78,7 +78,7 @@
           "specVersion": "3002",
           "transactionVersion": "2",
           "metadataVersion": 14,
-          "metadataSha256": "d0c4d743a126e7abac75a68eafc74437e8332756d0b9f8753cad825405d3d21d",
+          "metadataSha256": "b364fc364072f77549c5746c63eedc7a6d65ce2d35e78e9c554454a4e8bb8a52",
           "pallets": [
             "system",
             "utility",
@@ -157,16 +157,16 @@
         "id": "context.block",
         "title": "Shared block context",
         "status": "PASS",
-        "summary": "Both reads are pinned to finalized block 120873.",
+        "summary": "Both reads are pinned to finalized block 121096.",
         "evidence": {
           "substrate": {
-            "number": "120873",
-            "hash": "0x76d7c4d6f7006233604f3f256f3390e3a632ff2600e97fe13181c99e59d2fba8"
+            "number": "121096",
+            "hash": "0xa84e7a52830c9c469c2e01f8c029ebe2ff5818d8ab9bda13412fc6d47601fab8"
           },
           "evm": {
-            "number": "120873",
-            "hash": "0x7ef2e91c7a84cb2e543ca12c312744bf8b691e7bf3deb852dddd1901ff7393f6",
-            "requestedTag": "0x1d829",
+            "number": "121096",
+            "hash": "0x97e7794f0755fedbd3f7fd8f5f899f701485b3c2a8eaa4487a4f19c65fa6fd28",
+            "requestedTag": "0x1d908",
             "available": true
           }
         }
@@ -278,15 +278,15 @@
         }
       },
       "finalized": {
-        "number": "120873",
-        "hash": "0x76d7c4d6f7006233604f3f256f3390e3a632ff2600e97fe13181c99e59d2fba8"
+        "number": "121096",
+        "hash": "0xa84e7a52830c9c469c2e01f8c029ebe2ff5818d8ab9bda13412fc6d47601fab8"
       },
       "runtime": {
         "specName": "portaldot-v3",
         "specVersion": "3002",
         "transactionVersion": "2",
         "metadataVersion": 14,
-        "metadataSha256": "d0c4d743a126e7abac75a68eafc74437e8332756d0b9f8753cad825405d3d21d",
+        "metadataSha256": "b364fc364072f77549c5746c63eedc7a6d65ce2d35e78e9c554454a4e8bb8a52",
         "pallets": [
           "system",
           "utility",
@@ -393,9 +393,9 @@
         "clientVersion": "eth-rpc/main-fddd431/x86_64-unknown-linux-gnu/rustc1.98.0"
       },
       "block": {
-        "number": "120873",
-        "hash": "0x7ef2e91c7a84cb2e543ca12c312744bf8b691e7bf3deb852dddd1901ff7393f6",
-        "requestedTag": "0x1d829",
+        "number": "121096",
+        "hash": "0x97e7794f0755fedbd3f7fd8f5f899f701485b3c2a8eaa4487a4f19c65fa6fd28",
+        "requestedTag": "0x1d908",
         "available": true
       },
       "calls": {
@@ -427,23 +427,7 @@
       },
       "requests": [
         {
-          "startedAt": "2026-10-20T18:30:48.402Z",
-          "attempt": 0,
-          "request": {
-            "jsonrpc": "2.0",
-            "id": 2,
-            "method": "web3_clientVersion",
-            "params": []
-          },
-          "httpStatus": 200,
-          "response": {
-            "jsonrpc": "2.0",
-            "id": 2,
-            "result": "eth-rpc/main-fddd431/x86_64-unknown-linux-gnu/rustc1.98.0"
-          }
-        },
-        {
-          "startedAt": "2026-10-20T18:30:48.396Z",
+          "startedAt": "2026-10-20T18:53:12.946Z",
           "attempt": 0,
           "request": {
             "jsonrpc": "2.0",
@@ -459,14 +443,30 @@
           }
         },
         {
-          "startedAt": "2026-10-20T18:30:49.705Z",
+          "startedAt": "2026-10-20T18:53:12.961Z",
+          "attempt": 0,
+          "request": {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "web3_clientVersion",
+            "params": []
+          },
+          "httpStatus": 200,
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "result": "eth-rpc/main-fddd431/x86_64-unknown-linux-gnu/rustc1.98.0"
+          }
+        },
+        {
+          "startedAt": "2026-10-20T18:53:15.670Z",
           "attempt": 0,
           "request": {
             "jsonrpc": "2.0",
             "id": 3,
             "method": "eth_getBlockByNumber",
             "params": [
-              "0x1d829",
+              "0x1d908",
               false
             ]
           },
@@ -475,25 +475,25 @@
             "jsonrpc": "2.0",
             "id": 3,
             "result": {
-              "baseFeePerGas": "0x9060",
+              "baseFeePerGas": "0x9047",
               "blobGasUsed": "0x0",
               "difficulty": "0x0",
               "excessBlobGas": "0x0",
               "extraData": "0x",
               "gasLimit": "0xffffffffffffffff",
               "gasUsed": "0x0",
-              "hash": "0x7ef2e91c7a84cb2e543ca12c312744bf8b691e7bf3deb852dddd1901ff7393f6",
+              "hash": "0x97e7794f0755fedbd3f7fd8f5f899f701485b3c2a8eaa4487a4f19c65fa6fd28",
               "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
               "miner": "0x9234511ee6f98f944b846d19d4013a81f93bd5f9",
               "mixHash": "0x0000000000000000000000000000000000000000000000000008e1bc9bf04000",
               "nonce": "0x0000000000000000",
-              "number": "0x1d829",
-              "parentHash": "0xcf74b03cf9f09c72f4166de6890f344cfd927e0f8f1817870ffacffc539f367b",
+              "number": "0x1d908",
+              "parentHash": "0x9a6b47f27cdb7150b4c28b1f7a6f0705ec7600e36f3ffe4550781c0a3a07f978",
               "receiptsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
               "sha3Uncles": "0x0000000000000000000000000000000000000000000000000000000000000000",
               "size": "0x0",
               "stateRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
-              "timestamp": "0x6ad7b346",
+              "timestamp": "0x6ad7b886",
               "transactions": [],
               "transactionsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
               "uncles": [],
@@ -503,7 +503,7 @@
           }
         },
         {
-          "startedAt": "2026-10-20T18:30:50.323Z",
+          "startedAt": "2026-10-20T18:53:16.119Z",
           "attempt": 0,
           "request": {
             "jsonrpc": "2.0",
@@ -514,7 +514,7 @@
                 "to": "0x0000000200000000000000000000000000010000",
                 "data": "0x18160ddd"
               },
-              "0x1d829"
+              "0x1d908"
             ]
           },
           "httpStatus": 200,
@@ -525,7 +525,7 @@
           }
         },
         {
-          "startedAt": "2026-10-20T18:30:50.732Z",
+          "startedAt": "2026-10-20T18:53:16.604Z",
           "attempt": 0,
           "request": {
             "jsonrpc": "2.0",
@@ -536,7 +536,7 @@
                 "to": "0x0000000200000000000000000000000000010000",
                 "data": "0x70a08231000000000000000000000000578f0a6155551b3b7c7ff255ea7dc2b08968e380"
               },
-              "0x1d829"
+              "0x1d908"
             ]
           },
           "httpStatus": 200,
@@ -547,7 +547,7 @@
           }
         },
         {
-          "startedAt": "2026-10-20T18:30:51.245Z",
+          "startedAt": "2026-10-20T18:53:17.092Z",
           "attempt": 0,
           "request": {
             "jsonrpc": "2.0",
@@ -558,7 +558,7 @@
                 "to": "0x0000000200000000000000000000000000010000",
                 "data": "0x06fdde03"
               },
-              "0x1d829"
+              "0x1d908"
             ]
           },
           "httpStatus": 200,
@@ -569,7 +569,7 @@
           }
         },
         {
-          "startedAt": "2026-10-20T18:30:51.674Z",
+          "startedAt": "2026-10-20T18:53:17.503Z",
           "attempt": 0,
           "request": {
             "jsonrpc": "2.0",
@@ -580,7 +580,7 @@
                 "to": "0x0000000200000000000000000000000000010000",
                 "data": "0x95d89b41"
               },
-              "0x1d829"
+              "0x1d908"
             ]
           },
           "httpStatus": 200,
@@ -591,7 +591,7 @@
           }
         },
         {
-          "startedAt": "2026-10-20T18:30:52.165Z",
+          "startedAt": "2026-10-20T18:53:17.938Z",
           "attempt": 0,
           "request": {
             "jsonrpc": "2.0",
@@ -602,7 +602,7 @@
                 "to": "0x0000000200000000000000000000000000010000",
                 "data": "0x313ce567"
               },
-              "0x1d829"
+              "0x1d908"
             ]
           },
           "httpStatus": 200,
