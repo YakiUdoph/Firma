@@ -17,7 +17,7 @@
     "verify": "node bin/firma.mjs",
     "verify:json": "node bin/firma.mjs --json",
     "test": "node --test",
-    "check": "node --check server.mjs && node --check api/verify.mjs && node --check bin/firma.mjs && node --check public/app.js && node --check src/verifier.mjs && node --test",
+    "check": "node --check server.mjs && node --check api/verify.mjs && node --check bin/firma.mjs && node --check public/app.js && node --check public/view-model.js && node --check src/verifier.mjs && node --test",
     "probe:evm": "node evm-probe.mjs",
     "probe:assets": "node evm-asset-probe.mjs",
     "probe:substrate": "node substrate-probe.mjs",

@@ -3,87 +3,173 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="FIRMA verifies native and EVM asset consistency on Portaldot V3 with pinned, read-only evidence.">
-  <title>FIRMA · Portaldot Interop Evidence</title>
+  <meta name="description" content="FIRMA verifies whether Portaldot native and EVM asset observations agree at one finalized block.">
+  <meta name="theme-color" content="#f3f0e7">
+  <title>FIRMA | Portaldot asset verification</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
+  <a class="skip-link" href="#verify">Skip to verification</a>
+
   <header class="site-header">
-    <a class="brand" href="/" aria-label="FIRMA home"><span class="brand-mark">F</span><span>FIRMA</span></a>
-    <div class="mode"><span aria-hidden="true"></span> Read-only mode</div>
+    <a class="brand" href="/" aria-label="FIRMA home">
+      <span class="brand-mark" aria-hidden="true"><span>F</span></span>
+      <span class="brand-name">FIRMA</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="#method">Method</a>
+      <a href="#boundaries">About</a>
+    </nav>
   </header>
 
   <main>
-    <div class="intro-shell">
-      <section class="hero" aria-labelledby="hero-title">
-        <p class="eyebrow">Portaldot V3 · read-only verification</p>
-        <h1 id="hero-title">Does the token agree on <em>both sides?</em></h1>
-        <p class="lede">FIRMA checks whether the same token information agrees across Portaldot’s native and Ethereum-compatible interfaces. It reads both sides at one finalized block and gives you evidence you can inspect or export.</p>
-        <div class="truth-strip" aria-label="FIRMA guarantees">
-          <span>No wallet</span><span>No signature</span><span>No transaction</span><span>Exportable proof</span>
-        </div>
-      </section>
-
-      <section class="workbench" aria-labelledby="verify-title">
-        <div class="workbench-heading">
-          <p class="eyebrow">Try the working verifier</p>
-          <h2 id="verify-title">Check a token now.</h2>
-          <p>Use the known-good example below, or enter another native asset ID and EVM account.</p>
-        </div>
-      <form id="verify-form" novalidate>
-        <label>Native asset ID
-          <input id="asset-id" name="assetId" value="2" inputmode="numeric" pattern="[0-9]+" required aria-describedby="asset-help">
-          <small id="asset-help">The token’s numeric ID</small>
-        </label>
-        <label>EVM account
-          <input id="account" name="account" value="0x578f0a6155551b3b7c7ff255ea7dc2b08968e380" spellcheck="false" required>
-          <small>The 0x account whose balance should be checked</small>
-        </label>
-        <button id="run-button" type="submit"><span>Run read-only verification</span><span aria-hidden="true">↗</span></button>
-      </form>
-      <details class="field-help">
-        <summary>What do these fields mean?</summary>
-        <p>The asset ID identifies an entry in Substrate’s Assets pallet. The EVM account is a 20-byte address that Portaldot maps to a native account through Revive storage.</p>
-      </details>
-      <p id="form-error" class="form-error" role="alert" hidden></p>
-      </section>
-    </div>
-
-    <section id="result" class="result" aria-live="polite" hidden>
-      <div class="result-topline">
-        <div><p class="eyebrow">Verdict</p><h2 id="verdict-title">Waiting</h2></div>
-        <div class="result-actions">
-          <button id="copy-button" class="quiet-button" type="button">Copy JSON</button>
-          <button id="download-button" class="quiet-button" type="button">Export evidence</button>
-        </div>
+    <section id="verify" class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span aria-hidden="true"></span> Portaldot verification workspace</p>
+        <h1 id="hero-title">One asset.<br>Two interfaces.<br><em>One clear answer.</em></h1>
+        <p class="lede">FIRMA checks whether asset data agrees across Portaldot's native and EVM interfaces at the same finalized block. Every conclusion stays attached to evidence you can inspect and export.</p>
+        <ul class="principles" aria-label="Verification principles">
+          <li><span>01</span> Same finalized block</li>
+          <li><span>02</span> Actual RPC observations</li>
+          <li><span>03</span> Exportable JSON evidence</li>
+        </ul>
       </div>
-      <p id="verdict-summary" class="verdict-summary"></p>
-      <p class="evidence-hint">Each row explains one check. Open “Inspect raw evidence” or export the JSON to review the supporting RPC responses.</p>
-      <dl id="context" class="context"></dl>
-      <div id="checks" class="checks"></div>
-      <details class="raw-evidence">
-        <summary>Inspect raw evidence</summary>
-        <pre id="evidence-json"></pre>
-      </details>
+
+      <section class="verifier-card" aria-labelledby="verify-title">
+        <div class="card-kicker"><span>New verification</span><span>Portaldot V3</span></div>
+        <div class="card-heading">
+          <h2 id="verify-title">Verify an asset</h2>
+          <p>Compare supply, account balance, metadata, and runtime-backed account mapping.</p>
+        </div>
+
+        <form id="verify-form" novalidate>
+          <div class="field">
+            <label for="asset-id">Asset ID</label>
+            <input id="asset-id" name="assetId" value="2" inputmode="numeric" pattern="[0-9]+" required aria-describedby="asset-help" autocomplete="off">
+            <small id="asset-help">The numeric ID in Portaldot's native Assets storage.</small>
+          </div>
+          <div class="field">
+            <label for="account">Wallet address</label>
+            <input id="account" name="account" value="0x578f0a6155551b3b7c7ff255ea7dc2b08968e380" spellcheck="false" required aria-describedby="account-help" autocomplete="off">
+            <small id="account-help">A 20-byte 0x address used for the balance comparison.</small>
+          </div>
+          <button id="run-button" class="primary-button" type="submit">
+            <span class="button-label">Verify asset</span>
+            <span class="button-icon" aria-hidden="true">&#8599;</span>
+          </button>
+        </form>
+
+        <div id="progress" class="progress-panel" role="status" aria-live="polite" hidden>
+          <div class="progress-heading">
+            <span class="progress-spinner" aria-hidden="true"></span>
+            <div>
+              <strong>Collecting live evidence</strong>
+              <p id="progress-message">Pinning native and EVM reads to one finalized block.</p>
+            </div>
+          </div>
+          <div class="progress-track" aria-hidden="true"><span></span></div>
+          <p class="progress-note">Public RPC responses can take a few moments. FIRMA will not infer a result while evidence is unavailable.</p>
+        </div>
+
+        <p id="form-error" class="form-error" role="alert" tabindex="-1" hidden></p>
+
+        <details class="field-help">
+          <summary>How FIRMA uses these fields</summary>
+          <p>The asset ID selects native Assets storage and its EVM precompile surface. The wallet address is resolved through Revive's runtime-backed account mapping. FIRMA only performs reads; it cannot connect a wallet, sign, transfer, or submit a transaction.</p>
+        </details>
+      </section>
     </section>
 
-    <section class="method" aria-labelledby="method-title">
-      <div class="method-heading"><p class="eyebrow">How it works</p><h2 id="method-title">One check, four clear steps.</h2><p>FIRMA does not ask you to trust a green badge. It keeps the observations behind every result.</p></div>
-      <ol>
-        <li><strong>Lock one moment</strong><span>Choose one finalized block so timing cannot create a false mismatch.</span></li>
-        <li><strong>Read both sides</strong><span>Collect the token and account information from Portaldot’s native and EVM interfaces.</span></li>
-        <li><strong>Compare exactly</strong><span>Check supply, balance, name, symbol, and decimals without rounding large numbers.</span></li>
-        <li><strong>Explain the answer</strong><span>Show Passed, Failed, or Couldn’t verify and keep the evidence behind every check.</span></li>
+    <section id="result" class="result" aria-labelledby="verdict-title" aria-live="polite" hidden>
+      <div class="result-hero">
+        <div class="verdict-lockup">
+          <p class="eyebrow result-eyebrow">Verification result</p>
+          <div class="verdict-line">
+            <span id="verdict-symbol" class="verdict-symbol" aria-hidden="true"></span>
+            <h2 id="verdict-title">Waiting</h2>
+          </div>
+          <p id="verdict-summary" class="verdict-summary"></p>
+        </div>
+        <div class="result-actions" aria-label="Evidence actions">
+          <button id="copy-button" class="secondary-button" type="button">Copy JSON</button>
+          <button id="download-button" class="secondary-button" type="button">Export evidence</button>
+        </div>
+      </div>
+
+      <div id="verdict-counts" class="verdict-counts" aria-label="Verdict totals"></div>
+
+      <section class="context-panel" aria-labelledby="context-title">
+        <div class="section-heading compact">
+          <div>
+            <p class="section-index">01 / Context</p>
+            <h3 id="context-title">The shared observation point</h3>
+          </div>
+          <p>These values come from this verification response, not a cached product metric.</p>
+        </div>
+        <dl id="context" class="context"></dl>
+      </section>
+
+      <section class="comparison-panel" aria-labelledby="comparison-title">
+        <div class="section-heading">
+          <div>
+            <p class="section-index">02 / Comparisons</p>
+            <h3 id="comparison-title">Evidence checks</h3>
+          </div>
+          <p>Each row preserves the backend's technical <code>PASS</code>, <code>FAIL</code>, or <code>UNKNOWN</code> classification. Open a row's evidence for the underlying observation.</p>
+        </div>
+        <div id="checks" class="checks"></div>
+      </section>
+
+      <section class="evidence-panel" aria-labelledby="evidence-title">
+        <div class="section-heading">
+          <div>
+            <p class="section-index">03 / Evidence</p>
+            <h3 id="evidence-title">Complete verification record</h3>
+          </div>
+          <p>The exported report includes inputs, endpoint observations, runtime identity, block context, checks, and limitations.</p>
+        </div>
+        <details class="raw-evidence">
+          <summary><span>Inspect complete JSON</span><span aria-hidden="true">+</span></summary>
+          <pre id="evidence-json" tabindex="0"></pre>
+        </details>
+      </section>
+    </section>
+
+    <section id="method" class="method" aria-labelledby="method-title">
+      <div class="method-intro">
+        <p class="eyebrow"><span aria-hidden="true"></span> The method</p>
+        <h2 id="method-title">A narrow claim,<br><em>proved carefully.</em></h2>
+        <p>FIRMA is designed around one question. It does not turn missing observations into reassuring answers.</p>
+      </div>
+      <ol class="method-steps">
+        <li><span class="step-number">01</span><div><h3>Lock the moment</h3><p>Select one finalized Substrate block and request that exact height from the EVM endpoint.</p></div></li>
+        <li><span class="step-number">02</span><div><h3>Recognize the runtime</h3><p>Match the reviewed chain and finalized runtime-code fingerprint before interpreting storage.</p></div></li>
+        <li><span class="step-number">03</span><div><h3>Read both interfaces</h3><p>Observe native Assets and Revive storage alongside ERC-20-compatible EVM calls.</p></div></li>
+        <li><span class="step-number">04</span><div><h3>Compare without guessing</h3><p>Return Passed, Failed, or Couldn't verify while retaining the complete evidence record.</p></div></li>
       </ol>
-      <details class="technical-details">
-        <summary>See the technical method</summary>
-        <p>FIRMA fingerprints the live runtime, reads Assets and Revive storage, maps the EVM account to its native account, and calls the ERC-20 surface with <code>eth_call</code> at the same finalized height. Exact base-unit values stay as arbitrary-precision integers. The evidence retains the nine technical <code>PASS</code>, <code>FAIL</code>, or <code>UNKNOWN</code> classifications.</p>
-      </details>
+    </section>
+
+    <section id="boundaries" class="boundaries" aria-labelledby="boundaries-title">
+      <div>
+        <p class="section-index">Scope and safety</p>
+        <h2 id="boundaries-title">Verification, not custody.</h2>
+      </div>
+      <div class="boundary-copy">
+        <p>FIRMA reads public network state. It has no authentication, wallet connection, signing flow, transaction submission, transfer capability, or private-key handling.</p>
+        <details class="technical-details">
+          <summary>Technical scope</summary>
+          <p>The verifier fingerprints the runtime, reads Assets and Revive storage, maps the EVM address to its native account, and performs ERC-20-compatible <code>eth_call</code> reads at the same finalized height. Exact base-unit values remain arbitrary-precision integers. Results describe only the listed observations at that block and are not an audit of write behavior.</p>
+        </details>
+      </div>
     </section>
   </main>
 
-  <footer><span>FIRMA v0.1.0</span><span>Verification is not an audit. No write behavior is claimed.</span></footer>
+  <footer>
+    <a class="brand footer-brand" href="/" aria-label="FIRMA home"><span class="brand-mark" aria-hidden="true"><span>F</span></span><span class="brand-name">FIRMA</span></a>
+    <p>Portaldot V3 cross-interface evidence<br><span>Read-only verification. No transaction behavior is claimed.</span></p>
+    <p class="version">Version 0.1.0</p>
+  </footer>
+
   <script type="module" src="/app.js"></script>
 </body>
 </html>
-

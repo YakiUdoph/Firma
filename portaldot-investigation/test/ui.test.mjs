@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { LABEL, VERDICT_COPY, evidenceFilename, reportContext } from "../public/view-model.js";
 
 const [html, css, client] = await Promise.all([
   readFile(new URL("../public/index.html", import.meta.url), "utf8"),
@@ -8,27 +9,80 @@ const [html, css, client] = await Promise.all([
   readFile(new URL("../public/app.js", import.meta.url), "utf8"),
 ]);
 
-test("the working verifier is presented before the detailed method", () => {
-  assert.ok(html.indexOf('id="verify-form"') > -1);
-  assert.ok(html.indexOf('id="verify-form"') < html.indexOf('class="method"'));
-  assert.match(html, /same token information agrees across Portaldot’s native and Ethereum-compatible interfaces/i);
+test("the page leads with the real verification task and primary action", () => {
+  assert.match(html, /asset data agrees across Portaldot's native and EVM interfaces at the same finalized block/i);
+  assert.ok(html.indexOf('id="verify-form"') < html.indexOf('id="method"'));
+  assert.match(html, /<span class="button-label">Verify asset<\/span>/);
+  assert.match(html, /<label for="asset-id">Asset ID<\/label>/);
+  assert.match(html, /<label for="account">Wallet address<\/label>/);
+  assert.doesNotMatch(html, /READ-ONLY MODE|Run read-only verification/i);
 });
 
-test("advanced terminology is available without leading the main journey", () => {
-  assert.match(html, /<details class="field-help">/);
-  assert.match(html, /<details class="technical-details">/);
-  assert.match(html, /The evidence retains the nine technical/);
+test("scope is transparent without adding wallet or transaction capabilities", () => {
+  assert.match(html, /cannot connect a wallet, sign, transfer, or submit a transaction/i);
+  assert.match(html, /Verification, not custody/i);
+  assert.doesNotMatch(html, /Connect wallet|Sign transaction|Transfer POT/i);
+  assert.match(client, /method: "POST"/);
+  assert.match(client, /fetch\("\/api\/verify"/);
 });
 
-test("human verdict labels retain the evidence status codes", () => {
-  assert.match(client, /PASS: "Passed"/);
-  assert.match(client, /FAIL: "Failed"/);
-  assert.match(client, /UNKNOWN: "Couldn't verify"/);
+test("loading, error, result, and evidence interactions are wired", () => {
+  assert.match(html, /id="progress"[^>]*role="status"[^>]*aria-live="polite"[^>]*hidden/);
+  assert.match(html, /id="form-error"[^>]*role="alert"/);
+  assert.match(client, /function setLoading\(loading\)/);
+  assert.match(client, /progress\.hidden = !loading/);
+  assert.match(client, /button\.disabled = loading/);
+  assert.match(client, /navigator\.clipboard\.writeText/);
+  assert.match(client, /URL\.createObjectURL/);
+  assert.match(client, /evidenceDetails\(item\.evidence\)/);
+});
+
+test("PASS FAIL and UNKNOWN retain distinct language and technical codes", () => {
+  assert.deepEqual(LABEL, { PASS: "Passed", FAIL: "Failed", UNKNOWN: "Couldn't verify" });
+  assert.match(VERDICT_COPY.PASS, /proven/i);
+  assert.match(VERDICT_COPY.FAIL, /mismatch was proven/i);
+  assert.match(VERDICT_COPY.UNKNOWN, /evidence is incomplete/i);
+  assert.doesNotMatch(VERDICT_COPY.UNKNOWN, /\bpassed\b|all required.*proven/i);
   assert.match(client, /statusCode\.textContent = item\.status/);
+  assert.match(css, /\.result\[data-status="UNKNOWN"\]::before/);
+  assert.match(css, /repeating-linear-gradient/);
 });
 
-test("responsive layouts avoid fixed narrow explanation columns", () => {
-  assert.match(css, /\.method ol \{[^}]*repeat\(2, minmax\(0, 1fr\)\)/s);
-  assert.match(css, /@media \(max-width: 520px\)[\s\S]*\.method ol \{ grid-template-columns: 1fr; \}/);
-  assert.doesNotMatch(css, /\.method li \{[^}]*grid-template-columns: 100px 1fr/s);
+test("result context uses only fields supplied by the backend report", () => {
+  const report = {
+    completedAt: "2026-10-22T21:16:52.843Z",
+    evidence: {
+      substrate: {
+        finalized: { number: "151221", hash: "0xsubstrate" },
+        identity: { chain: "PortaldotV3 Test" },
+        runtime: { specName: "portaldot-v3", specVersion: "3002", fingerprint: { runtimeCodeHash: "0xcode" } },
+      },
+      evm: { identity: { chainId: "420420777", chainIdHex: "0x190f1ca9" } },
+    },
+  };
+  const items = reportContext(report);
+  assert.deepEqual(items.map(({ label, value }) => ({ label, value })).slice(0, 4), [
+    { label: "Finalized block", value: "151221" },
+    { label: "Native chain", value: "PortaldotV3 Test" },
+    { label: "Runtime", value: "portaldot-v3/3002" },
+    { label: "EVM chain ID", value: "420420777" },
+  ]);
+  assert.equal(reportContext({})[0].value, "Unavailable");
+});
+
+test("evidence export filenames remain deterministic and sanitized", () => {
+  assert.equal(evidenceFilename({ input: { assetId: "806707" }, completedAt: "2026-10-22T21:16:52.843Z" }), "firma-806707-2026-10-22T21-16-52.843Z.json");
+  assert.equal(evidenceFilename({ input: { assetId: "not-valid" } }), "firma-unknown-undated.json");
+});
+
+test("the workspace provides keyboard and responsive accessibility affordances", () => {
+  assert.match(html, /class="skip-link" href="#verify"/);
+  assert.match(html, /aria-describedby="asset-help"/);
+  assert.match(html, /aria-describedby="account-help"/);
+  assert.match(html, /id="result"[^>]*aria-labelledby="verdict-title"[^>]*aria-live="polite"/);
+  assert.match(css, /:focus-visible/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(css, /@media \(max-width: 980px\)/);
+  assert.match(css, /@media \(max-width: 700px\)/);
+  assert.match(css, /@media \(max-width: 470px\)/);
 });
