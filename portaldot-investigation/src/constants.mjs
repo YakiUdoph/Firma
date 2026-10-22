@@ -21,3 +21,26 @@ export const READ_ONLY_EVM_METHODS = Object.freeze([
 
 export const REQUIRED_PALLETS = Object.freeze(["assets", "revive"]);
 
+export const REQUIRED_QUERY_SURFACES = Object.freeze([
+  "assets.asset",
+  "assets.metadata",
+  "assets.account",
+  "revive.originalAccount",
+]);
+
+export const RUNTIME_CODE_STORAGE_KEY = "0x3a636f6465";
+
+export const PORTALDOT_V3_SUPPORT_PROFILE = Object.freeze({
+  id: "portaldot-v3-3002-edc03c9d",
+  genesisHash: "0xd4f9acbcf7f52388d8b095abe3c198d19fc510e0343e643e87cfbccb155283bd",
+  runtimeCodeHash: "0xedc03c9dc81d39fea5c02893cc34cf2ec898d55d7ee8f8e89eb27597a724c7c2",
+  runtimeCodeHashAlgorithm: "blake2-256",
+  specName: "portaldot-v3",
+  specVersion: "3002",
+  transactionVersion: "2",
+  metadataVersion: 14,
+  evmChainId: "420420777",
+  requiredPallets: REQUIRED_PALLETS,
+  requiredQuerySurfaces: REQUIRED_QUERY_SURFACES,
+});
+

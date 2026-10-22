@@ -10,7 +10,7 @@
 - Public request bodies cannot select RPC endpoints. Endpoint overrides are operator-controlled environment settings and are validated before use.
 - Local and production HTTP adapters limit requests to 8 KiB, cap concurrent work per instance, and apply a bounded five-per-minute client limiter.
 - Exported errors omit stack traces so evidence cannot leak deployment or developer filesystem paths.
-- Unsupported runtimes suppress all parity verdicts instead of displaying misleading individual passes.
+- Runtime support is fail-closed against an exact reviewed chain/runtime profile. Missing, invalid, mismatched, or differently pinned identity evidence suppresses all dependent parity verdicts instead of displaying misleading individual passes.
 - The CLI refuses to overwrite an existing evidence file.
 - Balances and supplies remain decimal strings backed by `BigInt`; JavaScript floating-point numbers are never used for asset arithmetic.
 - The browser renders response text with DOM `textContent`, not HTML injection.
@@ -20,13 +20,13 @@
 - Endpoint honesty, consensus correctness, or cryptographic state proofs.
 - Correctness of transfers, approvals, permits, event emission, gas charging, fees, or dust behavior.
 - Safety of user-provided or third-party RPC infrastructure.
-- Support for runtimes other than the explicitly recognized Portaldot V3 shape.
+- Support for runtimes other than the explicitly recognized Portaldot V3 genesis and runtime-code fingerprint.
 - Absence of unpublished competitors or undisclosed chain behavior.
 
 ## Known design risks
 
 - The Substrate and EVM services could expose different histories even at an equal height. FIRMA records both surface-specific hashes but does not claim they should be identical; they use different block representations.
-- Runtime upgrades can invalidate address, storage, or ABI assumptions. FIRMA records spec/transaction/metadata versions and the metadata SHA-256 to make drift visible.
+- Runtime upgrades can invalidate address, storage, or ABI assumptions. FIRMA gates support on the finalized runtime `:code` hash plus the reviewed identity tuple. It separately records raw metadata SHA-256 as evidence; that digest is not an approval key because an observed Revive fallback varies across block contexts with unchanged runtime code.
 - Public endpoints can rate-limit, prune history, or return transient errors. Those outcomes are `UNKNOWN`.
 - The current account check depends on a pre-existing Revive mapping. Missing mapping is `UNKNOWN`, not evidence of a zero balance or a broken chain.
 - Function-memory rate limits are per instance and per region. A Vercel Firewall rate-limit rule is a required public-launch control, not an optional optimization.

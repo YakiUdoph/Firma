@@ -1,4 +1,4 @@
-import { REQUIRED_PALLETS, STATUS } from "./constants.mjs";
+import { PORTALDOT_V3_SUPPORT_PROFILE, STATUS } from "./constants.mjs";
 
 const check = (id, title, status, summary, evidence = {}) => ({ id, title, status, summary, evidence });
 const unavailable = (id, title, summary, evidence = {}) => check(id, title, STATUS.UNKNOWN, summary, evidence);
@@ -29,6 +29,30 @@ function metadataOutcome(nativeMetadata, evmCalls) {
     : [STATUS.PASS, "Name, symbol, and decimals match exactly across both surfaces."];
 }
 
+function runtimeProfileMismatches(substrate, evm) {
+  const runtime = substrate?.runtime;
+  const fingerprint = runtime?.fingerprint;
+  const profile = PORTALDOT_V3_SUPPORT_PROFILE;
+  const mismatches = [];
+  const exactFields = ["specName", "specVersion", "transactionVersion", "metadataVersion"];
+  for (const field of exactFields) {
+    if (runtime?.[field] !== profile[field]) mismatches.push(field);
+  }
+  if (fingerprint?.genesisHash !== profile.genesisHash) mismatches.push("genesisHash");
+  if (fingerprint?.runtimeCodeHash !== profile.runtimeCodeHash) mismatches.push("runtimeCodeHash");
+  if (fingerprint?.runtimeCodeHashAlgorithm !== profile.runtimeCodeHashAlgorithm) mismatches.push("runtimeCodeHashAlgorithm");
+  if (fingerprint?.collectedAtBlockHash !== substrate?.finalized?.hash) mismatches.push("runtimeCodeBlockContext");
+  if (evm?.identity?.chainId !== profile.evmChainId) mismatches.push("evmChainId");
+  const pallets = runtime?.pallets ?? [];
+  for (const pallet of profile.requiredPallets) {
+    if (!pallets.includes(pallet)) mismatches.push(`pallet:${pallet}`);
+  }
+  for (const surface of profile.requiredQuerySurfaces) {
+    if (runtime?.querySurfaces?.[surface] !== true) mismatches.push(`querySurface:${surface}`);
+  }
+  return mismatches;
+}
+
 export function evaluateSnapshot(snapshot) {
   const checks = [];
   const substrate = snapshot.substrate;
@@ -50,12 +74,11 @@ export function evaluateSnapshot(snapshot) {
 
   let runtimeSupported = false;
   if (substrate?.runtime) {
-    const pallets = substrate.runtime.pallets ?? [];
-    const missing = REQUIRED_PALLETS.filter((name) => !pallets.includes(name));
-    runtimeSupported = substrate.runtime.specName === "portaldot-v3" && missing.length === 0;
+    const mismatches = runtimeProfileMismatches(substrate, evm);
+    runtimeSupported = mismatches.length === 0;
     checks.push(check("runtime.support", "Runtime support", runtimeSupported ? STATUS.PASS : STATUS.UNKNOWN,
-      runtimeSupported ? `Runtime ${substrate.runtime.specName}/${substrate.runtime.specVersion} exposes Assets and Revive.` : "This runtime is not in FIRMA's verified support envelope.",
-      { ...substrate.runtime, missingPallets: missing }));
+      runtimeSupported ? `Runtime ${substrate.runtime.specName}/${substrate.runtime.specVersion} matches FIRMA's verified support profile.` : "This runtime is not in FIRMA's verified support envelope.",
+      { ...substrate.runtime, supportProfile: PORTALDOT_V3_SUPPORT_PROFILE.id, mismatchReasons: mismatches }));
   } else checks.push(unavailable("runtime.support", "Runtime support", "Runtime metadata was unavailable."));
 
   const sameBlock = Boolean(substrate?.finalized?.number && evm?.block?.number && substrate.finalized.number === evm.block.number);

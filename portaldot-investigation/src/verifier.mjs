@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { ApiPromise, WsProvider } from "@polkadot/api";
-import { DEFAULTS, READ_ONLY_EVM_METHODS, SCHEMA_VERSION, VERSION } from "./constants.mjs";
+import { DEFAULTS, READ_ONLY_EVM_METHODS, RUNTIME_CODE_STORAGE_KEY, SCHEMA_VERSION, VERSION } from "./constants.mjs";
 import { assetPrecompileAddress, compactError, decodeAbiString, decodeUint256, encodeBalanceOf, numberToHex } from "./codec.mjs";
 import { evaluateSnapshot } from "./evaluate.mjs";
 import { EvmRpcClient, RpcError, withTimeout } from "./rpc.mjs";
@@ -60,6 +60,34 @@ async function storageExists(api, key, hash) {
   return Boolean(value?.isSome ?? (value && value.toHex?.() !== "0x"));
 }
 
+function hashHex(value) {
+  const hex = typeof value === "string" ? value : value?.toHex?.();
+  return typeof hex === "string" && /^0x[0-9a-f]{64}$/i.test(hex) ? hex.toLowerCase() : null;
+}
+
+export async function collectRuntimeFingerprint(api, finalizedHash, timeoutMs) {
+  const blockHash = hashHex(finalizedHash);
+  const [genesisResult, codeHashResult] = await Promise.allSettled([
+    withTimeout(api.rpc.chain.getBlockHash(0), timeoutMs, "Genesis-hash query"),
+    withTimeout(api.rpc.state.getStorageHash(RUNTIME_CODE_STORAGE_KEY, finalizedHash), timeoutMs, "Finalized runtime-code hash query"),
+  ]);
+  const errors = {};
+  const genesisHash = genesisResult.status === "fulfilled" ? hashHex(genesisResult.value) : null;
+  const runtimeCodeHash = codeHashResult.status === "fulfilled" ? hashHex(codeHashResult.value) : null;
+  if (genesisResult.status === "rejected") errors.genesisHash = compactError(genesisResult.reason);
+  else if (!genesisHash) errors.genesisHash = { name: "InvalidFingerprint", message: "Genesis hash was missing or invalid." };
+  if (codeHashResult.status === "rejected") errors.runtimeCodeHash = compactError(codeHashResult.reason);
+  else if (!runtimeCodeHash) errors.runtimeCodeHash = { name: "InvalidFingerprint", message: "Runtime-code hash was missing or invalid." };
+  return {
+    genesisHash,
+    runtimeCodeHash,
+    runtimeCodeHashAlgorithm: "blake2-256",
+    runtimeCodeStorageKey: RUNTIME_CODE_STORAGE_KEY,
+    collectedAtBlockHash: blockHash,
+    ...(Object.keys(errors).length ? { errors } : {}),
+  };
+}
+
 async function collectSubstrate(options) {
   const provider = new WsProvider(options.substrateEndpoint, 2_500);
   let api;
@@ -72,17 +100,27 @@ async function collectSubstrate(options) {
     ]), options.timeoutMs, "Substrate identity and metadata queries");
     const apiAt = await withTimeout(api.at(finalizedHash), options.timeoutMs, "Historic runtime decoration");
     const pallets = metadata.asLatest.pallets.map((pallet) => pallet.name.toString().toLowerCase());
-    if (!apiAt.query.assets?.asset || !apiAt.query.assets?.metadata || !apiAt.query.assets?.account || !apiAt.query.revive?.originalAccount) {
+    const querySurfaces = {
+      "assets.asset": Boolean(apiAt.query.assets?.asset),
+      "assets.metadata": Boolean(apiAt.query.assets?.metadata),
+      "assets.account": Boolean(apiAt.query.assets?.account),
+      "revive.originalAccount": Boolean(apiAt.query.revive?.originalAccount),
+    };
+    const fingerprint = await collectRuntimeFingerprint(api, finalizedHash, options.timeoutMs);
+    const metadataHex = metadata.toHex();
+    const runtime = {
+      specName: runtimeVersion.specName.toString(), specVersion: runtimeVersion.specVersion.toString(),
+      transactionVersion: runtimeVersion.transactionVersion.toString(), metadataVersion: metadata.version,
+      metadataSha256: createHash("sha256").update(Buffer.from(metadataHex.slice(2), "hex")).digest("hex"),
+      pallets, querySurfaces, fingerprint,
+    };
+    if (Object.values(querySurfaces).some((available) => !available)) {
       return {
         reachable: true,
         endpoint: options.substrateEndpoint,
         identity: { chain: chain.toString(), nodeName: nodeName.toString(), nodeVersion: nodeVersion.toString(), properties: properties.toJSON() },
         finalized: { number: header.number.toString(), hash: finalizedHash.toHex() },
-        runtime: {
-          specName: runtimeVersion.specName.toString(), specVersion: runtimeVersion.specVersion.toString(),
-          transactionVersion: runtimeVersion.transactionVersion.toString(), metadataVersion: metadata.version,
-          metadataSha256: createHash("sha256").update(Buffer.from(metadata.toHex().slice(2), "hex")).digest("hex"), pallets,
-        },
+        runtime,
         asset: { exists: false, unsupportedRuntime: true },
         accountMapping: { exists: false, unsupportedRuntime: true },
         balance: { exists: false, value: null },
@@ -105,17 +143,12 @@ async function collectSubstrate(options) {
       const exists = entry.isSome;
       balance = { exists, value: exists ? entry.unwrap().balance.toString() : "0", storageKey: accountStorageKey };
     }
-    const metadataHex = metadata.toHex();
     return {
       reachable: true,
       endpoint: options.substrateEndpoint,
       identity: { chain: chain.toString(), nodeName: nodeName.toString(), nodeVersion: nodeVersion.toString(), properties: properties.toJSON() },
       finalized: { number: header.number.toString(), hash: finalizedHash.toHex() },
-      runtime: {
-        specName: runtimeVersion.specName.toString(), specVersion: runtimeVersion.specVersion.toString(),
-        transactionVersion: runtimeVersion.transactionVersion.toString(), metadataVersion: metadata.version,
-        metadataSha256: createHash("sha256").update(Buffer.from(metadataHex.slice(2), "hex")).digest("hex"), pallets,
-      },
+      runtime,
       asset: {
         exists: assetExists, id: options.assetId, storageKey: apiAt.query.assets.asset.key(options.assetId),
         supply: assetExists ? asset.supply.toString() : null,

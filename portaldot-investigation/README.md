@@ -12,7 +12,7 @@ It is not an explorer, wallet, token checker, deployment tool, or audit. It neve
 For a native asset ID and EVM account, FIRMA:
 
 1. reads a finalized block from the Substrate endpoint;
-2. fingerprints the runtime and metadata at that block;
+2. identifies the runtime from the chain genesis and the finalized block's runtime `:code` hash, and records the raw metadata hash as evidence;
 3. requests the exact same block number from the EVM endpoint;
 4. verifies the expected EVM chain ID;
 5. reads native supply, metadata, Revive account mapping, and account balance;
@@ -107,7 +107,8 @@ raw/                   Original investigation evidence
 
 ## Boundaries
 
-- Portaldot V3 runtime support is deliberately explicit. A different runtime is `UNKNOWN` until its mapping conventions are verified.
+- Portaldot V3 runtime support is deliberately fail-closed. The chain genesis, finalized runtime-code hash, version tuple, EVM chain ID, required pallets, and required query surfaces must match the reviewed support profile. Missing or different identity evidence is `UNKNOWN`.
+- The raw metadata SHA-256 remains in every report for inspection, but it is not an approval key because a Revive storage fallback makes the raw metadata bytes vary across blocks without changing the runtime code.
 - The product verifies reads only. It makes no claim about transfers, approvals, permits, events, gas, fees, dust, or signed origins.
 - The precompile address convention is scoped to the runtime evidence documented in this repository.
 - Public-search results cannot establish that no private or unpublished competitor exists.
