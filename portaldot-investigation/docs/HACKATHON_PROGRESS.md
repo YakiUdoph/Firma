@@ -22,6 +22,15 @@
 - Confirmed unreachable endpoints become `UNKNOWN` with exit code `2`.
 - Re-ran both live asset checks successfully at finalized blocks `121096` and `121099`.
 
+## 2026-10-22 — fail-closed runtime recognition
+
+- Replaced the permissive name-and-pallet runtime gate with an exact reviewed Portaldot V3 profile.
+- Added finalized-block runtime `:code` hashing, genesis identity, version, EVM chain ID, pallet, and query-surface checks.
+- Kept raw metadata SHA-256 as exported evidence without using it as the approval key; investigation showed its `Revive.EthBlockBuilderIR` fallback varies by block while runtime code remains identical.
+- Added regression coverage for unknown code, wrong genesis or versions, missing query surfaces, metadata fallback drift, and finalized-block collection.
+- Passed the 35-test check suite, production build, and production dependency audit with zero reported vulnerabilities.
+- Completed a fresh read-only verification with nine PASS checks at finalized block `151221`. The approved runtime-code hash remained `0xedc03c9d…a724c7c2` while the block-specific raw metadata SHA-256 was `1dae6abe…95d53b4f`.
+
 ## 2026-10-21 â€” final validation
 
 - Re-ran the clean install, 22-test check suite, production build, and production dependency audit successfully.
@@ -38,7 +47,7 @@
 
 ## Before November 6
 
-- Add runtime-fingerprint allowlist configuration and report diffing across runtime upgrades.
+- Add report diffing across reviewed runtime upgrades if another runtime profile is ever approved.
 - Add a compact Markdown/JUnit renderer.
 - Expand account samples without scanning unbounded storage.
 - Consider controlled write/event conformance only after separate authorization, test funding, and a safety plan.
