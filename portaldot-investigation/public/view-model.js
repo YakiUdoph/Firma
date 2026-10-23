@@ -5,9 +5,9 @@ export const LABEL = Object.freeze({
 });
 
 export const VERDICT_COPY = Object.freeze({
-  PASS: "Every required invariant was proven from one shared finalized block.",
-  FAIL: "At least one cross-interface mismatch was proven by the collected evidence.",
-  UNKNOWN: "The evidence is incomplete. FIRMA has not treated an unavailable observation as agreement.",
+  PASS: "All required checks agreed at the same finalized block.",
+  FAIL: "At least one required check found a proven difference between the two interfaces.",
+  UNKNOWN: "FIRMA could not complete every required check, so it does not claim the asset passed or failed.",
 });
 
 function available(value) {

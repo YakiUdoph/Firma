@@ -15,6 +15,11 @@ const verdictSummary = document.querySelector("#verdict-summary");
 const verdictCounts = document.querySelector("#verdict-counts");
 const evidenceJson = document.querySelector("#evidence-json");
 const copyButton = document.querySelector("#copy-button");
+const COUNT_LABEL = Object.freeze({
+  PASS: "Checks passed",
+  FAIL: "Checks failed",
+  UNKNOWN: "Not verified",
+});
 let latestReport = null;
 
 function contextItem({ label, value, title }) {
@@ -34,7 +39,7 @@ function countItem(status, count) {
   const number = document.createElement("strong");
   number.textContent = String(count ?? 0);
   const label = document.createElement("span");
-  label.textContent = LABEL[status];
+  label.textContent = COUNT_LABEL[status];
   const code = document.createElement("small");
   code.textContent = status;
   item.append(number, label, code);
@@ -45,7 +50,7 @@ function evidenceDetails(evidence) {
   const details = document.createElement("details");
   details.className = "check-evidence";
   const summary = document.createElement("summary");
-  summary.textContent = "View check evidence";
+  summary.textContent = "Show technical evidence";
   const pre = document.createElement("pre");
   pre.tabIndex = 0;
   pre.textContent = JSON.stringify(evidence ?? {}, null, 2);
@@ -87,7 +92,7 @@ function setLoading(loading) {
   progress.hidden = !loading;
   button.disabled = loading;
   for (const input of form.querySelectorAll("input")) input.disabled = loading;
-  buttonLabel.textContent = loading ? "Verifying asset" : "Verify asset";
+  buttonLabel.textContent = loading ? "Checking asset" : "Check asset";
   buttonIcon.textContent = loading ? "" : "\u2197";
   buttonIcon.classList.toggle("is-loading", loading);
 }

@@ -10,9 +10,9 @@ const [html, css, client] = await Promise.all([
 ]);
 
 test("the page leads with the real verification task and primary action", () => {
-  assert.match(html, /asset data agrees across Portaldot's native and EVM interfaces at the same finalized block/i);
+  assert.match(html, /native system and its Ethereum-compatible interface/i);
   assert.ok(html.indexOf('id="verify-form"') < html.indexOf('id="method"'));
-  assert.match(html, /<span class="button-label">Verify asset<\/span>/);
+  assert.match(html, /<span class="button-label">Check asset<\/span>/);
   assert.match(html, /<label for="asset-id">Asset ID<\/label>/);
   assert.match(html, /<label for="account">Wallet address<\/label>/);
   assert.doesNotMatch(html, /READ-ONLY MODE|Run read-only verification/i);
@@ -39,10 +39,10 @@ test("loading, error, result, and evidence interactions are wired", () => {
 
 test("PASS FAIL and UNKNOWN retain distinct language and technical codes", () => {
   assert.deepEqual(LABEL, { PASS: "Passed", FAIL: "Failed", UNKNOWN: "Couldn't verify" });
-  assert.match(VERDICT_COPY.PASS, /proven/i);
-  assert.match(VERDICT_COPY.FAIL, /mismatch was proven/i);
-  assert.match(VERDICT_COPY.UNKNOWN, /evidence is incomplete/i);
-  assert.doesNotMatch(VERDICT_COPY.UNKNOWN, /\bpassed\b|all required.*proven/i);
+  assert.match(VERDICT_COPY.PASS, /all required checks agreed/i);
+  assert.match(VERDICT_COPY.FAIL, /proven difference/i);
+  assert.match(VERDICT_COPY.UNKNOWN, /could not complete every required check/i);
+  assert.doesNotMatch(VERDICT_COPY.UNKNOWN, /all required.*agreed/i);
   assert.match(client, /statusCode\.textContent = item\.status/);
   assert.match(css, /\.result\[data-status="UNKNOWN"\]::before/);
   assert.match(css, /repeating-linear-gradient/);
@@ -79,10 +79,13 @@ test("the workspace provides keyboard and responsive accessibility affordances",
   assert.match(html, /class="skip-link" href="#verify"/);
   assert.match(html, /aria-describedby="asset-help"/);
   assert.match(html, /aria-describedby="account-help"/);
-  assert.match(html, /id="result"[^>]*aria-labelledby="verdict-title"[^>]*aria-live="polite"/);
+  assert.match(html, /class="verdict-line"[^>]*role="status"[^>]*aria-live="polite"[^>]*aria-atomic="true"/);
+  assert.match(html, /pattern="0x\[0-9a-fA-F\]\{40\}"/);
   assert.match(css, /:focus-visible/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(css, /@media \(max-width: 980px\)/);
   assert.match(css, /@media \(max-width: 700px\)/);
   assert.match(css, /@media \(max-width: 470px\)/);
+  assert.match(css, /@media \(forced-colors: active\)/);
+  assert.match(html, /rel="icon" href="\/favicon\.svg"/);
 });

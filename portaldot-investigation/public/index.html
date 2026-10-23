@@ -6,6 +6,7 @@
   <meta name="description" content="FIRMA verifies whether Portaldot native and EVM asset observations agree at one finalized block.">
   <meta name="theme-color" content="#f3f0e7">
   <title>FIRMA | Portaldot asset verification</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -27,7 +28,7 @@
       <div class="hero-copy">
         <p class="eyebrow"><span aria-hidden="true"></span> Portaldot verification workspace</p>
         <h1 id="hero-title">One asset.<br>Two interfaces.<br><em>One clear answer.</em></h1>
-        <p class="lede">FIRMA checks whether asset data agrees across Portaldot's native and EVM interfaces at the same finalized block. Every conclusion stays attached to evidence you can inspect and export.</p>
+        <p class="lede">FIRMA compares the same asset in Portaldot's native system and its Ethereum-compatible interface. Both readings come from one finalized block, with evidence you can inspect and export.</p>
         <ul class="principles" aria-label="Verification principles">
           <li><span>01</span> Same finalized block</li>
           <li><span>02</span> Actual RPC observations</li>
@@ -38,23 +39,23 @@
       <section class="verifier-card" aria-labelledby="verify-title">
         <div class="card-kicker"><span>New verification</span><span>Portaldot V3</span></div>
         <div class="card-heading">
-          <h2 id="verify-title">Verify an asset</h2>
-          <p>Compare supply, account balance, metadata, and runtime-backed account mapping.</p>
+          <h2 id="verify-title">Check an asset</h2>
+          <p>Enter an asset number and account address. FIRMA will compare the supply, balance, name, symbol, decimals, and account mapping.</p>
         </div>
 
-        <form id="verify-form" novalidate>
+        <form id="verify-form">
           <div class="field">
             <label for="asset-id">Asset ID</label>
-            <input id="asset-id" name="assetId" value="2" inputmode="numeric" pattern="[0-9]+" required aria-describedby="asset-help" autocomplete="off">
-            <small id="asset-help">The numeric ID in Portaldot's native Assets storage.</small>
+            <input id="asset-id" name="assetId" value="2" inputmode="numeric" pattern="[0-9]+" required aria-describedby="asset-help" autocomplete="off" title="Enter the asset number using digits only.">
+            <small id="asset-help">The number Portaldot uses to identify the asset — for example, 2.</small>
           </div>
           <div class="field">
             <label for="account">Wallet address</label>
-            <input id="account" name="account" value="0x578f0a6155551b3b7c7ff255ea7dc2b08968e380" spellcheck="false" required aria-describedby="account-help" autocomplete="off">
-            <small id="account-help">A 20-byte 0x address used for the balance comparison.</small>
+            <input id="account" name="account" value="0x578f0a6155551b3b7c7ff255ea7dc2b08968e380" spellcheck="false" required pattern="0x[0-9a-fA-F]{40}" maxlength="42" aria-describedby="account-help" autocomplete="off" title="Enter 0x followed by 40 letters or numbers.">
+            <small id="account-help">The 0x account whose asset balance you want to compare. FIRMA will not connect to it.</small>
           </div>
           <button id="run-button" class="primary-button" type="submit">
-            <span class="button-label">Verify asset</span>
+            <span class="button-label">Check asset</span>
             <span class="button-icon" aria-hidden="true">&#8599;</span>
           </button>
         </form>
@@ -75,16 +76,16 @@
 
         <details class="field-help">
           <summary>How FIRMA uses these fields</summary>
-          <p>The asset ID selects native Assets storage and its EVM precompile surface. The wallet address is resolved through Revive's runtime-backed account mapping. FIRMA only performs reads; it cannot connect a wallet, sign, transfer, or submit a transaction.</p>
+          <p>Behind the scenes, the asset ID selects native Assets storage and its EVM precompile. Portaldot's Revive mapping links the wallet address to its native account. FIRMA only reads public data; it cannot connect a wallet, sign, transfer, or submit a transaction.</p>
         </details>
       </section>
     </section>
 
-    <section id="result" class="result" aria-labelledby="verdict-title" aria-live="polite" hidden>
+    <section id="result" class="result" aria-labelledby="verdict-title" hidden>
       <div class="result-hero">
         <div class="verdict-lockup">
           <p class="eyebrow result-eyebrow">Verification result</p>
-          <div class="verdict-line">
+          <div class="verdict-line" role="status" aria-live="polite" aria-atomic="true">
             <span id="verdict-symbol" class="verdict-symbol" aria-hidden="true"></span>
             <h2 id="verdict-title">Waiting</h2>
           </div>
@@ -102,9 +103,9 @@
         <div class="section-heading compact">
           <div>
             <p class="section-index">01 / Context</p>
-            <h3 id="context-title">The shared observation point</h3>
+            <h3 id="context-title">When and where FIRMA checked</h3>
           </div>
-          <p>These values come from this verification response, not a cached product metric.</p>
+          <p>These details identify the network and exact finalized block used for this result.</p>
         </div>
         <dl id="context" class="context"></dl>
       </section>
@@ -113,9 +114,9 @@
         <div class="section-heading">
           <div>
             <p class="section-index">02 / Comparisons</p>
-            <h3 id="comparison-title">Evidence checks</h3>
+            <h3 id="comparison-title">What FIRMA compared</h3>
           </div>
-          <p>Each row preserves the backend's technical <code>PASS</code>, <code>FAIL</code>, or <code>UNKNOWN</code> classification. Open a row's evidence for the underlying observation.</p>
+          <p>Open any row to see the technical evidence. The original <code>PASS</code>, <code>FAIL</code>, or <code>UNKNOWN</code> result is always preserved.</p>
         </div>
         <div id="checks" class="checks"></div>
       </section>
@@ -124,12 +125,12 @@
         <div class="section-heading">
           <div>
             <p class="section-index">03 / Evidence</p>
-            <h3 id="evidence-title">Complete verification record</h3>
+            <h3 id="evidence-title">Full verification record</h3>
           </div>
           <p>The exported report includes inputs, endpoint observations, runtime identity, block context, checks, and limitations.</p>
         </div>
         <details class="raw-evidence">
-          <summary><span>Inspect complete JSON</span><span aria-hidden="true">+</span></summary>
+          <summary><span>Show complete JSON</span><span aria-hidden="true">+</span></summary>
           <pre id="evidence-json" tabindex="0"></pre>
         </details>
       </section>
