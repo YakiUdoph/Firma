@@ -5,7 +5,11 @@ import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { configuredDefaults } from "./src/config.mjs";
+import { InvalidReportError } from "./experimental/onchain-proof/src/report-commitment.mjs";
+import { independentlyVerifyReport } from "./src/independent-verifier.mjs";
 import { BoundedRateLimiter } from "./src/limiter.mjs";
+import { parseExpectedCommitment, parseImportedReportText } from "./src/report-import.mjs";
+import { withTimeout } from "./src/rpc.mjs";
 import { verify } from "./src/verifier.mjs";
 import { InputError, parseRequestBody } from "./src/validation.mjs";
 
@@ -25,14 +29,14 @@ function clientKey(request) {
   return request.socket.remoteAddress ?? "local";
 }
 
-async function readBody(request) {
+async function readBody(request, maxBytes = 8_192) {
   const declared = Number(request.headers["content-length"] ?? 0);
-  if (Number.isFinite(declared) && declared > 8_192) throw new InputError("Request body exceeds 8 KiB.");
+  if (Number.isFinite(declared) && declared > maxBytes) throw new InputError("Request body is too large.");
   const chunks = [];
   let size = 0;
   for await (const chunk of request) {
     size += chunk.length;
-    if (size > 8_192) throw new InputError("Request body exceeds 8 KiB.");
+    if (size > maxBytes) throw new InputError("Request body is too large.");
     chunks.push(chunk);
   }
   return JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
@@ -41,7 +45,7 @@ async function readBody(request) {
 const server = createServer(async (request, response) => {
   response.setHeader("referrer-policy", "no-referrer");
   response.setHeader("content-security-policy", "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'none'; frame-ancestors 'none'");
-  if (request.method === "POST" && request.url === "/api/verify") {
+  if (request.method === "POST" && ["/api/verify", "/api/check-report"].includes(request.url)) {
     const key = clientKey(request);
     const rate = limiter.consume(key);
     if (!rate.allowed) {
@@ -53,16 +57,29 @@ const server = createServer(async (request, response) => {
     active.add(key);
     globalActive += 1;
     try {
-      const body = parseRequestBody(await readBody(request));
       const defaults = configuredDefaults();
-      const report = await verify({
-        ...defaults,
-        assetId: body.assetId ?? defaults.assetId,
-        account: body.account ?? defaults.account,
-      });
+      if (request.url === "/api/check-report") {
+        if (!/^application\/json(?:;|$)/i.test(request.headers["content-type"] ?? "")) throw new InputError("Content-Type must be application/json.");
+        const body = parseRequestBody(await readBody(request, 1_048_576));
+        if (typeof body.reportText !== "string") throw new InvalidReportError("Request must include the uploaded report as JSON text.");
+        const report = parseImportedReportText(body.reportText);
+        const checked = await withTimeout(
+          independentlyVerifyReport({
+            report,
+            expectedCommitment: parseExpectedCommitment(body.expectedCommitment),
+            network: defaults,
+          }),
+          55_000,
+          "Independent verification",
+        );
+        return sendJson(response, 200, checked);
+      }
+      const body = parseRequestBody(await readBody(request));
+      const report = await verify({ ...defaults, assetId: body.assetId ?? defaults.assetId, account: body.account ?? defaults.account });
       return sendJson(response, 200, report);
     } catch (error) {
-      const expected = error instanceof InputError || error instanceof SyntaxError;
+      if (error?.name === "TimeoutError") return sendJson(response, 504, { error: "Independent verification timed out." });
+      const expected = error instanceof InputError || error instanceof InvalidReportError || error instanceof SyntaxError;
       if (!expected) console.error("Verification request failed", { name: error?.name, message: error?.message });
       return sendJson(response, expected ? 400 : 500, { error: expected ? error.message : "Verification failed unexpectedly." });
     } finally {

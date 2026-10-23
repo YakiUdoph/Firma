@@ -19,7 +19,12 @@ const COUNT_LABEL = Object.freeze({
   PASS: "Checks passed",
   FAIL: "Checks failed",
   UNKNOWN: "Not verified",
+  VERIFIED: "Claims verified",
+  MISMATCH: "Claims differ",
+  UNAVAILABLE: "Not available",
 });
+const INDEPENDENT_LABEL = Object.freeze({ VERIFIED: "Verified", MISMATCH: "Mismatch", UNAVAILABLE: "Unavailable" });
+const MAX_REPORT_BYTES = 262_144;
 let latestReport = null;
 
 function contextItem({ label, value, title }) {
@@ -58,7 +63,7 @@ function evidenceDetails(evidence) {
   return details;
 }
 
-function checkRow(item, index) {
+function checkRow(item, index, labels = LABEL) {
   const row = document.createElement("article");
   row.className = "check";
   row.dataset.status = item.status;
@@ -75,7 +80,7 @@ function checkRow(item, index) {
   badge.className = "status-badge";
   const marker = document.createElement("span");
   marker.setAttribute("aria-hidden", "true");
-  const humanStatus = document.createTextNode(LABEL[item.status]);
+  const humanStatus = document.createTextNode(labels[item.status] ?? item.status);
   const statusCode = document.createElement("small");
   statusCode.textContent = item.status;
   badge.append(marker, humanStatus, statusCode);
@@ -85,6 +90,50 @@ function checkRow(item, index) {
   body.append(heading, summary, evidenceDetails(item.evidence));
   row.append(indexLabel, body);
   return row;
+}
+
+function setReportLoading(loading) {
+  const reportForm = document.querySelector("#report-form");
+  const reportButton = document.querySelector("#report-button");
+  reportForm.setAttribute("aria-busy", String(loading));
+  document.querySelector("#report-progress").hidden = !loading;
+  for (const input of reportForm.querySelectorAll("input, button")) input.disabled = loading;
+  reportButton.querySelector(".button-label").textContent = loading ? "Checking evidence" : "Check evidence";
+  reportButton.querySelector(".button-icon").classList.toggle("is-loading", loading);
+}
+
+function showReportError(message) {
+  const box = document.querySelector("#report-error");
+  box.textContent = message;
+  box.hidden = false;
+  box.focus();
+}
+
+function renderIndependent(response) {
+  const independent = response.independent;
+  const status = independent.overall;
+  const panel = document.querySelector("#report-result");
+  panel.hidden = false;
+  panel.dataset.status = status;
+  const title = document.querySelector("#independent-title");
+  title.textContent = INDEPENDENT_LABEL[status];
+  document.querySelector("#independent-symbol").textContent = status === "VERIFIED" ? "\u2713" : status === "MISMATCH" ? "\u00d7" : "?";
+  document.querySelector("#independent-summary").textContent = independent.summary;
+  document.querySelector("#imported-verdict").textContent = response.importedVerdict.overall;
+  document.querySelector("#imported-block").textContent = independent.requestedBlock.number;
+  const commitment = document.querySelector("#report-commitment");
+  commitment.textContent = response.commitment.computed;
+  commitment.title = response.commitment.computed;
+  document.querySelector("#independent-counts").replaceChildren(
+    ...["VERIFIED", "MISMATCH", "UNAVAILABLE"].map((item) => countItem(item, independent.counts?.[item])),
+  );
+  document.querySelector("#independent-checks").replaceChildren(
+    ...independent.checks.map((item, index) => checkRow(item, index, INDEPENDENT_LABEL)),
+  );
+  document.querySelector("#independent-json").textContent = JSON.stringify(response, null, 2);
+  panel.scrollIntoView({ behavior: "smooth", block: "start" });
+  title.tabIndex = -1;
+  title.focus({ preventScroll: true });
 }
 
 function setLoading(loading) {
@@ -137,6 +186,35 @@ form.addEventListener("submit", async (event) => {
     showError(error instanceof Error ? error.message : "Verification failed unexpectedly.");
   } finally {
     setLoading(false);
+  }
+});
+
+document.querySelector("#report-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const errorBox = document.querySelector("#report-error");
+  errorBox.hidden = true;
+  const file = document.querySelector("#report-file").files?.[0];
+  if (!file) return showReportError("Choose a FIRMA JSON report first.");
+  if (file.size > MAX_REPORT_BYTES) return showReportError("The report is larger than 256 KiB.");
+  setReportLoading(true);
+  try {
+    const text = await file.text();
+    if (new TextEncoder().encode(text).byteLength > MAX_REPORT_BYTES) throw new Error("The report is larger than 256 KiB.");
+    const response = await fetch("/api/check-report", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        reportText: text,
+        expectedCommitment: document.querySelector("#expected-commitment").value.trim() || null,
+      }),
+    });
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`);
+    renderIndependent(body);
+  } catch (error) {
+    showReportError(error instanceof Error ? error.message : "The report could not be checked.");
+  } finally {
+    setReportLoading(false);
   }
 });
 

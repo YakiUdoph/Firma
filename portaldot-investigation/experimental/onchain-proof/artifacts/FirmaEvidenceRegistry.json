@@ -1,0 +1,279 @@
+{
+  "contractName": "FirmaEvidenceRegistry",
+  "sourceName": "contracts/FirmaEvidenceRegistry.sol",
+  "compiler": {
+    "version": "0.8.38+commit.1835d247.Emscripten.clang",
+    "settings": {
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "evmVersion": "paris",
+      "metadata": {
+        "appendCBOR": false,
+        "bytecodeHash": "none"
+      },
+      "outputSelection": {
+        "*": {
+          "*": [
+            "abi",
+            "metadata",
+            "evm.bytecode.object",
+            "evm.bytecode.opcodes",
+            "evm.bytecode.sourceMap",
+            "evm.deployedBytecode.object",
+            "evm.deployedBytecode.opcodes",
+            "evm.deployedBytecode.sourceMap"
+          ]
+        }
+      }
+    }
+  },
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "commitment",
+          "type": "bytes32"
+        }
+      ],
+      "name": "CommitmentAlreadyExists",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ZeroCommitment",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "commitment",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "submitter",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "recordedBlock",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "recordedAt",
+          "type": "uint256"
+        }
+      ],
+      "name": "ReportCommitted",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "commitment",
+          "type": "bytes32"
+        }
+      ],
+      "name": "commit",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "commitment",
+          "type": "bytes32"
+        }
+      ],
+      "name": "get",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "submitter",
+          "type": "address"
+        },
+        {
+          "internalType": "uint64",
+          "name": "recordedBlock",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint64",
+          "name": "recordedAt",
+          "type": "uint64"
+        },
+        {
+          "internalType": "bool",
+          "name": "exists",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x6080604052348015600f57600080fd5b506102358061001f6000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c80638eaa6ac01461003b578063f14fcbc8146100de575b600080fd5b6100a061004936600461021c565b60008181526020818152604091829020825160608101845281546001600160a01b03811680835267ffffffffffffffff600160a01b9092048216948301859052600190930154169301839052918215159193509193565b604080516001600160a01b0395909516855267ffffffffffffffff938416602086015291909216908301521515606082015260800160405180910390f35b6100f16100ec36600461021c565b6100f3565b005b80610111576040516351bda03d60e01b815260040160405180910390fd5b6000818152602081905260409020546001600160a01b03161561014e5760405163c5f89f0560e01b81526004810182905260240160405180910390fd5b604080516060810182523380825267ffffffffffffffff4381811660208086019182524280851687890190815260008a815292839052918890209651875493518616600160a01b026001600160e01b03199094166001600160a01b03919091161792909217865551600190950180549590931667ffffffffffffffff19909516949094179091559251909284927f9301958b1e441d17b925c4767c7c173cf0eeb98b069c00980572f72abc22644092610211929190918252602082015260400190565b60405180910390a350565b60006020828403121561022e57600080fd5b503591905056",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100365760003560e01c80638eaa6ac01461003b578063f14fcbc8146100de575b600080fd5b6100a061004936600461021c565b60008181526020818152604091829020825160608101845281546001600160a01b03811680835267ffffffffffffffff600160a01b9092048216948301859052600190930154169301839052918215159193509193565b604080516001600160a01b0395909516855267ffffffffffffffff938416602086015291909216908301521515606082015260800160405180910390f35b6100f16100ec36600461021c565b6100f3565b005b80610111576040516351bda03d60e01b815260040160405180910390fd5b6000818152602081905260409020546001600160a01b03161561014e5760405163c5f89f0560e01b81526004810182905260240160405180910390fd5b604080516060810182523380825267ffffffffffffffff4381811660208086019182524280851687890190815260008a815292839052918890209651875493518616600160a01b026001600160e01b03199094166001600160a01b03919091161792909217865551600190950180549590931667ffffffffffffffff19909516949094179091559251909284927f9301958b1e441d17b925c4767c7c173cf0eeb98b069c00980572f72abc22644092610211929190918252602082015260400190565b60405180910390a350565b60006020828403121561022e57600080fd5b503591905056",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.38+commit.1835d247"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "bytes32",
+              "name": "commitment",
+              "type": "bytes32"
+            }
+          ],
+          "name": "CommitmentAlreadyExists",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "ZeroCommitment",
+          "type": "error"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "bytes32",
+              "name": "commitment",
+              "type": "bytes32"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "submitter",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "recordedBlock",
+              "type": "uint256"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "recordedAt",
+              "type": "uint256"
+            }
+          ],
+          "name": "ReportCommitted",
+          "type": "event"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes32",
+              "name": "commitment",
+              "type": "bytes32"
+            }
+          ],
+          "name": "commit",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes32",
+              "name": "commitment",
+              "type": "bytes32"
+            }
+          ],
+          "name": "get",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "submitter",
+              "type": "address"
+            },
+            {
+              "internalType": "uint64",
+              "name": "recordedBlock",
+              "type": "uint64"
+            },
+            {
+              "internalType": "uint64",
+              "name": "recordedAt",
+              "type": "uint64"
+            },
+            {
+              "internalType": "bool",
+              "name": "exists",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        }
+      ],
+      "devdoc": {
+        "details": "A record proves only that an address submitted a hash by a chain block.",
+        "kind": "dev",
+        "methods": {},
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {},
+        "notice": "Immutable registry for commitments to off-chain FIRMA reports.",
+        "version": 1
+      }
+    },
+    "settings": {
+      "compilationTarget": {
+        "contracts/FirmaEvidenceRegistry.sol": "FirmaEvidenceRegistry"
+      },
+      "evmVersion": "paris",
+      "libraries": {},
+      "metadata": {
+        "appendCBOR": false,
+        "bytecodeHash": "none"
+      },
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "remappings": []
+    },
+    "sources": {
+      "contracts/FirmaEvidenceRegistry.sol": {
+        "keccak256": "0xc3e0f2a7280113214b1b619a39cb33b6219fb85905faba04ff255e4e6ed03f08",
+        "license": "MIT",
+        "urls": [
+          "bzz-raw://edcb520b69cff0b37e60960cecd7db4ebde834bc0d92241afcefc7acce13e6bb",
+          "dweb:/ipfs/QmQjM2vgskmzWuj1tkNChYyLDwZHanmPMkiU6Lqu1oYPg7"
+        ]
+      }
+    },
+    "version": 1
+  },
+  "hashes": {
+    "sourceSha256": "0x362a4c05bd655ce96d8d5be2769a0ca64ad22e67d52c7042d3fb7463506de4c7",
+    "creationBytecodeSha256": "0x9dd9da1cc48a95cee42acf3eb85e6a2d0df1cafc5e006bec0cb138d7169c1bc2",
+    "deployedBytecodeSha256": "0xd489802faf58724a44a698b556de4dd252eee3ca5b0e94a4aeb46345542d65ad",
+    "deployedBytecodeKeccak256": "0x8ee305fbfd423d1b94d12e9a304b30e851f865b0b3421af294c6423ecb6af7bd"
+  }
+}

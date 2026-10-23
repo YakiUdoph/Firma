@@ -21,7 +21,7 @@ async function readEvmCall(client, to, data, blockTag, decoder) {
   }
 }
 
-async function collectEvm(options, blockNumber) {
+export async function collectEvm(options, blockNumber) {
   const client = new EvmRpcClient(options.evmEndpoint, options);
   const evidence = { reachable: false, endpoint: options.evmEndpoint, identity: null, block: null, calls: {}, requests: client.history };
   try {
@@ -88,12 +88,41 @@ export async function collectRuntimeFingerprint(api, finalizedHash, timeoutMs) {
   };
 }
 
-async function collectSubstrate(options) {
+export async function collectSubstrate(options, targetBlockNumber = null) {
   const provider = new WsProvider(options.substrateEndpoint, 2_500);
   let api;
   try {
     api = await withTimeout(ApiPromise.create({ provider, throwOnConnect: true, noInitWarn: true }), options.timeoutMs, "Substrate connection");
-    const finalizedHash = await withTimeout(api.rpc.chain.getFinalizedHead(), options.timeoutMs, "Finalized-head query");
+    const latestFinalizedHash = await withTimeout(api.rpc.chain.getFinalizedHead(), options.timeoutMs, "Finalized-head query");
+    const latestFinalizedHeader = await withTimeout(api.rpc.chain.getHeader(latestFinalizedHash), options.timeoutMs, "Finalized-head header query");
+    const latestFinalized = { number: latestFinalizedHeader.number.toString(), hash: latestFinalizedHash.toHex() };
+    if (targetBlockNumber !== null && BigInt(targetBlockNumber) > BigInt(latestFinalized.number)) {
+      return {
+        reachable: true,
+        endpoint: options.substrateEndpoint,
+        finalized: null,
+        latestFinalized,
+        historical: { requestedNumber: String(targetBlockNumber), available: false, finalized: false },
+        error: {
+          name: "HistoricalFinalityUnavailable",
+          message: `Block ${targetBlockNumber} is newer than finalized block ${latestFinalized.number}.`,
+        },
+      };
+    }
+    const finalizedHash = targetBlockNumber === null
+      ? latestFinalizedHash
+      : await withTimeout(api.rpc.chain.getBlockHash(targetBlockNumber), options.timeoutMs, "Historical block-hash query");
+    const finalizedHashHex = hashHex(finalizedHash);
+    if (!finalizedHashHex || /^0x0{64}$/i.test(finalizedHashHex)) {
+      return {
+        reachable: true,
+        endpoint: options.substrateEndpoint,
+        finalized: null,
+        latestFinalized,
+        historical: { requestedNumber: String(targetBlockNumber), available: false, finalized: true },
+        error: { name: "HistoricalStateUnavailable", message: `Block ${targetBlockNumber} is not available from the Substrate endpoint.` },
+      };
+    }
     const [header, chain, nodeName, nodeVersion, properties, runtimeVersion, metadata] = await withTimeout(Promise.all([
       api.rpc.chain.getHeader(finalizedHash), api.rpc.system.chain(), api.rpc.system.name(), api.rpc.system.version(),
       api.rpc.system.properties(), api.rpc.state.getRuntimeVersion(finalizedHash), api.rpc.state.getMetadata(finalizedHash),
@@ -119,7 +148,9 @@ async function collectSubstrate(options) {
         reachable: true,
         endpoint: options.substrateEndpoint,
         identity: { chain: chain.toString(), nodeName: nodeName.toString(), nodeVersion: nodeVersion.toString(), properties: properties.toJSON() },
-        finalized: { number: header.number.toString(), hash: finalizedHash.toHex() },
+        finalized: { number: header.number.toString(), hash: finalizedHashHex },
+        latestFinalized,
+        historical: targetBlockNumber === null ? undefined : { requestedNumber: String(targetBlockNumber), available: true, finalized: true },
         runtime,
         asset: { exists: false, unsupportedRuntime: true },
         accountMapping: { exists: false, unsupportedRuntime: true },
@@ -147,7 +178,9 @@ async function collectSubstrate(options) {
       reachable: true,
       endpoint: options.substrateEndpoint,
       identity: { chain: chain.toString(), nodeName: nodeName.toString(), nodeVersion: nodeVersion.toString(), properties: properties.toJSON() },
-      finalized: { number: header.number.toString(), hash: finalizedHash.toHex() },
+      finalized: { number: header.number.toString(), hash: finalizedHashHex },
+      latestFinalized,
+      historical: targetBlockNumber === null ? undefined : { requestedNumber: String(targetBlockNumber), available: true, finalized: true },
       runtime,
       asset: {
         exists: assetExists, id: options.assetId, storageKey: apiAt.query.assets.asset.key(options.assetId),
@@ -171,11 +204,8 @@ async function collectSubstrate(options) {
 }
 
 export async function verify(input = {}) {
-  const options = normalizeOptions({ ...DEFAULTS, ...input });
   const startedAt = new Date().toISOString();
-  const substrate = await collectSubstrate(options);
-  const evm = await collectEvm(options, substrate.finalized?.number);
-  const snapshot = { input: options, substrate, evm };
+  const { options, snapshot } = await collectSnapshot(input);
   const verdict = evaluateSnapshot(snapshot);
   return {
     schema: SCHEMA_VERSION,
@@ -191,5 +221,13 @@ export async function verify(input = {}) {
       "An unavailable endpoint, unsupported runtime, missing mapping, timeout, or unavailable historical block is UNKNOWN—not FAIL.",
     ],
   };
+}
+
+export async function collectSnapshot(input = {}, targetBlockNumber = null) {
+  const options = normalizeOptions({ ...DEFAULTS, ...input });
+  const substrate = await collectSubstrate(options, targetBlockNumber);
+  const blockNumber = targetBlockNumber ?? substrate.finalized?.number;
+  const evm = await collectEvm(options, blockNumber);
+  return { options, snapshot: { input: options, substrate, evm } };
 }
 

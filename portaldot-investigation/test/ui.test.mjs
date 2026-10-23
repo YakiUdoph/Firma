@@ -89,3 +89,17 @@ test("the workspace provides keyboard and responsive accessibility affordances",
   assert.match(css, /@media \(forced-colors: active\)/);
   assert.match(html, /rel="icon" href="\/favicon\.svg"/);
 });
+
+test("independent report verification keeps original and reproduced results separate", () => {
+  assert.match(html, /id="check-report"/);
+  assert.match(html, /<label for="report-file">Upload report<\/label>/);
+  assert.match(html, /<span class="button-label">Check evidence<\/span>/);
+  assert.match(html, /Verified<\/strong><span>Historical evidence was reproduced/);
+  assert.match(html, /Mismatch<\/strong><span>A saved claim disagrees/);
+  assert.match(html, /Unavailable<\/strong><span>The exact history could not be checked safely/);
+  assert.match(html, /The original report is preserved/);
+  assert.match(client, /reportText: text/);
+  assert.doesNotMatch(client, /eval\(|new Function/);
+  assert.match(css, /\.check\[data-status="MISMATCH"\]/);
+  assert.match(css, /\.check\[data-status="UNAVAILABLE"\]/);
+});
