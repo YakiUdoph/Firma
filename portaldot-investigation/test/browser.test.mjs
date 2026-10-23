@@ -11,6 +11,8 @@ import { validHistoricalSnapshot, validImportedReport } from "../test-support/re
 const require = createRequire(import.meta.url);
 const projectRoot = fileURLToPath(new URL("../", import.meta.url));
 const screenshotPath = fileURLToPath(new URL("../../review-artifacts/phase-7d-check-report.png", import.meta.url));
+const mismatchScreenshotPath = fileURLToPath(new URL("../../review-artifacts/phase-7e-mismatch.png", import.meta.url));
+const unavailableScreenshotPath = fileURLToPath(new URL("../../review-artifacts/phase-7e-unavailable.png", import.meta.url));
 const chromeCandidates = process.platform === "win32"
   ? ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"]
   : process.platform === "darwin"
@@ -52,7 +54,8 @@ test("report upload works in Chrome and has no serious accessibility violations"
   await page.addInitScript({ path: require.resolve("axe-core/axe.min.js") });
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
-  await page.route("**/api/check-report", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(response) }));
+  let routedResponse = response;
+  await page.route("**/api/check-report", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(routedResponse) }));
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "networkidle" });
 
   await assert.doesNotReject(() => page.getByRole("heading", { name: "Check a report" }).waitFor());
@@ -73,4 +76,28 @@ test("report upload works in Chrome and has no serious accessibility violations"
   assert.deepEqual(serious.map(({ id, impact }) => ({ id, impact })), []);
 
   await page.locator("#report-result").screenshot({ path: screenshotPath });
+
+  routedResponse = structuredClone(response);
+  routedResponse.independent.overall = "MISMATCH";
+  routedResponse.independent.summary = "A saved claim disagrees with independently retrieved evidence.";
+  routedResponse.independent.checks[0].status = "MISMATCH";
+  routedResponse.independent.checks[0].summary = "The independently retrieved network identity disagrees with the imported claim.";
+  routedResponse.independent.counts = { VERIFIED: 25, MISMATCH: 1, UNAVAILABLE: 0 };
+  await page.getByRole("button", { name: "Check evidence" }).click();
+  await page.getByRole("heading", { name: "Mismatch", exact: true }).waitFor();
+  assert.equal(await page.locator("#report-result").getAttribute("data-status"), "MISMATCH");
+  assert.equal(await page.locator("#independent-symbol").textContent(), "×");
+  await page.locator("#report-result").screenshot({ path: mismatchScreenshotPath });
+
+  routedResponse = structuredClone(response);
+  routedResponse.independent.overall = "UNAVAILABLE";
+  routedResponse.independent.summary = "The exact historical evidence could not be retrieved or checked safely.";
+  routedResponse.independent.checks[0].status = "UNAVAILABLE";
+  routedResponse.independent.checks[0].summary = "The exact historical network identity could not be retrieved safely.";
+  routedResponse.independent.counts = { VERIFIED: 25, MISMATCH: 0, UNAVAILABLE: 1 };
+  await page.getByRole("button", { name: "Check evidence" }).click();
+  await page.getByRole("heading", { name: "Unavailable", exact: true }).waitFor();
+  assert.equal(await page.locator("#report-result").getAttribute("data-status"), "UNAVAILABLE");
+  assert.equal(await page.locator("#independent-symbol").textContent(), "?");
+  await page.locator("#report-result").screenshot({ path: unavailableScreenshotPath });
 });

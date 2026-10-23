@@ -10,13 +10,18 @@ export const INDEPENDENT_STATUS = Object.freeze({ VERIFIED: "VERIFIED", MISMATCH
 
 function semanticCall(call) {
   if (!call || typeof call.ok !== "boolean") return undefined;
-  return call.ok ? { ok: true, value: call.value } : { ok: false, kind: call.kind ?? "rpc-error" };
+  return call.ok ? { ok: true, value: call.value, raw: call.raw } : { ok: false, kind: call.kind ?? "rpc-error" };
 }
 
 function hasHistoricalSubstrate(snapshot) {
-  return snapshot.substrate?.reachable === true
-    && snapshot.substrate?.historical?.available !== false
-    && Boolean(snapshot.substrate?.finalized);
+  const substrate = snapshot.substrate;
+  if (substrate?.reachable !== true || substrate?.historical?.available === false || substrate?.historical?.finalized === false) return false;
+  if (!substrate?.finalized?.number || !substrate?.latestFinalized?.number) return false;
+  try {
+    return BigInt(substrate.finalized.number) <= BigInt(substrate.latestFinalized.number);
+  } catch {
+    return false;
+  }
 }
 
 function hasHistoricalEvm(snapshot) {
@@ -98,20 +103,20 @@ function claimSpecs(report, snapshot) {
     {
       id: "asset.native", title: "Native asset existence and supply", available: nativeAssetAvailable,
       reason: reproducedSubstrate?.error?.message ?? "Historical native asset state could not be retrieved.",
-      imported: { exists: importedSubstrate.asset.exists, id: importedSubstrate.asset.id, supply: importedSubstrate.asset.supply },
-      reproduced: reproducedSubstrate?.asset ? { exists: reproducedSubstrate.asset.exists, id: reproducedSubstrate.asset.id, supply: reproducedSubstrate.asset.supply } : undefined,
+      imported: { exists: importedSubstrate.asset.exists, id: importedSubstrate.asset.id, supply: importedSubstrate.asset.supply, storageKey: importedSubstrate.asset.storageKey },
+      reproduced: reproducedSubstrate?.asset ? { exists: reproducedSubstrate.asset.exists, id: reproducedSubstrate.asset.id, supply: reproducedSubstrate.asset.supply, storageKey: reproducedSubstrate.asset.storageKey } : undefined,
     },
     {
       id: "account.mapping", title: "Runtime account mapping", available: mappingAvailable,
       reason: reproducedSubstrate?.error?.message ?? "Historical account-mapping state could not be retrieved.",
-      imported: { exists: importedSubstrate.accountMapping.exists, h160: importedSubstrate.accountMapping.h160, accountId: importedSubstrate.accountMapping.accountId },
-      reproduced: reproducedSubstrate?.accountMapping ? { exists: reproducedSubstrate.accountMapping.exists, h160: reproducedSubstrate.accountMapping.h160, accountId: reproducedSubstrate.accountMapping.accountId } : undefined,
+      imported: { exists: importedSubstrate.accountMapping.exists, h160: importedSubstrate.accountMapping.h160, accountId: importedSubstrate.accountMapping.accountId, storageKey: importedSubstrate.accountMapping.storageKey },
+      reproduced: reproducedSubstrate?.accountMapping ? { exists: reproducedSubstrate.accountMapping.exists, h160: reproducedSubstrate.accountMapping.h160, accountId: reproducedSubstrate.accountMapping.accountId, storageKey: reproducedSubstrate.accountMapping.storageKey } : undefined,
     },
     {
       id: "asset.balance.native", title: "Native account balance", available: balanceAvailable,
       reason: reproducedSubstrate?.error?.message ?? "Historical native balance state could not be retrieved.",
-      imported: { exists: importedSubstrate.balance.exists, value: importedSubstrate.balance.value },
-      reproduced: reproducedSubstrate?.balance ? { exists: reproducedSubstrate.balance.exists, value: reproducedSubstrate.balance.value } : undefined,
+      imported: { exists: importedSubstrate.balance.exists, value: importedSubstrate.balance.value, storageKey: importedSubstrate.balance.storageKey },
+      reproduced: reproducedSubstrate?.balance ? { exists: reproducedSubstrate.balance.exists, value: reproducedSubstrate.balance.value, storageKey: reproducedSubstrate.balance.storageKey } : undefined,
     },
     {
       id: "asset.metadata.native", title: "Native asset metadata",

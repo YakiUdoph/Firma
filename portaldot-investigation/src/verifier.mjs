@@ -95,6 +95,20 @@ export async function collectSubstrate(options, targetBlockNumber = null) {
     api = await withTimeout(ApiPromise.create({ provider, throwOnConnect: true, noInitWarn: true }), options.timeoutMs, "Substrate connection");
     const latestFinalizedHash = await withTimeout(api.rpc.chain.getFinalizedHead(), options.timeoutMs, "Finalized-head query");
     const latestFinalizedHeader = await withTimeout(api.rpc.chain.getHeader(latestFinalizedHash), options.timeoutMs, "Finalized-head header query");
+    const latestFinalized = { number: latestFinalizedHeader.number.toString(), hash: latestFinalizedHash.toHex() };
+    if (targetBlockNumber !== null && BigInt(targetBlockNumber) > BigInt(latestFinalized.number)) {
+      return {
+        reachable: true,
+        endpoint: options.substrateEndpoint,
+        finalized: null,
+        latestFinalized,
+        historical: { requestedNumber: String(targetBlockNumber), available: false, finalized: false },
+        error: {
+          name: "HistoricalFinalityUnavailable",
+          message: `Block ${targetBlockNumber} is newer than finalized block ${latestFinalized.number}.`,
+        },
+      };
+    }
     const finalizedHash = targetBlockNumber === null
       ? latestFinalizedHash
       : await withTimeout(api.rpc.chain.getBlockHash(targetBlockNumber), options.timeoutMs, "Historical block-hash query");
@@ -104,8 +118,8 @@ export async function collectSubstrate(options, targetBlockNumber = null) {
         reachable: true,
         endpoint: options.substrateEndpoint,
         finalized: null,
-        latestFinalized: { number: latestFinalizedHeader.number.toString(), hash: latestFinalizedHash.toHex() },
-        historical: { requestedNumber: String(targetBlockNumber), available: false },
+        latestFinalized,
+        historical: { requestedNumber: String(targetBlockNumber), available: false, finalized: true },
         error: { name: "HistoricalStateUnavailable", message: `Block ${targetBlockNumber} is not available from the Substrate endpoint.` },
       };
     }
@@ -135,8 +149,8 @@ export async function collectSubstrate(options, targetBlockNumber = null) {
         endpoint: options.substrateEndpoint,
         identity: { chain: chain.toString(), nodeName: nodeName.toString(), nodeVersion: nodeVersion.toString(), properties: properties.toJSON() },
         finalized: { number: header.number.toString(), hash: finalizedHashHex },
-        latestFinalized: { number: latestFinalizedHeader.number.toString(), hash: latestFinalizedHash.toHex() },
-        historical: targetBlockNumber === null ? undefined : { requestedNumber: String(targetBlockNumber), available: true },
+        latestFinalized,
+        historical: targetBlockNumber === null ? undefined : { requestedNumber: String(targetBlockNumber), available: true, finalized: true },
         runtime,
         asset: { exists: false, unsupportedRuntime: true },
         accountMapping: { exists: false, unsupportedRuntime: true },
@@ -165,8 +179,8 @@ export async function collectSubstrate(options, targetBlockNumber = null) {
       endpoint: options.substrateEndpoint,
       identity: { chain: chain.toString(), nodeName: nodeName.toString(), nodeVersion: nodeVersion.toString(), properties: properties.toJSON() },
       finalized: { number: header.number.toString(), hash: finalizedHashHex },
-      latestFinalized: { number: latestFinalizedHeader.number.toString(), hash: latestFinalizedHash.toHex() },
-      historical: targetBlockNumber === null ? undefined : { requestedNumber: String(targetBlockNumber), available: true },
+      latestFinalized,
+      historical: targetBlockNumber === null ? undefined : { requestedNumber: String(targetBlockNumber), available: true, finalized: true },
       runtime,
       asset: {
         exists: assetExists, id: options.assetId, storageKey: apiAt.query.assets.asset.key(options.assetId),

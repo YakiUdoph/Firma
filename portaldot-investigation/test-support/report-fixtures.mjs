@@ -32,7 +32,7 @@ export function validHistoricalSnapshot() {
       },
       finalized: { number: BLOCK_NUMBER, hash: SUBSTRATE_HASH },
       latestFinalized: { number: "158174", hash: `0x${"99".repeat(32)}` },
-      historical: { requestedNumber: BLOCK_NUMBER, available: true },
+      historical: { requestedNumber: BLOCK_NUMBER, available: true, finalized: true },
       runtime: {
         specName: "portaldot-v3",
         specVersion: "3002",
@@ -52,12 +52,12 @@ export function validHistoricalSnapshot() {
       asset: {
         exists: true,
         id: "2",
-        storageKey: "0xasset",
+        storageKey: "0xaa",
         supply: SUPPLY,
-        metadata: { exists: true, storageKey: "0xmetadata", name: "test asset", symbol: "TEST", decimals: "18" },
+        metadata: { exists: true, storageKey: "0xbb", name: "test asset", symbol: "TEST", decimals: "18" },
       },
-      accountMapping: { exists: true, h160: ACCOUNT, accountId: ACCOUNT_ID, storageKey: "0xmapping" },
-      balance: { exists: true, value: SUPPLY, storageKey: "0xbalance" },
+      accountMapping: { exists: true, h160: ACCOUNT, accountId: ACCOUNT_ID, storageKey: "0xcc" },
+      balance: { exists: true, value: SUPPLY, storageKey: "0xdd" },
     },
     evm: {
       reachable: true,
@@ -79,6 +79,8 @@ export function validHistoricalSnapshot() {
 
 export function validImportedReport() {
   const evidence = validHistoricalSnapshot();
+  evidence.substrate.latestFinalized = { ...evidence.substrate.finalized };
+  delete evidence.substrate.historical;
   return {
     schema: "firma.report.v1",
     tool: {

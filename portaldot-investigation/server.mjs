@@ -9,6 +9,7 @@ import { InvalidReportError } from "./experimental/onchain-proof/src/report-comm
 import { independentlyVerifyReport } from "./src/independent-verifier.mjs";
 import { BoundedRateLimiter } from "./src/limiter.mjs";
 import { parseExpectedCommitment, parseImportedReportText } from "./src/report-import.mjs";
+import { withTimeout } from "./src/rpc.mjs";
 import { verify } from "./src/verifier.mjs";
 import { InputError, parseRequestBody } from "./src/validation.mjs";
 
@@ -62,17 +63,22 @@ const server = createServer(async (request, response) => {
         const body = parseRequestBody(await readBody(request, 1_048_576));
         if (typeof body.reportText !== "string") throw new InvalidReportError("Request must include the uploaded report as JSON text.");
         const report = parseImportedReportText(body.reportText);
-        const checked = await independentlyVerifyReport({
-          report,
-          expectedCommitment: parseExpectedCommitment(body.expectedCommitment),
-          network: defaults,
-        });
+        const checked = await withTimeout(
+          independentlyVerifyReport({
+            report,
+            expectedCommitment: parseExpectedCommitment(body.expectedCommitment),
+            network: defaults,
+          }),
+          55_000,
+          "Independent verification",
+        );
         return sendJson(response, 200, checked);
       }
       const body = parseRequestBody(await readBody(request));
       const report = await verify({ ...defaults, assetId: body.assetId ?? defaults.assetId, account: body.account ?? defaults.account });
       return sendJson(response, 200, report);
     } catch (error) {
+      if (error?.name === "TimeoutError") return sendJson(response, 504, { error: "Independent verification timed out." });
       const expected = error instanceof InputError || error instanceof InvalidReportError || error instanceof SyntaxError;
       if (!expected) console.error("Verification request failed", { name: error?.name, message: error?.message });
       return sendJson(response, expected ? 400 : 500, { error: expected ? error.message : "Verification failed unexpectedly." });

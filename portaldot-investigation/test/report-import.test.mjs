@@ -34,6 +34,14 @@ test("incomplete, internally inconsistent, and extended core schemas fail safely
   const unexpected = validImportedReport();
   unexpected.execute = "never";
   assert.throws(() => parseImportedReport(unexpected), /not allowed/);
+
+  const nestedUnexpected = validImportedReport();
+  nestedUnexpected.evidence.substrate.asset.unverifiedClaim = "trusted";
+  assert.throws(() => parseImportedReport(nestedUnexpected), /not allowed/);
+
+  const unfinalizedOriginal = validImportedReport();
+  unfinalizedOriginal.evidence.substrate.latestFinalized.number = (BigInt(unfinalizedOriginal.evidence.substrate.finalized.number) - 1n).toString();
+  assert.throws(() => parseImportedReport(unfinalizedOriginal), /must match its finalized head/);
 });
 
 test("wrong-network claims remain importable evidence rather than executable configuration", () => {

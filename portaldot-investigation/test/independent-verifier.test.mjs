@@ -69,6 +69,54 @@ test("wrong-network identity and genesis evidence are MISMATCH", async () => {
   assert.equal(result.independent.checks.find((check) => check.id === "claim.runtime.fingerprint").status, "MISMATCH");
 });
 
+test("a retrievable block newer than the finalized head is UNAVAILABLE", async () => {
+  const report = validImportedReport();
+  const merelyRetrievable = validHistoricalSnapshot();
+  merelyRetrievable.substrate.latestFinalized.number = (BigInt(BLOCK_NUMBER) - 1n).toString();
+  merelyRetrievable.substrate.historical.finalized = false;
+  const result = await independentlyVerifyReport({ report, collectSnapshotFn: collector(merelyRetrievable) });
+  assert.equal(result.independent.overall, "UNAVAILABLE");
+  assert.equal(result.independent.counts.MISMATCH, 0);
+  assert.equal(result.independent.checks.find((check) => check.id === "claim.block.substrate").status, "UNAVAILABLE");
+});
+
+test("adversarial report mutations are never independently VERIFIED", async (t) => {
+  const mutations = [
+    ["native network identity", "claim.network.substrate", (report) => { report.evidence.substrate.identity.chain = "Imposter Testnet"; }],
+    ["EVM network identity", "claim.network.evm", (report) => { report.evidence.evm.identity.chainId = "1"; }],
+    ["native block hash", "claim.block.substrate", (report) => {
+      report.evidence.substrate.finalized.hash = `0x${"11".repeat(32)}`;
+      report.evidence.substrate.latestFinalized.hash = report.evidence.substrate.finalized.hash;
+      report.evidence.substrate.runtime.fingerprint.collectedAtBlockHash = report.evidence.substrate.finalized.hash;
+    }],
+    ["EVM block hash", "claim.block.evm", (report) => { report.evidence.evm.block.hash = `0x${"22".repeat(32)}`; }],
+    ["runtime version", "claim.runtime.version", (report) => { report.evidence.substrate.runtime.specVersion = "9999"; }],
+    ["runtime fingerprint", "claim.runtime.fingerprint", (report) => { report.evidence.substrate.runtime.fingerprint.runtimeCodeHash = `0x${"33".repeat(32)}`; }],
+    ["asset identifier", "claim.asset.identifier", (report) => { report.evidence.evm.precompileAddress = `0x${"44".repeat(20)}`; }],
+    ["account mapping", "claim.account.mapping", (report) => { report.evidence.substrate.accountMapping.accountId = "5FakeAccount"; }],
+    ["native balance", "claim.asset.balance.native", (report) => { report.evidence.substrate.balance.value = "7"; }],
+    ["native balance storage key", "claim.asset.balance.native", (report) => { report.evidence.substrate.balance.storageKey = "0xee"; }],
+    ["native metadata", "claim.asset.metadata.native", (report) => { report.evidence.substrate.asset.metadata.symbol = "FAKE"; }],
+    ["EVM metadata", "claim.evm.symbol", (report) => { report.evidence.evm.calls.symbol.value = "FAKE"; }],
+    ["EVM raw return bytes", "claim.evm.totalSupply", (report) => { report.evidence.evm.calls.totalSupply.raw = "0xff"; }],
+    ["reported check status", "verdict.asset.balance", (report) => {
+      report.verdict.checks.find((check) => check.id === "asset.balance").status = "UNKNOWN";
+      report.verdict.counts = { PASS: 8, FAIL: 0, UNKNOWN: 1 };
+      report.verdict.overall = "UNKNOWN";
+    }],
+  ];
+
+  for (const [name, checkId, mutate] of mutations) {
+    await t.test(name, async () => {
+      const report = validImportedReport();
+      mutate(report);
+      const result = await independentlyVerifyReport({ report, collectSnapshotFn: collector(validHistoricalSnapshot()) });
+      assert.equal(result.independent.overall, "MISMATCH");
+      assert.equal(result.independent.checks.find((check) => check.id === checkId).status, "MISMATCH");
+    });
+  }
+});
+
 test("the Phase 7B deterministic commitment is independently recomputed and compared", async () => {
   const report = validImportedReport();
   const expected = computeReportCommitment(report).commitment;

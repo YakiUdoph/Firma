@@ -38,6 +38,9 @@ test("report API rejects malformed, duplicate-key, missing, and oversized import
 
   const oversized = await createCheckReportHandler().fetch(request("{}", { "content-length": "1048577" }));
   assert.equal(oversized.status, 413);
+
+  const undeclaredOversized = await createCheckReportHandler().fetch(request(JSON.stringify({ reportText: "x".repeat(1_048_576) })));
+  assert.equal(undeclaredOversized.status, 413);
   assert.equal(calls, 0);
 });
 
@@ -48,4 +51,38 @@ test("report API requires JSON and remains read-only", async () => {
   const get = await handler.fetch(new Request("https://firma.example/api/check-report"));
   assert.equal(get.status, 405);
   assert.equal(get.headers.get("allow"), "POST");
+});
+
+test("report API rate-limits repeated requests and supplies Retry-After", async () => {
+  const handler = createCheckReportHandler();
+  for (let index = 0; index < 3; index += 1) {
+    const response = await handler.fetch(request("{"));
+    assert.equal(response.status, 400);
+  }
+  const limited = await handler.fetch(request("{"));
+  assert.equal(limited.status, 429);
+  assert.ok(Number(limited.headers.get("retry-after")) >= 1);
+});
+
+test("report API classifies deadlines, endpoint unavailability, and unexpected errors", async () => {
+  const body = JSON.stringify({ reportText: JSON.stringify(validImportedReport()) });
+  const timeout = createCheckReportHandler({
+    verificationTimeoutMs: 5,
+    verifyFn: async () => new Promise(() => {}),
+  });
+  const timedOut = await timeout.fetch(request(body));
+  assert.equal(timedOut.status, 504);
+  assert.match((await timedOut.json()).error, /timed out/i);
+
+  const unavailable = createCheckReportHandler({
+    verifyFn: async () => ({ independent: { overall: "UNAVAILABLE" } }),
+  });
+  const unavailableResponse = await unavailable.fetch(request(body));
+  assert.equal(unavailableResponse.status, 200);
+  assert.equal((await unavailableResponse.json()).independent.overall, "UNAVAILABLE");
+
+  const failed = createCheckReportHandler({ verifyFn: async () => { throw new Error("RPC implementation fault"); } });
+  const failedResponse = await failed.fetch(request(body));
+  assert.equal(failedResponse.status, 500);
+  assert.equal((await failedResponse.json()).error, "Independent verification failed unexpectedly.");
 });
