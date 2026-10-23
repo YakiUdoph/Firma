@@ -8,6 +8,10 @@
     "api/verify.mjs": {
       "maxDuration": 60,
       "supportsCancellation": true
+    },
+    "api/check-report.mjs": {
+      "maxDuration": 60,
+      "supportsCancellation": true
     }
   },
   "headers": [

@@ -18,6 +18,7 @@
       <span class="brand-name">FIRMA</span>
     </a>
     <nav aria-label="Primary navigation">
+      <a href="#check-report">Check a report</a>
       <a href="#method">Method</a>
       <a href="#boundaries">About</a>
     </nav>
@@ -134,6 +135,69 @@
           <pre id="evidence-json" tabindex="0"></pre>
         </details>
       </section>
+    </section>
+
+    <section id="check-report" class="report-workspace" aria-labelledby="report-title">
+      <div class="report-intro">
+        <p class="eyebrow"><span aria-hidden="true"></span> Independent evidence</p>
+        <h2 id="report-title">Check a report</h2>
+        <p>Upload a FIRMA JSON report. FIRMA will return to the report's exact finalized block, repeat the supported reads, and show whether the saved claims still agree with the chain.</p>
+        <ul class="report-status-guide" aria-label="Independent result meanings">
+          <li><strong>Verified</strong><span>Historical evidence was reproduced.</span></li>
+          <li><strong>Mismatch</strong><span>A saved claim disagrees with the chain.</span></li>
+          <li><strong>Unavailable</strong><span>The exact history could not be checked safely.</span></li>
+        </ul>
+      </div>
+
+      <div class="report-card">
+        <form id="report-form">
+          <div class="field">
+            <label for="report-file">Upload report</label>
+            <input id="report-file" name="reportFile" type="file" accept="application/json,.json" required aria-describedby="report-file-help">
+            <small id="report-file-help">Choose an exported <code>firma.report.v1</code> JSON file, up to 256 KiB.</small>
+          </div>
+          <div class="field">
+            <label for="expected-commitment">Expected commitment <span class="optional">Optional</span></label>
+            <input id="expected-commitment" name="expectedCommitment" spellcheck="false" autocomplete="off" pattern="0x[0-9a-fA-F]{64}" maxlength="66" aria-describedby="commitment-help" placeholder="0x…">
+            <small id="commitment-help">Paste a Phase 7B report commitment to compare it with the uploaded file.</small>
+          </div>
+          <button id="report-button" class="primary-button" type="submit">
+            <span class="button-label">Check evidence</span>
+            <span class="button-icon" aria-hidden="true">&#8599;</span>
+          </button>
+        </form>
+        <div id="report-progress" class="progress-panel" role="status" aria-live="polite" hidden>
+          <div class="progress-heading"><span class="progress-spinner" aria-hidden="true"></span><div><strong>Checking historical evidence</strong><p>Requesting the exact block saved in the report.</p></div></div>
+          <div class="progress-track" aria-hidden="true"><span></span></div>
+          <p class="progress-note">FIRMA will return Unavailable rather than substitute current blockchain state.</p>
+        </div>
+        <p id="report-error" class="form-error" role="alert" tabindex="-1" hidden></p>
+      </div>
+    </section>
+
+    <section id="report-result" class="report-result" aria-labelledby="independent-title" hidden>
+      <div class="report-result-heading">
+        <div>
+          <p class="eyebrow result-eyebrow">Independent result</p>
+          <div class="verdict-line" role="status" aria-live="polite" aria-atomic="true">
+            <span id="independent-symbol" class="verdict-symbol" aria-hidden="true"></span>
+            <h2 id="independent-title">Waiting</h2>
+          </div>
+          <p id="independent-summary" class="verdict-summary"></p>
+        </div>
+        <dl class="report-summary-list">
+          <div><dt>Original verdict</dt><dd id="imported-verdict"></dd></div>
+          <div><dt>Historical block</dt><dd id="imported-block"></dd></div>
+          <div><dt>Report commitment</dt><dd id="report-commitment"></dd></div>
+        </dl>
+      </div>
+      <p class="separation-note"><strong>The original report is preserved.</strong> Its asset verdict and this independent result answer different questions.</p>
+      <div id="independent-counts" class="verdict-counts" aria-label="Independent verification totals"></div>
+      <div id="independent-checks" class="checks"></div>
+      <details class="raw-evidence">
+        <summary><span>Show complete independent verification JSON</span><span aria-hidden="true">+</span></summary>
+        <pre id="independent-json" tabindex="0"></pre>
+      </details>
     </section>
 
     <section id="method" class="method" aria-labelledby="method-title">
