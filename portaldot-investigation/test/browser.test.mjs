@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { chromium } from "playwright-core";
 import { independentlyVerifyReport } from "../src/independent-verifier.mjs";
+import { browserStartupTimeout, startManagedHttpServer } from "../test-support/browser-server.mjs";
 import { validHistoricalSnapshot, validImportedReport } from "../test-support/report-fixtures.mjs";
 
 const require = createRequire(import.meta.url);
@@ -20,28 +20,14 @@ const chromeCandidates = process.platform === "win32"
     : ["/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "/usr/bin/chromium", "/usr/bin/chromium-browser"];
 const chromePath = process.env.FIRMA_CHROME_PATH || chromeCandidates.find(existsSync);
 
-async function waitForServer(url) {
-  let lastError;
-  for (let attempt = 0; attempt < 30; attempt += 1) {
-    try {
-      const response = await fetch(url);
-      if (response.ok) return;
-    } catch (error) { lastError = error; }
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-  throw lastError ?? new Error("Local FIRMA server did not start.");
-}
-
-test("report upload works in Chrome and has no serious accessibility violations", { timeout: 30_000 }, async (t) => {
+test("report upload works in Chrome and has no serious accessibility violations", { timeout: 45_000 }, async (t) => {
   assert.ok(chromePath, "Chrome or Chromium is required for the browser regression test.");
-  const port = 4397;
-  const server = spawn(process.execPath, ["server.mjs"], {
+  const server = await startManagedHttpServer({
+    args: ["server.mjs"],
     cwd: projectRoot,
-    env: { ...process.env, PORT: String(port) },
-    stdio: ["ignore", "pipe", "pipe"],
+    timeoutMs: browserStartupTimeout(),
   });
-  t.after(() => server.kill());
-  await waitForServer(`http://127.0.0.1:${port}`);
+  t.after(() => server.stop());
 
   const report = validImportedReport();
   const response = await independentlyVerifyReport({
@@ -56,7 +42,7 @@ test("report upload works in Chrome and has no serious accessibility violations"
   page.on("pageerror", (error) => pageErrors.push(error.message));
   let routedResponse = response;
   await page.route("**/api/check-report", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(routedResponse) }));
-  await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "networkidle" });
+  await page.goto(`${server.url}/`, { waitUntil: "networkidle" });
 
   await assert.doesNotReject(() => page.getByRole("heading", { name: "Check a report" }).waitFor());
   await page.getByLabel("Upload report").setInputFiles({ name: "firma-report.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(report)) });
