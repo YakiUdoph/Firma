@@ -40,7 +40,7 @@ async function readBody(request) {
 
 const server = createServer(async (request, response) => {
   response.setHeader("referrer-policy", "no-referrer");
-  response.setHeader("content-security-policy", "default-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; frame-ancestors 'none'");
+  response.setHeader("content-security-policy", "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'none'; frame-ancestors 'none'");
   if (request.method === "POST" && request.url === "/api/verify") {
     const key = clientKey(request);
     const rate = limiter.consume(key);

@@ -4,4 +4,5 @@ portaldot-investigation/dist/
 portaldot-investigation/.vercel/
 npm-debug.log*
 .DS_Store
+/review-artifacts/
 
