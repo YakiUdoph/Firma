@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
@@ -10,7 +11,12 @@ import { validHistoricalSnapshot, validImportedReport } from "../test-support/re
 const require = createRequire(import.meta.url);
 const projectRoot = fileURLToPath(new URL("../", import.meta.url));
 const screenshotPath = fileURLToPath(new URL("../../review-artifacts/phase-7d-check-report.png", import.meta.url));
-const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+const chromeCandidates = process.platform === "win32"
+  ? ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"]
+  : process.platform === "darwin"
+    ? ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"]
+    : ["/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "/usr/bin/chromium", "/usr/bin/chromium-browser"];
+const chromePath = process.env.FIRMA_CHROME_PATH || chromeCandidates.find(existsSync);
 
 async function waitForServer(url) {
   let lastError;
@@ -25,6 +31,7 @@ async function waitForServer(url) {
 }
 
 test("report upload works in Chrome and has no serious accessibility violations", { timeout: 30_000 }, async (t) => {
+  assert.ok(chromePath, "Chrome or Chromium is required for the browser regression test.");
   const port = 4397;
   const server = spawn(process.execPath, ["server.mjs"], {
     cwd: projectRoot,
