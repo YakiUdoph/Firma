@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { configuredDefaults } from "../src/config.mjs";
+import { createVerificationDiagnostics } from "../src/diagnostics.mjs";
 import { BoundedRateLimiter } from "../src/limiter.mjs";
 import { verify } from "../src/verifier.mjs";
 import { InputError, parseRequestBody } from "../src/validation.mjs";
@@ -30,6 +31,7 @@ function clientKey(request) {
 export default {
   async fetch(request) {
     const requestId = randomUUID();
+    let diagnostics = null;
     if (request.method !== "POST") return json(405, { error: "Method not allowed.", requestId }, { allow: "POST" });
 
     const declaredLength = Number(request.headers.get("content-length") ?? 0);
@@ -49,15 +51,18 @@ export default {
       if (Buffer.byteLength(text, "utf8") > MAX_BODY_BYTES) return json(413, { error: "Request body exceeds 8 KiB.", requestId });
       const body = parseRequestBody(JSON.parse(text || "{}"));
       const defaults = configuredDefaults();
+      diagnostics = createVerificationDiagnostics({ requestId });
       const report = await verify({
         ...defaults,
         assetId: body.assetId ?? defaults.assetId,
         account: body.account ?? defaults.account,
-      });
+      }, { diagnostics });
+      diagnostics.emit(report.verdict);
       return json(200, { ...report, requestId });
     } catch (error) {
+      diagnostics?.emit(null, error);
       const expected = error instanceof InputError || error instanceof SyntaxError;
-      if (!expected) console.error("FIRMA verification failed", { requestId, name: error?.name, message: error?.message });
+      if (!expected) console.error("FIRMA verification failed", { requestId, category: "unexpected_error" });
       return json(expected ? 400 : 500, { error: expected ? error.message : "Verification failed unexpectedly.", requestId });
     } finally {
       active -= 1;
