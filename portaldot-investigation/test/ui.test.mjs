@@ -103,3 +103,17 @@ test("independent report verification keeps original and reproduced results sepa
   assert.match(css, /\.check\[data-status="MISMATCH"\]/);
   assert.match(css, /\.check\[data-status="UNAVAILABLE"\]/);
 });
+
+test("investigation guidance is progressive, evidence-backed, and rendered as text", () => {
+  assert.match(html, /id="investigation-summary"/);
+  assert.match(html, /What matters next/);
+  assert.match(client, /WHAT FIRMA OBSERVED/);
+  assert.match(client, /WHAT THIS PROVES/);
+  assert.match(client, /WHAT IT DOES NOT PROVE/);
+  assert.match(client, /WHAT TO INVESTIGATE NEXT/);
+  assert.match(client, /details\.open = item\.status !== "PASS"/);
+  assert.match(client, /value\.textContent = entry\.value/);
+  assert.doesNotMatch(client, /innerHTML|insertAdjacentHTML|document\.write/);
+  assert.match(css, /\.investigation-guidance/);
+  assert.match(css, /\.guidance-grid/);
+});

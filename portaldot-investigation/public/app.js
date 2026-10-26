@@ -1,4 +1,5 @@
 import { LABEL, VERDICT_COPY, evidenceFilename, reportContext } from "/view-model.js";
+import { guidanceForCheck, projectInvestigation } from "/investigation.js";
 
 const form = document.querySelector("#verify-form");
 const button = document.querySelector("#run-button");
@@ -13,6 +14,7 @@ const verdictTitle = document.querySelector("#verdict-title");
 const verdictSymbol = document.querySelector("#verdict-symbol");
 const verdictSummary = document.querySelector("#verdict-summary");
 const verdictCounts = document.querySelector("#verdict-counts");
+const investigationSummary = document.querySelector("#investigation-summary");
 const evidenceJson = document.querySelector("#evidence-json");
 const copyButton = document.querySelector("#copy-button");
 const COUNT_LABEL = Object.freeze({
@@ -63,7 +65,64 @@ function evidenceDetails(evidence) {
   return details;
 }
 
-function checkRow(item, index, labels = LABEL) {
+function guidanceSection(titleText, bodyText) {
+  const section = document.createElement("section");
+  const title = document.createElement("h5");
+  title.textContent = titleText;
+  const body = document.createElement("p");
+  body.textContent = bodyText;
+  section.append(title, body);
+  return section;
+}
+
+function investigationDetails(item, guidance) {
+  const details = document.createElement("details");
+  details.className = "investigation-guidance";
+  details.open = item.status !== "PASS";
+  const summary = document.createElement("summary");
+  summary.textContent = "Investigation guidance";
+  const content = document.createElement("div");
+  content.className = "guidance-grid";
+  const nextSteps = document.createElement("section");
+  const nextTitle = document.createElement("h5");
+  nextTitle.textContent = "WHAT TO INVESTIGATE NEXT";
+  const list = document.createElement("ol");
+  for (const step of guidance.nextSteps) {
+    const item = document.createElement("li");
+    item.textContent = step;
+    list.append(item);
+  }
+  nextSteps.append(nextTitle, list);
+  content.append(
+    guidanceSection("WHAT FIRMA OBSERVED", guidance.observed),
+    guidanceSection("WHAT THIS PROVES", guidance.proves),
+    guidanceSection("WHAT IT DOES NOT PROVE", guidance.doesNotProve),
+    nextSteps,
+  );
+  if (guidance.evidenceReferences.length) {
+    const evidence = document.createElement("section");
+    evidence.className = "guidance-references";
+    const evidenceTitle = document.createElement("h5");
+    evidenceTitle.textContent = "RELEVANT EVIDENCE";
+    const definitions = document.createElement("dl");
+    for (const entry of guidance.evidenceReferences) {
+      const wrapper = document.createElement("div");
+      const term = document.createElement("dt");
+      term.textContent = entry.label;
+      term.title = entry.path;
+      const value = document.createElement("dd");
+      value.textContent = entry.value;
+      wrapper.append(term, value);
+      definitions.append(wrapper);
+    }
+    evidence.append(evidenceTitle, definitions);
+    content.append(evidence);
+  }
+  details.append(summary, content);
+  return details;
+}
+
+function checkRow(item, index, labels = LABEL, guidance = null) {
   const row = document.createElement("article");
   row.className = "check";
   row.dataset.status = item.status;
@@ -87,9 +146,32 @@ function checkRow(item, index, labels = LABEL) {
   heading.append(title, badge);
   const summary = document.createElement("p");
   summary.textContent = item.summary;
-  body.append(heading, summary, evidenceDetails(item.evidence));
+  body.append(heading, summary);
+  if (guidance) body.append(investigationDetails(item, guidance));
+  body.append(evidenceDetails(item.evidence));
   row.append(indexLabel, body);
   return row;
+}
+
+function renderInvestigationSummary(report) {
+  const investigation = projectInvestigation(report);
+  investigationSummary.dataset.status = investigation.overall;
+  const values = [
+    ["Primary finding", investigation.primaryFinding],
+    ["Block context", investigation.blockContext],
+    ["Priority", investigation.priorityIssue],
+    ["Next action", investigation.nextAction],
+  ];
+  investigationSummary.replaceChildren(...values.map(([label, value]) => {
+    const item = document.createElement("div");
+    const term = document.createElement("dt");
+    term.textContent = label;
+    const detail = document.createElement("dd");
+    detail.textContent = value;
+    item.append(term, detail);
+    return item;
+  }));
+  return investigation;
 }
 
 function setReportLoading(loading) {
@@ -161,8 +243,14 @@ function render(report) {
   verdictSymbol.textContent = status === "PASS" ? "\u2713" : status === "FAIL" ? "\u00d7" : "?";
   verdictSummary.textContent = VERDICT_COPY[status];
   verdictCounts.replaceChildren(...["PASS", "FAIL", "UNKNOWN"].map((item) => countItem(item, report.verdict.counts?.[item])));
+  const investigation = renderInvestigationSummary(report);
   context.replaceChildren(...reportContext(report).map(contextItem));
-  checks.replaceChildren(...report.verdict.checks.map(checkRow));
+  checks.replaceChildren(...report.verdict.checks.map((item, index) => checkRow(
+    item,
+    index,
+    LABEL,
+    investigation.checks[index]?.guidance ?? guidanceForCheck(report, item),
+  )));
   evidenceJson.textContent = JSON.stringify(report, null, 2);
   result.scrollIntoView({ behavior: "smooth", block: "start" });
   verdictTitle.tabIndex = -1;

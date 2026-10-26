@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { chromium } from "playwright-core";
+import { evaluateSnapshot } from "../src/evaluate.mjs";
 import { independentlyVerifyReport } from "../src/independent-verifier.mjs";
 import { browserStartupTimeout, startManagedHttpServer } from "../test-support/browser-server.mjs";
 import { validHistoricalSnapshot, validImportedReport } from "../test-support/report-fixtures.mjs";
@@ -41,8 +42,21 @@ test("report upload works in Chrome and has no serious accessibility violations"
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   let routedResponse = response;
+  const hostileText = `</p><script data-injected>globalThis.__firmaInjected=true</script>`;
+  const hostileReport = structuredClone(report);
+  hostileReport.evidence.substrate.asset.metadata.name = hostileText;
+  hostileReport.evidence.evm.calls.name.value = hostileText;
+  hostileReport.verdict = evaluateSnapshot(hostileReport.evidence);
+  await page.route("**/api/verify", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(hostileReport) }));
   await page.route("**/api/check-report", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(routedResponse) }));
   await page.goto(`${server.url}/`, { waitUntil: "networkidle" });
+
+  await page.getByRole("button", { name: "Check asset" }).click();
+  await page.getByRole("heading", { name: "Passed", exact: true }).waitFor();
+  assert.match(await page.locator("#checks").textContent(), /<script data-injected>/);
+  assert.equal(await page.locator("script[data-injected]").count(), 0);
+  assert.equal(await page.evaluate(() => globalThis.__firmaInjected), undefined);
+  await page.locator("#result").evaluate((element) => { element.hidden = true; });
 
   await assert.doesNotReject(() => page.getByRole("heading", { name: "Check a report" }).waitFor());
   await page.getByLabel("Upload report").setInputFiles({ name: "firma-report.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(report)) });

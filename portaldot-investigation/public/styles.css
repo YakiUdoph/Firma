@@ -141,6 +141,15 @@ small { color: var(--faint); font-size: .72rem; line-height: 1.45; }
 .verdict-counts [data-status="UNKNOWN"] strong { color: var(--unknown); }
 .verdict-counts span { font-size: .76rem; font-weight: 700; }
 .verdict-counts small { font-family: var(--mono); font-size: .58rem; letter-spacing: .08em; }
+.investigation-overview { margin-top: clamp(40px, 5vw, 58px); }
+.investigation-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.investigation-summary > div { padding: 18px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface-strong); }
+.investigation-summary > div:nth-child(2n) { border-right: 0; }
+.investigation-summary > div:nth-last-child(-n+2) { border-bottom: 0; }
+.investigation-summary dt { margin-bottom: 8px; color: var(--emerald); font-family: var(--mono); font-size: .62rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.investigation-summary[data-status="FAIL"] dt:first-child { color: var(--fail); }
+.investigation-summary[data-status="UNKNOWN"] dt:first-child { color: var(--unknown); }
+.investigation-summary dd { margin: 0; color: var(--ink-soft); font-size: .82rem; line-height: 1.55; }
 .context-panel, .comparison-panel, .evidence-panel { margin-top: clamp(40px, 5vw, 58px); }
 .section-heading { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, .65fr); gap: 40px; align-items: end; margin-bottom: 28px; }
 .section-heading.compact { align-items: start; }
@@ -169,6 +178,19 @@ small { color: var(--faint); font-size: .72rem; line-height: 1.45; }
 .check-evidence { margin-top: 13px; }
 .check-evidence summary { min-height: 44px; display: inline-flex; align-items: center; color: var(--muted); font-size: .7rem; text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 4px; }
 .check-evidence pre { margin: 14px 0 0; }
+.investigation-guidance { margin-top: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-strong); }
+.investigation-guidance > summary { min-height: 44px; display: flex; align-items: center; padding: 0 14px; cursor: pointer; color: var(--ink-soft); font-size: .72rem; font-weight: 750; list-style-position: inside; }
+.guidance-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--line); }
+.guidance-grid > section { min-width: 0; padding: 15px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.guidance-grid > section:nth-child(2n) { border-right: 0; }
+.guidance-grid h5 { margin: 0 0 7px; color: var(--emerald); font-family: var(--mono); font-size: .58rem; letter-spacing: .08em; line-height: 1.4; }
+.guidance-grid p, .guidance-grid li { margin: 0; color: var(--muted); font-size: .76rem; line-height: 1.55; }
+.guidance-grid ol { display: grid; gap: 7px; margin: 0; padding-left: 18px; }
+.guidance-grid .guidance-references { grid-column: 1 / -1; border-right: 0; border-bottom: 0; }
+.guidance-references dl { display: grid; gap: 8px; margin: 0; }
+.guidance-references dl > div { display: grid; grid-template-columns: minmax(120px, .35fr) minmax(0, 1fr); gap: 12px; }
+.guidance-references dt { color: var(--faint); font-size: .66rem; font-weight: 700; }
+.guidance-references dd { min-width: 0; margin: 0; overflow-wrap: anywhere; color: var(--ink-soft); font-family: var(--mono); font-size: .66rem; }
 .raw-evidence { border: 1px solid var(--line); border-radius: 14px; background: #1e241f; color: #edf0e9; overflow: hidden; }
 .raw-evidence > summary { min-height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 14px 21px; cursor: pointer; font-size: .82rem; font-weight: 700; list-style: none; }
 .raw-evidence > summary::-webkit-details-marker { display: none; }
@@ -267,6 +289,10 @@ button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visibl
   .verdict-counts > div:last-child { border-bottom: 0; }
   .section-heading { gap: 16px; align-items: start; }
   .check-heading { display: grid; gap: 10px; }
+  .investigation-summary, .guidance-grid { grid-template-columns: 1fr; }
+  .investigation-summary > div, .investigation-summary > div:nth-child(2n), .guidance-grid > section, .guidance-grid > section:nth-child(2n) { border-right: 0; border-bottom: 1px solid var(--line); }
+  .investigation-summary > div:last-child, .guidance-grid > section:last-child { border-bottom: 0; }
+  .guidance-references dl > div { grid-template-columns: 1fr; gap: 4px; }
   .status-badge { width: fit-content; }
   .boundaries { padding: 40px 28px; }
   .report-workspace { padding: 76px 0; }
