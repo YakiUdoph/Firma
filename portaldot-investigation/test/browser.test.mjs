@@ -47,7 +47,8 @@ test("report upload works in Chrome and has no serious accessibility violations"
   hostileReport.evidence.substrate.asset.metadata.name = hostileText;
   hostileReport.evidence.evm.calls.name.value = hostileText;
   hostileReport.verdict = evaluateSnapshot(hostileReport.evidence);
-  await page.route("**/api/verify", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(hostileReport) }));
+  let verificationReport = hostileReport;
+  await page.route("**/api/verify", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(verificationReport) }));
   await page.route("**/api/check-report", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(routedResponse) }));
   await page.goto(`${server.url}/`, { waitUntil: "networkidle" });
 
@@ -56,6 +57,29 @@ test("report upload works in Chrome and has no serious accessibility violations"
   assert.match(await page.locator("#checks").textContent(), /<script data-injected>/);
   assert.equal(await page.locator("script[data-injected]").count(), 0);
   assert.equal(await page.evaluate(() => globalThis.__firmaInjected), undefined);
+
+  const incompleteReports = [
+    {},
+    { schema: "firma.report.v1", evidence: {}, verdict: { overall: "PASS", counts: { PASS: 0, FAIL: 0, UNKNOWN: 0 } } },
+    { schema: "firma.report.v1", evidence: {}, verdict: { overall: "PASS", counts: {}, checks: {} } },
+    {
+      schema: "firma.report.v1",
+      verdict: {
+        overall: "PASS",
+        counts: { PASS: 2, FAIL: 0, UNKNOWN: 0 },
+        checks: [null, { id: 7, title: {}, status: "SURPRISE", summary: [], evidence: "missing" }],
+      },
+    },
+  ];
+  for (const incompleteReport of incompleteReports) {
+    verificationReport = incompleteReport;
+    await page.getByRole("button", { name: "Check asset" }).click();
+    await page.getByRole("heading", { name: "Couldn't verify", exact: true }).waitFor();
+    assert.equal(await page.locator("#result").getAttribute("data-status"), "UNKNOWN");
+    assert.match(await page.locator("#form-error").textContent(), /incomplete or internally inconsistent report/i);
+    assert.equal(await page.locator("#form-error").isHidden(), false);
+  }
+  assert.equal(pageErrors.length, 0);
   await page.locator("#result").evaluate((element) => { element.hidden = true; });
 
   await assert.doesNotReject(() => page.getByRole("heading", { name: "Check a report" }).waitFor());

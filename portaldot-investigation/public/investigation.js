@@ -20,13 +20,14 @@ function references(...items) {
   return items.filter(Boolean);
 }
 
-function result(observed, proves, doesNotProve, nextSteps, evidenceReferences) {
+function result(observed, proves, doesNotProve, nextSteps, evidenceReferences, integrity = "SUPPORTED") {
   return Object.freeze({
     observed,
     proves,
     doesNotProve,
     nextSteps: Object.freeze(nextSteps),
     evidenceReferences: Object.freeze(evidenceReferences),
+    integrity,
   });
 }
 
@@ -35,6 +36,26 @@ function unavailableObservation(label, error) {
   return detail
     ? `${label} was unavailable. The recorded error was ${detail}.`
     : `${label} was unavailable or malformed in this report.`;
+}
+
+function integerText(value) {
+  return typeof value === "string" && /^(0|[1-9]\d*)$/.test(value) ? value : null;
+}
+
+function evidenceStatusGuidance(check, evidenceStatus, evidenceDescription, refs) {
+  if (VALID_STATUS.has(check?.status) && check.status === evidenceStatus) return null;
+  const reportedStatus = text(check?.status) ?? "missing";
+  return result(
+    `The report labels this check ${reportedStatus}, but ${evidenceDescription} The reported status and supporting evidence cannot be reconciled.`,
+    "The report is internally inconsistent, so this check's conclusion cannot be established from the displayed evidence.",
+    "The reported status alone does not prove agreement, contradiction, or unavailability, and FIRMA has not changed the original status.",
+    [
+      "Independently reproduce this check from the recorded inputs and block context.",
+      "Inspect the original report and evidence source before relying on this result.",
+    ],
+    refs,
+    "INCONSISTENT",
+  );
 }
 
 function networkGuidance(report, check, surface) {
@@ -48,7 +69,15 @@ function networkGuidance(report, check, surface) {
     reference(`evidence.${surface}.finalized.number`, "Finalized block", evidence?.finalized?.number),
     reference(`evidence.${surface}.error`, "Recorded error", errorText(evidence?.error)),
   );
-  if (check.status === "PASS" && evidence?.reachable === true) {
+  const evidenceStatus = evidence?.reachable === true ? "PASS" : "UNKNOWN";
+  const inconsistent = evidenceStatusGuidance(
+    check,
+    evidenceStatus,
+    evidenceStatus === "PASS" ? `${label} is recorded as reachable.` : `${label} does not have a usable reachability observation.`,
+    refs,
+  );
+  if (inconsistent) return inconsistent;
+  if (evidenceStatus === "PASS") {
     const context = isSubstrate && text(evidence?.finalized?.number)
       ? ` and returned finalized block ${evidence.finalized.number}`
       : "";
@@ -75,13 +104,25 @@ function networkGuidance(report, check, surface) {
 }
 
 function chainIdentityGuidance(report, check) {
-  const expected = text(report?.input?.expectedChainId) ?? text(report?.evidence?.input?.expectedChainId);
-  const actual = text(report?.evidence?.evm?.identity?.chainId);
+  const expected = integerText(report?.input?.expectedChainId) ?? integerText(report?.evidence?.input?.expectedChainId);
+  const actual = integerText(report?.evidence?.evm?.identity?.chainId);
   const refs = references(
     reference("input.expectedChainId", "Expected chain ID", expected),
     reference("evidence.evm.identity.chainId", "Observed chain ID", actual),
     reference("evidence.evm.identity.chainIdHex", "Observed chain ID (hex)", report?.evidence?.evm?.identity?.chainIdHex),
   );
+  const evidenceStatus = !expected || !actual ? "UNKNOWN" : actual === expected ? "PASS" : "FAIL";
+  const inconsistent = evidenceStatusGuidance(
+    check,
+    evidenceStatus,
+    evidenceStatus === "UNKNOWN"
+      ? "the expected or observed chain ID is missing or malformed."
+      : evidenceStatus === "PASS"
+        ? `the observed chain ID ${actual} matches the expected chain ID.`
+        : `the observed chain ID ${actual} differs from the expected chain ID ${expected}.`,
+    refs,
+  );
+  if (inconsistent) return inconsistent;
   if (!expected || !actual) {
     return result(
       "The expected or observed EVM chain ID is missing or malformed.",
@@ -91,7 +132,7 @@ function chainIdentityGuidance(report, check) {
       refs,
     );
   }
-  if (check.status === "FAIL" || actual !== expected) {
+  if (actual !== expected) {
     return result(
       `The EVM endpoint reported chain ID ${actual}; FIRMA expected ${expected}.`,
       "The observed EVM chain identity contradicts the configured expected chain identity.",
@@ -124,7 +165,20 @@ function runtimeGuidance(report, check) {
     reference("evidence.substrate.runtime.fingerprint.runtimeCodeHash", "Runtime-code hash", fingerprint?.runtimeCodeHash),
     reference("verdict.checks[runtime.support].evidence.mismatchReasons", "Profile differences", mismatchReasons.join(", ")),
   );
-  if (check.status === "PASS" && version && text(fingerprint?.runtimeCodeHash)) {
+  const assessmentAvailable = Boolean(version && text(fingerprint?.runtimeCodeHash) && Array.isArray(check?.evidence?.mismatchReasons));
+  const evidenceStatus = assessmentAvailable && mismatchReasons.length === 0 ? "PASS" : "UNKNOWN";
+  const inconsistent = evidenceStatusGuidance(
+    check,
+    evidenceStatus,
+    evidenceStatus === "PASS"
+      ? "the recorded runtime fingerprint has no reported support-profile differences."
+      : mismatchReasons.length
+        ? `the runtime support evidence lists differences: ${mismatchReasons.join(", ")}.`
+        : "the runtime support evidence is missing or malformed.",
+    refs,
+  );
+  if (inconsistent) return inconsistent;
+  if (evidenceStatus === "PASS") {
     return result(
       `Runtime ${version} and its finalized runtime-code fingerprint matched FIRMA's reviewed support profile.`,
       "FIRMA can safely apply its reviewed storage, account-mapping, and asset-precompile interpretations at this block.",
@@ -166,7 +220,17 @@ function blockGuidance(report, check) {
     reference("evidence.substrate.historical.requestedNumber", "Requested historical block", requested),
     reference("evidence.substrate.error", "Recorded native error", substrateError),
   );
-  if (check.status === "PASS" && nativeBlock && evmBlock && nativeBlock === evmBlock) {
+  const evidenceStatus = nativeBlock && evmBlock && nativeBlock === evmBlock ? "PASS" : "UNKNOWN";
+  const inconsistent = evidenceStatusGuidance(
+    check,
+    evidenceStatus,
+    evidenceStatus === "PASS"
+      ? `both interfaces are recorded at block ${nativeBlock}.`
+      : "the report does not establish one shared block context.",
+    refs,
+  );
+  if (inconsistent) return inconsistent;
+  if (evidenceStatus === "PASS") {
     return result(
       `The native and EVM reads were both pinned to finalized block ${nativeBlock}.`,
       "The compared observations share one block height, so differences are not explained by reading different heights.",
@@ -195,8 +259,8 @@ function blockGuidance(report, check) {
 function supplyGuidance(report, check) {
   const nativeAsset = report?.evidence?.substrate?.asset;
   const evmCall = report?.evidence?.evm?.calls?.totalSupply;
-  const native = text(nativeAsset?.supply);
-  const evm = evmCall?.ok === true ? text(evmCall.value) : null;
+  const native = integerText(nativeAsset?.supply);
+  const evm = evmCall?.ok === true ? integerText(evmCall.value) : null;
   const refs = references(
     reference("evidence.substrate.asset.supply", "Native supply", native),
     reference("evidence.substrate.asset.storageKey", "Native asset storage key", nativeAsset?.storageKey),
@@ -205,6 +269,19 @@ function supplyGuidance(report, check) {
     reference("evidence.evm.precompileAddress", "Asset precompile", report?.evidence?.evm?.precompileAddress),
     reference("evidence.evm.calls.totalSupply.error", "Recorded EVM error", errorText(evmCall?.error)),
   );
+  const valuesAvailable = nativeAsset?.exists === true && Boolean(native && evm);
+  const evidenceStatus = !valuesAvailable ? "UNKNOWN" : native === evm ? "PASS" : "FAIL";
+  const inconsistent = evidenceStatusGuidance(
+    check,
+    evidenceStatus,
+    evidenceStatus === "UNKNOWN"
+      ? "a complete pair of valid native and EVM integer supply observations is not available."
+      : evidenceStatus === "PASS"
+        ? `both supply observations equal ${native} base units.`
+        : `native supply ${native} and EVM totalSupply ${evm} are different.`,
+    refs,
+  );
+  if (inconsistent) return inconsistent;
   if (!nativeAsset || nativeAsset.exists !== true || !native || !evm) {
     const reason = nativeAsset?.exists === false
       ? "The native asset record was absent, so no native supply observation was available."
@@ -217,7 +294,7 @@ function supplyGuidance(report, check) {
       refs,
     );
   }
-  if (check.status === "FAIL" || native !== evm) {
+  if (native !== evm) {
     return result(
       `At the shared block, native supply was ${native} base units and EVM totalSupply was ${evm} base units.`,
       "The two observed supply values contradict each other at the same block.",
@@ -247,7 +324,18 @@ function mappingGuidance(report, check) {
     reference("evidence.substrate.accountMapping.accountId", "Native AccountId", accountId),
     reference("evidence.substrate.accountMapping.storageKey", "Revive mapping storage key", mapping?.storageKey),
   );
-  if (check.status === "PASS" && mapping?.exists === true && h160 && accountId) {
+  const mappingAvailable = mapping?.exists === true && Boolean(h160 && accountId);
+  const evidenceStatus = mappingAvailable ? "PASS" : "UNKNOWN";
+  const inconsistent = evidenceStatusGuidance(
+    check,
+    evidenceStatus,
+    mappingAvailable
+      ? `the evidence contains a Revive mapping from ${h160} to ${accountId}.`
+      : "the report does not contain a complete, usable Revive mapping observation.",
+    refs,
+  );
+  if (inconsistent) return inconsistent;
+  if (mappingAvailable) {
     return result(
       `Revive storage mapped ${h160} to native account ${accountId}.`,
       "FIRMA has a runtime-backed native account to use for this address's balance comparison.",
@@ -275,8 +363,8 @@ function balanceGuidance(report, check) {
   const nativeBalance = substrate?.balance;
   const mapping = substrate?.accountMapping;
   const evmCall = report?.evidence?.evm?.calls?.balanceOf;
-  const native = nativeBalance?.exists === true ? text(nativeBalance.value) : null;
-  const evm = evmCall?.ok === true ? text(evmCall.value) : null;
+  const native = nativeBalance?.exists === true ? integerText(nativeBalance.value) : null;
+  const evm = evmCall?.ok === true ? integerText(evmCall.value) : null;
   const refs = references(
     reference("evidence.substrate.accountMapping.accountId", "Mapped native AccountId", mapping?.accountId),
     reference("evidence.substrate.balance.value", "Native balance", native),
@@ -285,6 +373,19 @@ function balanceGuidance(report, check) {
     reference("evidence.evm.calls.balanceOf.raw", "Raw EVM result", evmCall?.raw),
     reference("evidence.evm.calls.balanceOf.error", "Recorded EVM error", errorText(evmCall?.error)),
   );
+  const valuesAvailable = mapping?.exists === true && nativeBalance?.exists === true && Boolean(native && evm);
+  const evidenceStatus = !valuesAvailable ? "UNKNOWN" : native === evm ? "PASS" : "FAIL";
+  const inconsistent = evidenceStatusGuidance(
+    check,
+    evidenceStatus,
+    evidenceStatus === "UNKNOWN"
+      ? "a mapping and complete pair of valid native and EVM integer balance observations are not available."
+      : evidenceStatus === "PASS"
+        ? `both balance observations equal ${native} base units.`
+        : `native balance ${native} and EVM balanceOf ${evm} are different.`,
+    refs,
+  );
+  if (inconsistent) return inconsistent;
   if (!native || !evm || mapping?.exists !== true) {
     let observed;
     if (mapping?.exists !== true) observed = "No runtime-backed account mapping was available, so FIRMA could not select a native balance record.";
@@ -301,7 +402,7 @@ function balanceGuidance(report, check) {
       refs,
     );
   }
-  if (check.status === "FAIL" || native !== evm) {
+  if (native !== evm) {
     return result(
       `At the shared block, the mapped native balance was ${native} base units and EVM balanceOf was ${evm} base units.`,
       "The two observed account balances contradict each other at the same block.",
@@ -345,7 +446,31 @@ function metadataGuidance(report, check) {
       reference(`evidence.evm.calls.${field}.error`, `EVM ${field} error`, errorText(calls?.[field]?.error)),
     ]),
   );
-  if (check.status === "PASS" && native?.exists === false && evmMissing) {
+  const evmHasValue = fields.some((field) => calls?.[field]?.ok === true && typeof calls[field].value === "string");
+  const evmMissingField = nativeExists && fields.find((field) => calls?.[field]?.kind === "metadata-missing");
+  const evidenceStatus = native?.exists === false && evmMissing
+    ? "PASS"
+    : native?.exists === false && evmHasValue
+      ? "FAIL"
+      : valuesAvailable
+        ? mismatches.length ? "FAIL" : "PASS"
+        : evmMissingField
+          ? "FAIL"
+          : "UNKNOWN";
+  const evidenceDescription = evidenceStatus === "UNKNOWN"
+    ? "the report does not contain a complete, recognized pair of metadata observations."
+    : native?.exists === false && evmMissing
+      ? "both interfaces consistently represent metadata as absent."
+      : native?.exists === false
+        ? "the EVM interface contains metadata while native metadata storage is absent."
+        : evmMissingField
+          ? `native ${evmMissingField} metadata exists while the EVM interface reports that field missing.`
+          : mismatches.length
+            ? `the available metadata differs for: ${mismatches.join(", ")}.`
+            : "the available native and EVM metadata fields match exactly.";
+  const inconsistent = evidenceStatusGuidance(check, evidenceStatus, evidenceDescription, refs);
+  if (inconsistent) return inconsistent;
+  if (native?.exists === false && evmMissing) {
     return result(
       "Native metadata storage was absent, and the EVM name, symbol, and decimals calls all returned the recognized metadata-missing result.",
       "Both interfaces consistently represented metadata as absent at this block.",
@@ -354,7 +479,7 @@ function metadataGuidance(report, check) {
       refs,
     );
   }
-  if (check.status === "PASS" && valuesAvailable && mismatches.length === 0) {
+  if (valuesAvailable && mismatches.length === 0) {
     return result(
       `Native and EVM metadata matched: name “${native.name}”, symbol “${native.symbol}”, decimals ${native.decimals}.`,
       "The name, symbol, and decimal observations were equal across both interfaces at this block.",
@@ -363,9 +488,11 @@ function metadataGuidance(report, check) {
       refs,
     );
   }
-  if (check.status === "FAIL" || mismatches.length) {
+  if (evidenceStatus === "FAIL") {
     const detail = mismatches.length
       ? mismatches.map((field) => `${field}: native “${native[field]}”, EVM “${calls[field].value}”`).join("; ")
+      : evmMissingField
+        ? `native ${evmMissingField} metadata existed while the EVM interface reported that field missing`
       : nativeExists
         ? "native metadata existed while at least one EVM metadata field was reported missing"
         : "the EVM interface returned metadata while native metadata storage was absent";
@@ -398,6 +525,7 @@ function fallbackGuidance(check) {
     "This guidance does not replace the report's technical verdict or repair malformed evidence.",
     ["Inspect the original check and raw report evidence before acting on this result."],
     references(reference(`verdict.checks[${text(check?.id) ?? "unknown"}]`, "Technical check", text(check?.summary))),
+    "INCOMPLETE",
   );
 }
 
@@ -440,12 +568,15 @@ export function projectInvestigation(report) {
   }));
   const firstFail = projectedChecks.find((item) => item.status === "FAIL");
   const firstUnknown = projectedChecks.find((item) => item.status === "UNKNOWN");
-  const primary = firstFail ?? firstUnknown ?? projectedChecks[0] ?? null;
+  const firstIntegrityIssue = projectedChecks.find((item) => item.guidance.integrity !== "SUPPORTED");
+  const primary = firstIntegrityIssue ?? firstFail ?? firstUnknown ?? projectedChecks[0] ?? null;
   const overall = firstFail ? "FAIL" : firstUnknown || !projectedChecks.length ? "UNKNOWN" : "PASS";
-  const primaryFinding = overall === "PASS"
+  const primaryFinding = overall === "PASS" && !firstIntegrityIssue
     ? "All required verification checks were supported by matching evidence."
     : primary?.guidance.observed ?? "The report does not contain a usable primary finding.";
-  const priorityIssue = overall === "FAIL"
+  const priorityIssue = firstIntegrityIssue
+    ? "The reported status and supporting evidence are inconsistent and require independent reproduction."
+    : overall === "FAIL"
     ? "A demonstrated contradiction takes priority over unresolved checks."
     : overall === "UNKNOWN"
       ? "At least one required observation remains unresolved, so FIRMA does not claim success."
@@ -458,6 +589,7 @@ export function projectInvestigation(report) {
     blockContext: blockContext(report),
     priorityIssue,
     nextAction,
+    hasIntegrityIssue: Boolean(firstIntegrityIssue),
     checks: Object.freeze(projectedChecks),
   });
 }

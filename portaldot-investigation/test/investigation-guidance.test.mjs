@@ -21,6 +21,13 @@ function guidance(report, id) {
   return guidanceForCheck(report, check);
 }
 
+function setCheckStatus(report, id, status) {
+  const check = report.verdict.checks.find((item) => item.id === id);
+  assert.ok(check, `Expected check ${id}`);
+  check.status = status;
+  return check;
+}
+
 test("matching observations produce bounded PASS guidance for every existing check", () => {
   const report = reportFrom(matchingSnapshot());
   const projected = projectInvestigation(report);
@@ -175,9 +182,95 @@ test("RPC timeout and malformed observations remain inconclusive", () => {
     status: "PASS",
     evidence: {},
   });
-  assert.match(malformed.observed, /unavailable or malformed/i);
-  assert.match(malformed.proves, /cannot establish/i);
+  assert.equal(malformed.integrity, "INCONSISTENT");
+  assert.match(malformed.observed, /not available|malformed/i);
+  assert.match(malformed.proves, /cannot be established/i);
   assert.doesNotMatch(malformed.proves, /values match|exactly the same|reported agreement/i);
+});
+
+test("FAIL cannot turn matching chain, supply, balance, mapping, or metadata evidence into a contradiction", () => {
+  const cases = [
+    ["identity.chainId", /contradicts the configured|chain identity contradicts/i],
+    ["asset.supply", /supply values contradict/i],
+    ["account.mapping", /No usable Revive|mapping was observed/i],
+    ["asset.balance", /balances contradict/i],
+    ["asset.metadata", /metadata observations contradicted|fields? (?:differ|missing)/i],
+  ];
+  for (const [id, unsupportedClaim] of cases) {
+    const report = reportFrom(matchingSnapshot());
+    const check = setCheckStatus(report, id, "FAIL");
+    const before = JSON.stringify(report);
+    const projected = guidanceForCheck(report, check);
+    assert.equal(check.status, "FAIL");
+    assert.equal(projected.integrity, "INCONSISTENT");
+    assert.match(projected.observed, /status and supporting evidence cannot be reconciled/i);
+    assert.match(projected.nextSteps.join(" "), /independently reproduce/i);
+    assert.doesNotMatch(`${projected.observed} ${projected.proves}`, unsupportedClaim);
+    assert.equal(JSON.stringify(report), before);
+  }
+});
+
+test("every status and evidence inconsistency category remains explicit and non-mutating", () => {
+  const missing = guidanceForCheck({ evidence: {} }, {
+    id: "asset.supply", title: "Total supply parity", status: "FAIL", evidence: {},
+  });
+  assert.equal(missing.integrity, "INCONSISTENT");
+  assert.match(missing.observed, /valid native and EVM integer supply observations is not available/i);
+  assert.doesNotMatch(missing.proves, /contradict/i);
+
+  const malformedReport = reportFrom(matchingSnapshot());
+  malformedReport.evidence.substrate.asset.supply = "ten";
+  const malformedCheck = setCheckStatus(malformedReport, "asset.supply", "FAIL");
+  const malformed = guidanceForCheck(malformedReport, malformedCheck);
+  assert.equal(malformed.integrity, "INCONSISTENT");
+  assert.match(malformed.observed, /valid native and EVM integer/i);
+  assert.doesNotMatch(malformed.proves, /contradict/i);
+
+  const genuineMismatch = reportFrom(matchingSnapshot({ substrate: { asset: { supply: "9" } } }));
+  const demonstrated = guidance(genuineMismatch, "asset.supply");
+  assert.equal(demonstrated.integrity, "SUPPORTED");
+  assert.match(demonstrated.proves, /contradict/i);
+
+  const passWithContradiction = clone(genuineMismatch);
+  const passCheck = setCheckStatus(passWithContradiction, "asset.supply", "PASS");
+  const passBefore = JSON.stringify(passWithContradiction);
+  const passGuidance = guidanceForCheck(passWithContradiction, passCheck);
+  assert.equal(passGuidance.integrity, "INCONSISTENT");
+  assert.match(passGuidance.observed, /native supply 9.*different/i);
+  assert.equal(passCheck.status, "PASS");
+  assert.equal(JSON.stringify(passWithContradiction), passBefore);
+
+  const unknownWithAgreement = reportFrom(matchingSnapshot());
+  const unknownCheck = setCheckStatus(unknownWithAgreement, "asset.supply", "UNKNOWN");
+  const unknownGuidance = guidanceForCheck(unknownWithAgreement, unknownCheck);
+  assert.equal(unknownGuidance.integrity, "INCONSISTENT");
+  assert.match(unknownGuidance.observed, /both supply observations equal/i);
+  assert.equal(unknownCheck.status, "UNKNOWN");
+
+  for (const status of [undefined, "BROKEN"]) {
+    const report = reportFrom(matchingSnapshot());
+    const check = setCheckStatus(report, "asset.supply", status);
+    const projected = guidanceForCheck(report, check);
+    assert.equal(projected.integrity, "INCONSISTENT");
+    assert.match(projected.observed, /labels this check (missing|BROKEN)/i);
+    assert.equal(check.status, status);
+  }
+});
+
+test("inconsistent metadata guidance neither invents differing fields nor executes hostile text", () => {
+  const payload = `</p><script data-remediation-injected>globalThis.__firmaRemediationInjected=true</script>`;
+  const report = reportFrom(matchingSnapshot({
+    substrate: { asset: { metadata: { name: payload } } },
+    evm: { calls: { name: { ok: true, value: payload } } },
+  }));
+  const check = setCheckStatus(report, "asset.metadata", "FAIL");
+  const before = JSON.stringify(report);
+  const metadata = guidanceForCheck(report, check);
+  assert.equal(metadata.integrity, "INCONSISTENT");
+  assert.match(metadata.observed, /available native and EVM metadata fields match exactly/i);
+  assert.doesNotMatch(metadata.observed, /fields? (?:differ|missing)/i);
+  assert.equal(globalThis.__firmaRemediationInjected, undefined);
+  assert.equal(JSON.stringify(report), before);
 });
 
 test("summary precedence is FAIL then UNKNOWN then PASS across simultaneous results", () => {

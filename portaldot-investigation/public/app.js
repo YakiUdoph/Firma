@@ -27,7 +27,62 @@ const COUNT_LABEL = Object.freeze({
 });
 const INDEPENDENT_LABEL = Object.freeze({ VERIFIED: "Verified", MISMATCH: "Mismatch", UNAVAILABLE: "Unavailable" });
 const MAX_REPORT_BYTES = 262_144;
+const VALID_VERDICT_STATUS = new Set(["PASS", "FAIL", "UNKNOWN"]);
 let latestReport = null;
+
+function isRecord(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function safeJson(value) {
+  try {
+    return JSON.stringify(value ?? {}, null, 2) ?? "null";
+  } catch {
+    return "Evidence could not be displayed safely.";
+  }
+}
+
+function normalizeCheckForDisplay(check, index, issues) {
+  if (!isRecord(check)) {
+    issues.push(`check ${index + 1} is not an object`);
+    return {
+      id: "unknown",
+      title: `Incomplete check ${index + 1}`,
+      status: "UNKNOWN",
+      summary: "This check is malformed and cannot support a verification conclusion.",
+      evidence: {},
+    };
+  }
+  const status = VALID_VERDICT_STATUS.has(check.status) ? check.status : "UNKNOWN";
+  if (status !== check.status) issues.push(`check ${index + 1} has a missing or unexpected status`);
+  if (typeof check.title !== "string" || !check.title) issues.push(`check ${index + 1} has no usable title`);
+  if (typeof check.summary !== "string" || !check.summary) issues.push(`check ${index + 1} has no usable summary`);
+  return {
+    ...check,
+    id: typeof check.id === "string" && check.id ? check.id : "unknown",
+    title: typeof check.title === "string" && check.title ? check.title : `Incomplete check ${index + 1}`,
+    status,
+    summary: typeof check.summary === "string" && check.summary
+      ? check.summary
+      : "This check is incomplete and cannot support a verification conclusion.",
+    evidence: isRecord(check.evidence) ? check.evidence : {},
+  };
+}
+
+function reportForDisplay(report) {
+  const issues = [];
+  const source = isRecord(report) ? report : {};
+  if (source !== report) issues.push("the response is not a report object");
+  const verdict = isRecord(source.verdict) ? source.verdict : {};
+  if (verdict !== source.verdict) issues.push("verdict is absent or malformed");
+  const sourceChecks = Array.isArray(verdict.checks) ? verdict.checks : [];
+  if (!Array.isArray(verdict.checks)) issues.push("verdict.checks is absent or is not an array");
+  if (!isRecord(source.evidence)) issues.push("evidence is absent or malformed");
+  const checks = sourceChecks.map((check, index) => normalizeCheckForDisplay(check, index, issues));
+  const status = VALID_VERDICT_STATUS.has(verdict.overall) ? verdict.overall : "UNKNOWN";
+  if (status !== verdict.overall) issues.push("verdict.overall is missing or unexpected");
+  return { source, verdict, sourceChecks, checks, status, issues };
+}
 
 function contextItem({ label, value, title }) {
   const wrapper = document.createElement("div");
@@ -44,7 +99,7 @@ function countItem(status, count) {
   const item = document.createElement("div");
   item.dataset.status = status;
   const number = document.createElement("strong");
-  number.textContent = String(count ?? 0);
+  number.textContent = Number.isSafeInteger(count) && count >= 0 ? String(count) : "—";
   const label = document.createElement("span");
   label.textContent = COUNT_LABEL[status];
   const code = document.createElement("small");
@@ -60,7 +115,7 @@ function evidenceDetails(evidence) {
   summary.textContent = "Show technical evidence";
   const pre = document.createElement("pre");
   pre.tabIndex = 0;
-  pre.textContent = JSON.stringify(evidence ?? {}, null, 2);
+  pre.textContent = safeJson(evidence);
   details.append(summary, pre);
   return details;
 }
@@ -153,9 +208,8 @@ function checkRow(item, index, labels = LABEL, guidance = null) {
   return row;
 }
 
-function renderInvestigationSummary(report) {
-  const investigation = projectInvestigation(report);
-  investigationSummary.dataset.status = investigation.overall;
+function renderInvestigationSummary(report, investigation = projectInvestigation(report), displayStatus = investigation.overall) {
+  investigationSummary.dataset.status = displayStatus;
   const values = [
     ["Primary finding", investigation.primaryFinding],
     ["Block context", investigation.blockContext],
@@ -236,22 +290,31 @@ function showError(message) {
 
 function render(report) {
   latestReport = report;
-  const status = report.verdict.overall;
+  const display = reportForDisplay(report);
+  const investigation = projectInvestigation(display.source);
+  const incomplete = display.issues.length > 0 || investigation.hasIntegrityIssue;
+  const status = display.status === "FAIL" ? "FAIL" : incomplete ? "UNKNOWN" : display.status;
   result.hidden = false;
   result.dataset.status = status;
   verdictTitle.textContent = LABEL[status];
   verdictSymbol.textContent = status === "PASS" ? "\u2713" : status === "FAIL" ? "\u00d7" : "?";
-  verdictSummary.textContent = VERDICT_COPY[status];
-  verdictCounts.replaceChildren(...["PASS", "FAIL", "UNKNOWN"].map((item) => countItem(item, report.verdict.counts?.[item])));
-  const investigation = renderInvestigationSummary(report);
-  context.replaceChildren(...reportContext(report).map(contextItem));
-  checks.replaceChildren(...report.verdict.checks.map((item, index) => checkRow(
+  verdictSummary.textContent = incomplete
+    ? "The report is incomplete or internally inconsistent, so FIRMA cannot present it as a successful verification."
+    : VERDICT_COPY[status];
+  verdictCounts.replaceChildren(...["PASS", "FAIL", "UNKNOWN"].map((item) => countItem(item, display.verdict.counts?.[item])));
+  renderInvestigationSummary(display.source, investigation, status);
+  context.replaceChildren(...reportContext(display.source).map(contextItem));
+  checks.replaceChildren(...display.checks.map((item, index) => checkRow(
     item,
     index,
     LABEL,
-    investigation.checks[index]?.guidance ?? guidanceForCheck(report, item),
+    investigation.checks[index]?.guidance ?? guidanceForCheck(display.source, display.sourceChecks[index]),
   )));
-  evidenceJson.textContent = JSON.stringify(report, null, 2);
+  evidenceJson.textContent = safeJson(report);
+  if (incomplete) {
+    const detail = display.issues.length ? ` ${display.issues.join("; ")}.` : "";
+    showError(`FIRMA received an incomplete or internally inconsistent report.${detail} The original report remains available for inspection.`);
+  }
   result.scrollIntoView({ behavior: "smooth", block: "start" });
   verdictTitle.tabIndex = -1;
   verdictTitle.focus({ preventScroll: true });
