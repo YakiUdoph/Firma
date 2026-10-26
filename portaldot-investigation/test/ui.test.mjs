@@ -3,8 +3,10 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { LABEL, VERDICT_COPY, evidenceFilename, reportContext } from "../public/view-model.js";
 
-const [html, css, client] = await Promise.all([
+const [html, privacyHtml, privacyMarkdown, css, client] = await Promise.all([
   readFile(new URL("../public/index.html", import.meta.url), "utf8"),
+  readFile(new URL("../public/privacy.html", import.meta.url), "utf8"),
+  readFile(new URL("../docs/PRIVACY.md", import.meta.url), "utf8"),
   readFile(new URL("../public/styles.css", import.meta.url), "utf8"),
   readFile(new URL("../public/app.js", import.meta.url), "utf8"),
 ]);
@@ -102,4 +104,21 @@ test("independent report verification keeps original and reproduced results sepa
   assert.doesNotMatch(client, /eval\(|new Function/);
   assert.match(css, /\.check\[data-status="MISMATCH"\]/);
   assert.match(css, /\.check\[data-status="UNAVAILABLE"\]/);
+});
+
+test("privacy is visible, accessible, and describes the implemented data flow", () => {
+  assert.match(html, /<a href="\/privacy\.html">Privacy<\/a>/);
+  assert.match(privacyHtml, /complete selected JSON report/i);
+  assert.match(privacyHtml, /IP-derived client key/i);
+  assert.match(privacyHtml, /no application database/i);
+  assert.match(privacyHtml, /No application analytics/i);
+  assert.match(privacyHtml, /<strong>Effective date:<\/strong> October 26, 2026/);
+  assert.match(privacyHtml, /FIRMA, the public project identity/i);
+  assert.match(privacyHtml, /mailto:justremotegigs@gmail\.com/);
+  assert.match(privacyMarkdown, /\*\*Effective date:\*\* October 26, 2026/);
+  assert.match(privacyMarkdown, /FIRMA, the public project identity/i);
+  assert.match(privacyMarkdown, /mailto:justremotegigs@gmail\.com/);
+  assert.match(privacyHtml, /Never upload a private key, seed phrase/i);
+  assert.doesNotMatch(`${privacyHtml}\n${privacyMarkdown}`, /draft|unresolved|must be set/i);
+  assert.doesNotMatch(privacyHtml, /GDPR|CCPA|zero data collection|guaranteed anonymity/i);
 });

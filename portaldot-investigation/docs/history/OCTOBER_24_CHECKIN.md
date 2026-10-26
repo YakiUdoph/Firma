@@ -1,5 +1,7 @@
 # October 24 prototype check-in
 
+> Historical record. This check-in describes the repository and deployment as observed on October 21, 2026. Statements about unpushed UI work, test totals, deployment state, and submission status are not current product claims.
+
 Verified on 2026-10-21 (Atlantic/Cape Verde).
 
 ## Product and links
@@ -104,7 +106,7 @@ npm audit --omit=dev
 npm start
 ```
 
-Open `http://127.0.0.1:4173`, keep the documented asset 2 defaults, and select **Verify on Portaldot V3**. Use **View raw evidence**, **Copy JSON**, and **Download JSON** to inspect or export the report.
+At the time of this check-in, the script instructed reviewers to open `http://127.0.0.1:4173`, keep the documented asset 2 defaults, and use the then-current verification and evidence controls. The current UI labels are documented in the [demo script](../DEMO_SCRIPT.md).
 
 ## Check-in decision
 

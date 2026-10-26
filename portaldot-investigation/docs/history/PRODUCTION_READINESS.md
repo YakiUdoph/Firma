@@ -1,5 +1,7 @@
 # Production readiness review
 
+> Historical record. This review captures the October 21, 2026 release state. Its test count, local-only commit status, and deployment description must not be read as current status.
+
 Audit date: 2026-10-21 (Atlantic/Cape Verde)
 
 ## Release decision

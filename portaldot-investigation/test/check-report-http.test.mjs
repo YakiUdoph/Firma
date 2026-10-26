@@ -81,8 +81,18 @@ test("report API classifies deadlines, endpoint unavailability, and unexpected e
   assert.equal(unavailableResponse.status, 200);
   assert.equal((await unavailableResponse.json()).independent.overall, "UNAVAILABLE");
 
-  const failed = createCheckReportHandler({ verifyFn: async () => { throw new Error("RPC implementation fault"); } });
+  const logEntries = [];
+  const providerSecret = "provider response must not be logged";
+  const failed = createCheckReportHandler({
+    verifyFn: async () => { throw new Error(providerSecret); },
+    errorLogger: (...entry) => logEntries.push(entry),
+  });
   const failedResponse = await failed.fetch(request(body));
   assert.equal(failedResponse.status, 500);
   assert.equal((await failedResponse.json()).error, "Independent verification failed unexpectedly.");
+  assert.equal(logEntries.length, 1);
+  assert.equal(logEntries[0][0], "FIRMA independent verification failed");
+  assert.match(logEntries[0][1].requestId, /^[0-9a-f-]+$/i);
+  assert.equal(logEntries[0][1].category, "internal_error");
+  assert.doesNotMatch(JSON.stringify(logEntries), new RegExp(providerSecret));
 });

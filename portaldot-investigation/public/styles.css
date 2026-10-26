@@ -224,7 +224,18 @@ footer { min-height: 180px; display: grid; grid-template-columns: 1fr 1fr auto; 
 .footer-brand { color: var(--ink); }
 footer p { margin: 0; line-height: 1.6; }
 footer p span { color: var(--faint); }
+.footer-meta { display: flex; align-items: center; gap: 18px; }
+.footer-meta a { color: var(--emerald); font-weight: 700; text-underline-offset: 3px; }
 .version { font-family: var(--mono); font-size: .66rem; }
+
+.policy-page { max-width: 900px; padding: 72px 0 110px; }
+.policy-page h1 { max-width: 780px; }
+.policy-status { margin: 28px 0 42px; padding: 18px 20px; border-left: 4px solid var(--lime); background: var(--surface); color: var(--muted); line-height: 1.6; }
+.policy-section { padding: 30px 0; border-top: 1px solid var(--line); }
+.policy-section h2 { margin-bottom: 14px; font-size: clamp(1.45rem, 3vw, 2rem); }
+.policy-section p, .policy-section li { color: var(--muted); line-height: 1.75; }
+.policy-section li + li { margin-top: 8px; }
+.policy-section code { color: var(--emerald); }
 
 button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visible, pre:focus-visible { outline: 3px solid rgba(21,91,67,.3); outline-offset: 3px; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -274,6 +285,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visibl
   .report-result { padding: 34px 22px; border-radius: 22px; }
   .report-result::before { margin: -34px 0 34px; border-radius: 22px 22px 0 0; }
   footer { grid-template-columns: 1fr; padding: 48px 0; }
+  .footer-meta { align-items: flex-start; }
 }
 
 @media (max-width: 470px) {

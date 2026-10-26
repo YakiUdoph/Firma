@@ -2,7 +2,7 @@
 
 ## Recommended platform
 
-Use Vercel with `portaldot-investigation` as the project root. The repository already separates the static site (`dist`) from the Node.js verification function (`api/verify.mjs`) and declares the production settings in `vercel.json`.
+Use Vercel with `portaldot-investigation` as the project root. The repository separates the static site (`dist`) from two Node.js functions (`api/verify.mjs` and `api/check-report.mjs`) and declares both in `vercel.json`.
 
 This deployment shape is appropriate because the UI is static, verification is stateless, and every request must make short-lived read-only HTTPS and WebSocket calls. The configured function ceiling is 60 seconds; the verifier also enforces shorter operation-level timeouts.
 
@@ -28,12 +28,12 @@ Do not add wallet mnemonics, private keys, RPC write credentials, or signing ser
 2. Import the repository into Vercel and set the Root Directory to `portaldot-investigation`.
 3. Keep Deployment Protection enabled for the first preview.
 4. Confirm the build uses Node.js 22 or newer and runs `npm run build`.
-5. Run the acceptance checks in `PRODUCTION_READINESS.md` against the protected URL.
+5. Use the dated checklist in [`history/PRODUCTION_READINESS.md`](history/PRODUCTION_READINESS.md) as a starting point, then validate the current routes and UI against the current commit.
 6. Review function logs for timeouts, sanitized error messages, and request duration.
 
 ## Platform rate limiting
 
-The code includes a bounded best-effort limiter, but serverless instances do not share that memory. Before public promotion, add a Vercel Firewall rule for `POST /api/verify`.
+The code includes bounded best-effort limiters, but serverless instances do not share that memory. Before public promotion, add reviewed Vercel Firewall rules for `POST /api/verify` and `POST /api/check-report`.
 
 Start with a log-only rule and inspect real preview traffic:
 
@@ -59,6 +59,8 @@ Invoke-RestMethod -Method Post -Uri "https://<protected-preview>/api/verify" -Co
 The response must have `verdict.overall` equal to `PASS`, chain ID `420420777`, runtime `portaldot-v3/3002`, and nine named checks. Record the deployed timestamp and observed block number; do not reuse the local block numbers as deployment proof.
 
 Also verify HTTP 405 for GET on the API, HTTP 400 for malformed input, HTTP 413 for an oversized body, and HTTP 429 under the reviewed rate rule.
+
+Confirm that `/privacy.html` loads from the exact preview build and that the footer link reaches it. Exercise `/api/check-report` with a valid historical report and confirm that the original verdict remains separate from the independent result.
 
 ## Rollback
 

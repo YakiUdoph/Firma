@@ -1,5 +1,19 @@
 # Portaldot V3 network findings
 
+> Historical research. The main snapshot in this document was collected on October 20, 2026. A bounded October 26, 2026 audit observed 21 live asset IDs on runtime `portaldot-v3/3002`; that count is a dated observation, not a permanent chain fact. The three assets described below are the assets present in the earlier committed snapshot.
+
+## Dated asset context
+
+The bounded October 26 audit observed the following example-asset state at finalized block `203807`. These are current-state observations, not creation evidence:
+
+| Asset ID | Observed state | Creation provenance |
+| --- | --- | --- |
+| `1` | Symbol `TST`; zero supply | Creation transaction, creator, and original issuance are **UNKNOWN** |
+| `2` | Symbol `TEST`; 18 decimals; supply `15000000000000000000` base units (15 tokens) | Creation transaction, creator, and original issuance are **UNKNOWN** |
+| `806707` | No metadata was returned; four holder accounts were observed | Creation transaction, creator, and original issuance are **UNKNOWN** |
+
+Current ownership or administrative roles, where readable, must not be treated as proof of who created an asset. The repository does not contain a verified creation transaction hash for these assets.
+
 ## Implementation re-validation — 2026-10-20
 
 The original endpoint checks were repeated before implementation at `2026-10-20T18:20:41.011Z` (EVM) and `2026-10-20T18:20:47.651Z` (Substrate). Both remained reachable. EVM again returned `0x190f1ca9` / `420420777`; Substrate again returned `PortaldotV3 Test`, node version `3.0.0-dev-fddd43141f2`, runtime `portaldot-v3/3002`, and metadata v14.
@@ -87,7 +101,7 @@ The complete decoded pallet index/name list was:
 96:RegistrarRelay
 ```
 
-The full call, event, error, constant-name, and storage-item inventory is in [`raw/decoded-metadata.json`](raw/decoded-metadata.json). Important storage interfaces include:
+The full call, event, error, constant-name, and storage-item inventory is in [`raw/decoded-metadata.json`](../../raw/decoded-metadata.json). Important storage interfaces include:
 
 - `System.Account`, blocks, hashes, events, topics, and runtime-upgrade state.
 - `Balances` issuance, accounts, locks, reserves, holds, and freezes.
@@ -122,10 +136,10 @@ Three native `Assets` IDs existed: `1`, `2`, and `806707`. There were five asset
 
 ## Evidence files
 
-- [`raw/evm-probe.json`](raw/evm-probe.json): complete final EVM batch request/response and HTTP headers.
-- [`raw/substrate-probe.json`](raw/substrate-probe.json): Substrate identity, runtime, header, and RPC method list.
-- [`raw/substrate-metadata.hex`](raw/substrate-metadata.hex): exact returned SCALE metadata.
-- [`raw/decoded-metadata.json`](raw/decoded-metadata.json): locally decoded pallet/call/storage inventory.
-- [`raw/state-snapshot.json`](raw/state-snapshot.json): constants, live assets, account mappings, and selected call metadata.
-- [`raw/evm-asset-probe.json`](raw/evm-asset-probe.json): actual ERC-20/precompile responses and native/EVM balance comparisons.
+- [`raw/evm-probe.json`](../../raw/evm-probe.json): complete final EVM batch request/response and HTTP headers.
+- [`raw/substrate-probe.json`](../../raw/substrate-probe.json): Substrate identity, runtime, header, and RPC method list.
+- [`raw/substrate-metadata.hex`](../../raw/substrate-metadata.hex): exact returned SCALE metadata.
+- [`raw/decoded-metadata.json`](../../raw/decoded-metadata.json): locally decoded pallet/call/storage inventory.
+- [`raw/state-snapshot.json`](../../raw/state-snapshot.json): constants, live assets, account mappings, and selected call metadata.
+- [`raw/evm-asset-probe.json`](../../raw/evm-asset-probe.json): actual ERC-20/precompile responses and native/EVM balance comparisons.
 
