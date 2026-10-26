@@ -1,5 +1,7 @@
 # Portaldot V3 capability map
 
+> Historical research based on the October 20, 2026 snapshot unless a later observation is explicitly dated. Pallet or call presence does not prove successful signed execution.
+
 ## Confirmed working
 
 ### Native assets are exposed to EVM reads

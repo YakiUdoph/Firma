@@ -1,5 +1,7 @@
 # Reproducible read-only commands
 
+> Historical investigation commands. Review each command and choose new evidence filenames before rerunning it; live network output is time-specific.
+
 ## FIRMA pinned verifier (implemented 2026-10-20)
 
 ```powershell

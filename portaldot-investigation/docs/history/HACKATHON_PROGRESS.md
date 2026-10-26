@@ -1,5 +1,7 @@
 # Hacker House progress
 
+> Historical record. This file preserves dated development observations and plans from October 20–22, 2026. It is not the current product or release status; see the repository and application READMEs for current behavior.
+
 ## 2026-10-20 — investigation and read-only MVP
 
 - Verified both organizer-provided endpoints and EVM chain ID `420420777`.
@@ -31,7 +33,7 @@
 - Passed the 35-test check suite, production build, and production dependency audit with zero reported vulnerabilities.
 - Completed a fresh read-only verification with nine PASS checks at finalized block `151221`. The approved runtime-code hash remained `0xedc03c9d…a724c7c2` while the block-specific raw metadata SHA-256 was `1dae6abe…95d53b4f`.
 
-## 2026-10-21 â€” final validation
+## 2026-10-21 — final validation
 
 - Re-ran the clean install, 22-test check suite, production build, and production dependency audit successfully.
 - Re-ran asset 2 with nine PASS checks at finalized block `129347` and asset 806707 with nine PASS checks at block `129350`.
@@ -39,13 +41,13 @@
 - Started the loopback web server, rendered the landing page in headless Chrome, and received a nine-check PASS response from the local API at block `129376`.
 - Confirmed invalid non-object JSON returns HTTP 400 and a path-traversal probe returns HTTP 404.
 
-## Before October 24 check-in
+## Historical plan before the October 24 check-in
 
 - Record a short demo of the CLI and browser report using a fresh evidence filename.
 - Ask organizers to confirm whether the inline asset-precompile address convention is intended as stable V3 API.
 - Publish the repository only when the team chooses; no push or deployment was performed here.
 
-## Before November 6
+## Historical plan before November 6
 
 - Add report diffing across reviewed runtime upgrades if another runtime profile is ever approved.
 - Add a compact Markdown/JUnit renderer.

@@ -8,8 +8,9 @@
 - Credentials embedded in endpoint URLs are rejected.
 - Every Substrate and EVM operation has a bounded timeout; EVM transport retries are capped at two.
 - Public request bodies cannot select RPC endpoints. Endpoint overrides are operator-controlled environment settings and are validated before use.
-- Local and production HTTP adapters limit requests to 8 KiB, cap concurrent work per instance, and apply a bounded five-per-minute client limiter.
+- The verification adapters limit requests to 8 KiB and apply a bounded five-per-minute client limiter. The report-check adapters bound the outer request at 1 MiB, validate an uploaded report at 256 KiB, and apply a bounded three-per-minute client limiter. Both workflows cap concurrent work per instance.
 - Exported errors omit stack traces so evidence cannot leak deployment or developer filesystem paths.
+- Production unexpected-error logs use request IDs and bounded categories rather than uploaded report contents or raw provider error messages.
 - Runtime support is fail-closed against an exact reviewed chain/runtime profile. Missing, invalid, mismatched, or differently pinned identity evidence suppresses all dependent parity verdicts instead of displaying misleading individual passes.
 - The CLI refuses to overwrite an existing evidence file.
 - Balances and supplies remain decimal strings backed by `BigInt`; JavaScript floating-point numbers are never used for asset arithmetic.
@@ -34,7 +35,9 @@
 
 ## Publication gate
 
-Before sharing a public URL, stage a Vercel Firewall rule for `POST /api/verify`, observe it in log mode, test enforcement on a preview, and only then publish the production rate limit. See `DEPLOYMENT.md`. Vercel's automatic DDoS mitigation does not replace this endpoint-specific usage control.
+Before sharing a public URL, stage Vercel Firewall rules for `POST /api/verify` and `POST /api/check-report`, observe them in log mode, test enforcement on a preview, and only then publish the production rate limits. See `DEPLOYMENT.md`. Vercel's automatic DDoS mitigation does not replace these endpoint-specific usage controls.
+
+The application processes public addresses, uploaded evidence, IP-derived rate-limit keys, and operational diagnostics. See [`PRIVACY.md`](PRIVACY.md) for confirmed behavior and unresolved retention details.
 
 ## Responsible extension
 

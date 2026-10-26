@@ -1,5 +1,7 @@
 # Competitor and prior-art audit
 
+> Historical research. Repository and event observations were time-specific and should be rechecked before making current competitive or competition claims.
+
 Research date: 2026-10-20. Internet access was available. This audit separates repository/site claims from facts independently observed here. Repositories and private or unpublished work may exist outside search indexing; absence from this list is not proof of absence.
 
 ## Named projects

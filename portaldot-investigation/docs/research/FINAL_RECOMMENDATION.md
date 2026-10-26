@@ -1,5 +1,7 @@
 # Final recommendation
 
+> Historical product decision from the initial investigation. Future SDK, transaction, event, permit, and on-chain work described here was not implemented by the production application.
+
 ## Decision
 
 **BUILD FIRMA, the focused read-only Portaldot Interop Assurance Kit**, with medium confidence. It is a differentiated, evidence-backed opportunity: a CI-grade compatibility/conformance layer for one logical asset across Portaldot V3's native and EVM surfaces.

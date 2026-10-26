@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="How FIRMA processes verification inputs, uploaded evidence, operational metadata, and RPC requests.">
+  <meta name="theme-color" content="#f3f0e7">
+  <title>Privacy | FIRMA</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#privacy">Skip to privacy information</a>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="FIRMA home">
+      <span class="brand-mark" aria-hidden="true"><span>F</span></span>
+      <span class="brand-name">FIRMA</span>
+    </a>
+    <nav aria-label="Privacy navigation"><a href="/">Verification workspace</a></nav>
+  </header>
+
+  <main id="privacy" class="policy-page">
+    <p class="eyebrow"><span aria-hidden="true"></span> Privacy</p>
+    <h1>What FIRMA processes when you verify evidence.</h1>
+    <p class="policy-status"><strong>Effective date:</strong> October 26, 2026</p>
+
+    <section class="policy-section">
+      <h2>Project identity and privacy contact</h2>
+      <p>This notice is provided for FIRMA, the public project identity. FIRMA is a project name; this notice does not describe it as an incorporated company or registered legal entity.</p>
+      <p>Privacy questions may be sent to <a href="mailto:justremotegigs@gmail.com">justremotegigs@gmail.com</a>.</p>
+    </section>
+
+    <section class="policy-section">
+      <h2>Information you provide</h2>
+      <p>A normal verification sends the asset ID and public 0x account address you enter to FIRMA's verification API. Checking an existing report sends the complete selected JSON report and any optional expected commitment to FIRMA's report-check API.</p>
+      <p>Public blockchain addresses can still be associated with people or activity. Never upload a private key, seed phrase, password, wallet backup, or report containing secrets.</p>
+    </section>
+
+    <section class="policy-section">
+      <h2>How the information is used</h2>
+      <p>The APIs validate the request and query the configured Portaldot V3 Substrate and EVM RPC providers. Those providers can observe the requested asset, account-related query data, block heights, request timing, and the server's network address.</p>
+      <p>FIRMA uses an IP-derived client key in temporary function memory for rate limiting. Operational diagnostics contain a request ID, stage durations and outcomes, verdict counts, and bounded failure categories. They are designed not to contain report contents or raw provider error messages.</p>
+    </section>
+
+    <section class="policy-section">
+      <h2>Storage, cookies, and third parties</h2>
+      <ul>
+        <li>FIRMA has no application database.</li>
+        <li>No application analytics, advertising trackers, cookies, <code>localStorage</code>, or <code>sessionStorage</code> use was found in the reviewed code.</li>
+        <li>The browser keeps current results in page memory. It writes an evidence file only when you choose Export evidence and writes to the clipboard only when you choose Copy JSON.</li>
+        <li>The hosting provider and RPC providers may process and retain request or operational logs under their own policies.</li>
+      </ul>
+    </section>
+
+    <section class="policy-section">
+      <h2>Third-party policy limits</h2>
+      <p>FIRMA cannot currently state the hosting provider's or RPC providers' exact retention periods, processing regions, or internal access rules. No incorporated legal entity, jurisdiction, retention guarantee, deletion guarantee, or regulatory-compliance claim is stated or implied.</p>
+    </section>
+  </main>
+
+  <footer>
+    <a class="brand footer-brand" href="/" aria-label="FIRMA home"><span class="brand-mark" aria-hidden="true"><span>F</span></span><span class="brand-name">FIRMA</span></a>
+    <p>Read-only Portaldot V3 verification<br><span>No wallet secrets or transaction signing.</span></p>
+    <div class="footer-meta"><a href="/">Home</a><span class="version">Version 0.1.0</span></div>
+  </footer>
+</body>
+</html>

@@ -57,10 +57,20 @@ function clientKey(request) {
   return (forwarded || request.headers.get("x-real-ip") || "unknown").slice(0, 128);
 }
 
+function unexpectedErrorCategory(error) {
+  const name = typeof error?.name === "string" ? error.name : "";
+  if (/timeout/i.test(name)) return "timeout";
+  if (/abort/i.test(name)) return "cancelled";
+  if (/rpc/i.test(name)) return "rpc_error";
+  if (/type/i.test(name)) return "transport_error";
+  return "internal_error";
+}
+
 export function createCheckReportHandler({
   verifyFn = independentlyVerifyReport,
   defaultsFn = configuredDefaults,
   verificationTimeoutMs = VERIFICATION_TIMEOUT_MS,
+  errorLogger = console.error,
 } = {}) {
   const limiter = new BoundedRateLimiter({ limit: 3, windowMs: 60_000, maxKeys: 10_000 });
   let active = 0;
@@ -94,7 +104,16 @@ export function createCheckReportHandler({
         if (error instanceof RequestTooLargeError) return json(413, { error: error.message, requestId });
         if (error?.name === "TimeoutError") return json(504, { error: "Independent verification timed out.", requestId });
         const expected = error instanceof InvalidReportError || error instanceof InputError || error instanceof SyntaxError;
-        if (!expected) console.error("FIRMA independent verification failed", { requestId, name: error?.name, message: error?.message });
+        if (!expected) {
+          try {
+            errorLogger("FIRMA independent verification failed", {
+              requestId,
+              category: unexpectedErrorCategory(error),
+            });
+          } catch {
+            // Operational logging must not change report-verification behavior.
+          }
+        }
         return json(expected ? 400 : 500, { error: expected ? error.message : "Independent verification failed unexpectedly.", requestId });
       } finally {
         active -= 1;

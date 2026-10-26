@@ -1,5 +1,7 @@
 # Development history
 
+> Historical record. Counts and release statements below describe the dated validation runs, not the current suite or deployment.
+
 ## Preserved repository history
 
 | Commit | Purpose |
@@ -14,7 +16,7 @@ The production review hardened timeouts, runtime gating, error sanitization, API
 
 See the Git log after this review for the exact production-readiness commit identifiers.
 
-## Final validation â€” 2026-10-21
+## Final validation — 2026-10-21
 
 The final pass corrected non-object JSON error classification and documentation drift, expanded the suite to 22 tests, and repeated the build, dependency audit, live CLI, failure-mode, local API, and headless-browser checks. The fresh live observations were PASS for asset 2 at block 129347, PASS for asset 806707 at block 129350, and PASS through the local API at block 129376.
 

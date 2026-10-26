@@ -8,7 +8,7 @@ Open the page. Point out the public repository link and the read-only label.
 
 ## 0:25–1:05 — Run the default check
 
-Keep asset ID `2` and the documented default account. Select **Verify on Portaldot V3**.
+Keep asset ID `2` and the documented default account. Select **Check asset**.
 
 While it runs: “FIRMA locks one chain moment, reads both interfaces, compares exact values, and explains the outcome.”
 
@@ -16,9 +16,9 @@ Show **Passed** and the nine technical `PASS` codes. Do not imply that FIRMA tes
 
 ## 1:05–1:40 — Inspect and export proof
 
-Open **View raw evidence**. Highlight the timestamp, finalized block, runtime, chain ID, native/EVM observations, named checks, and endpoint provenance.
+Open **Show complete JSON**. Highlight the timestamp, finalized block, runtime, chain ID, native/EVM observations, named checks, and endpoint provenance.
 
-Use **Copy JSON** or **Download JSON**. Explain that the exported report is the reproducible artifact, while the large label is the beginner-friendly summary.
+Use **Copy JSON** or **Export evidence**. Explain that the exported report is the reproducible artifact, while the large label is the beginner-friendly summary.
 
 ## 1:40–2:10 — Explain uncertainty
 
