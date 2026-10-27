@@ -44,6 +44,79 @@ export function matchingSnapshot(overrides = {}) {
   return merge(base, overrides);
 }
 
+export function genuineReportSnapshots() {
+  return [
+    { label: "fully supported PASS", overall: "PASS", snapshot: matchingSnapshot() },
+    { label: "supported supply FAIL", overall: "FAIL", snapshot: matchingSnapshot({ substrate: { asset: { supply: "9" } } }) },
+    { label: "supported balance FAIL", overall: "FAIL", snapshot: matchingSnapshot({ substrate: { balance: { value: "8" } } }) },
+    { label: "supported metadata FAIL", overall: "FAIL", snapshot: matchingSnapshot({ substrate: { asset: { metadata: { symbol: "OTHER" } } } }) },
+    { label: "wrong-chain FAIL", overall: "FAIL", snapshot: matchingSnapshot({ evm: { identity: { chainId: "1" } } }) },
+    { label: "unsupported-runtime UNKNOWN", overall: "UNKNOWN", snapshot: matchingSnapshot({ substrate: { runtime: { specName: "unreviewed-runtime" } } }) },
+    {
+      label: "EVM endpoint unavailable UNKNOWN",
+      overall: "UNKNOWN",
+      snapshot: matchingSnapshot({
+        evm: { reachable: false, identity: null, block: null, calls: {}, error: { name: "TimeoutError", message: "timed out" } },
+      }),
+    },
+    {
+      label: "missing native asset UNKNOWN",
+      overall: "UNKNOWN",
+      snapshot: matchingSnapshot({
+        substrate: {
+          asset: { exists: false, supply: null, metadata: { exists: false, name: null, symbol: null, decimals: null } },
+          balance: { exists: false, value: null },
+        },
+      }),
+    },
+    {
+      label: "missing Revive mapping UNKNOWN",
+      overall: "UNKNOWN",
+      snapshot: matchingSnapshot({
+        substrate: { accountMapping: { exists: false, accountId: null }, balance: { exists: false, value: null } },
+      }),
+    },
+    {
+      label: "missing native balance UNKNOWN",
+      overall: "UNKNOWN",
+      snapshot: matchingSnapshot({ substrate: { balance: { exists: false, value: null } } }),
+    },
+    {
+      label: "historical block unavailable UNKNOWN",
+      overall: "UNKNOWN",
+      snapshot: matchingSnapshot({
+        substrate: {
+          finalized: null,
+          historical: { requestedNumber: "120900", available: false, finalized: true },
+          runtime: null,
+          asset: null,
+          accountMapping: null,
+          balance: null,
+          error: { name: "HistoricalStateUnavailable", message: "Block 120900 is unavailable." },
+        },
+        evm: { block: { requestedNumber: "120900", available: false }, calls: {} },
+      }),
+    },
+    {
+      label: "RPC timeout UNKNOWN",
+      overall: "UNKNOWN",
+      snapshot: matchingSnapshot({
+        substrate: {
+          reachable: false,
+          identity: null,
+          finalized: null,
+          runtime: null,
+          asset: null,
+          accountMapping: null,
+          balance: null,
+          error: { name: "TimeoutError", message: "Connection timed out." },
+        },
+        evm: { block: null, calls: {} },
+      }),
+    },
+  ];
+}
+
 function merge(target, source) {
   if (!source || typeof source !== "object" || Array.isArray(source)) return source ?? target;
   const result = { ...target };

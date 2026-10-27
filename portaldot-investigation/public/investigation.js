@@ -149,6 +149,25 @@ function mappingEvidence(report) {
   return Object.freeze({ kind: "VALID", h160: observed, accountId, reason: null });
 }
 
+function dependentAssetGate(report) {
+  const checks = Array.isArray(report?.verdict?.checks) ? report.verdict.checks : [];
+  const runtime = checks.find((check) => check?.id === "runtime.support");
+  if (!runtime) return null;
+  if (runtime?.status !== "PASS") {
+    return Object.freeze({
+      reason: "the evaluator did not authorize dependent asset interpretation because runtime support was not established",
+      nextStep: "Resolve the runtime-support finding before interpreting raw asset, mapping, balance, or metadata observations.",
+    });
+  }
+  if (!report?.evidence?.substrate?.asset?.exists) {
+    return Object.freeze({
+      reason: "the evaluator did not authorize dependent asset checks because the native asset was absent or could not be read",
+      nextStep: "Confirm the native asset record before interpreting dependent mapping or parity observations.",
+    });
+  }
+  return null;
+}
+
 function evidenceStatusGuidance(check, evidenceStatus, evidenceDescription, refs) {
   if (VALID_STATUS.has(check?.status) && check.status === evidenceStatus) return null;
   const reportedStatus = text(check?.status) ?? "missing";
@@ -379,14 +398,17 @@ function supplyGuidance(report, check) {
     reference("evidence.evm.precompileAddress", "Asset precompile", report?.evidence?.evm?.precompileAddress),
     reference("evidence.evm.calls.totalSupply.error", "Recorded EVM error", errorText(evmCall?.error)),
   );
+  const dependency = dependentAssetGate(report);
   const valuesAvailable = nativeAsset?.exists === true && Boolean(native && evm);
   const sharedBlock = sharedBlockEvidence(report);
-  const evidenceStatus = !valuesAvailable || !sharedBlock.number ? "UNKNOWN" : native === evm ? "PASS" : "FAIL";
+  const evidenceStatus = dependency || !valuesAvailable || !sharedBlock.number ? "UNKNOWN" : native === evm ? "PASS" : "FAIL";
   const inconsistent = evidenceStatusGuidance(
     check,
     evidenceStatus,
     evidenceStatus === "UNKNOWN"
-      ? !valuesAvailable
+      ? dependency
+        ? `${dependency.reason}.`
+        : !valuesAvailable
         ? "a complete pair of valid native and EVM integer supply observations is not available."
         : `the supply observations are not tied to one verified shared finalized block: ${sharedBlock.issues.join("; ")}.`
       : evidenceStatus === "PASS"
@@ -395,6 +417,15 @@ function supplyGuidance(report, check) {
     refs,
   );
   if (inconsistent) return inconsistent;
+  if (dependency) {
+    return result(
+      `The supply comparison was suppressed because ${dependency.reason}.`,
+      "FIRMA cannot establish supply agreement or contradiction while an evaluator prerequisite is unresolved.",
+      "Structurally present raw values do not override the runtime-support and native-asset gates.",
+      [dependency.nextStep],
+      refs,
+    );
+  }
   if (!nativeAsset || nativeAsset.exists !== true || !native || !evm || !sharedBlock.number) {
     const reason = nativeAsset?.exists === false
       ? "The native asset record was absent, so no native supply observation was available."
@@ -440,17 +471,29 @@ function mappingGuidance(report, check) {
     reference("evidence.substrate.accountMapping.accountId", "Native AccountId", accountId),
     reference("evidence.substrate.accountMapping.storageKey", "Revive mapping storage key", mapping?.storageKey),
   );
+  const dependency = dependentAssetGate(report);
   const mappingAvailable = assessment.kind === "VALID";
-  const evidenceStatus = mappingAvailable ? "PASS" : "UNKNOWN";
+  const evidenceStatus = dependency ? "UNKNOWN" : mappingAvailable ? "PASS" : "UNKNOWN";
   const inconsistent = evidenceStatusGuidance(
     check,
     evidenceStatus,
-    mappingAvailable
+    dependency
+      ? `${dependency.reason}.`
+      : mappingAvailable
       ? `the evidence contains a Revive mapping from ${h160} to ${accountId}.`
       : `${assessment.reason}.`,
     refs,
   );
   if (inconsistent) return inconsistent;
+  if (dependency) {
+    return result(
+      `The Revive mapping conclusion was suppressed because ${dependency.reason}.`,
+      "FIRMA cannot authorize a runtime-backed mapping conclusion while an evaluator prerequisite is unresolved.",
+      "A structurally valid raw mapping does not override the runtime-support or native-asset gate.",
+      [dependency.nextStep],
+      refs,
+    );
+  }
   if (mappingAvailable) {
     return result(
       `Revive storage mapped ${h160} to native account ${accountId}.`,
@@ -489,16 +532,19 @@ function balanceGuidance(report, check) {
     reference("evidence.evm.calls.balanceOf.raw", "Raw EVM result", evmCall?.raw),
     reference("evidence.evm.calls.balanceOf.error", "Recorded EVM error", errorText(evmCall?.error)),
   );
+  const dependency = dependentAssetGate(report);
   const mappingAssessment = mappingEvidence(report);
   const mappingAvailable = mappingAssessment.kind === "VALID";
   const valuesAvailable = mappingAvailable && nativeBalance?.exists === true && Boolean(native && evm);
   const sharedBlock = sharedBlockEvidence(report);
-  const evidenceStatus = !valuesAvailable || !sharedBlock.number ? "UNKNOWN" : native === evm ? "PASS" : "FAIL";
+  const evidenceStatus = dependency || !valuesAvailable || !sharedBlock.number ? "UNKNOWN" : native === evm ? "PASS" : "FAIL";
   const inconsistent = evidenceStatusGuidance(
     check,
     evidenceStatus,
     evidenceStatus === "UNKNOWN"
-      ? !valuesAvailable
+      ? dependency
+        ? `${dependency.reason}.`
+        : !valuesAvailable
         ? `${mappingAvailable ? "a complete pair of native and EVM integer balance observations is not available" : mappingAssessment.reason}.`
         : `the balance observations are not tied to one verified shared finalized block: ${sharedBlock.issues.join("; ")}.`
       : evidenceStatus === "PASS"
@@ -507,6 +553,15 @@ function balanceGuidance(report, check) {
     refs,
   );
   if (inconsistent) return inconsistent;
+  if (dependency) {
+    return result(
+      `The balance comparison was suppressed because ${dependency.reason}.`,
+      "FIRMA cannot establish balance agreement or contradiction while an evaluator prerequisite is unresolved.",
+      "Structurally present mapping or balance values do not override the runtime-support and native-asset gates.",
+      [dependency.nextStep],
+      refs,
+    );
+  }
   if (!native || !evm || !mappingAvailable || !sharedBlock.number) {
     let observed;
     if (!mappingAvailable) observed = `The balance comparison has no valid observed Revive mapping: ${mappingAssessment.reason}.`;
@@ -568,10 +623,13 @@ function metadataGuidance(report, check) {
       reference(`evidence.evm.calls.${field}.error`, `EVM ${field} error`, errorText(calls?.[field]?.error)),
     ]),
   );
+  const dependency = dependentAssetGate(report);
   const evmHasValue = fields.some((field) => calls?.[field]?.ok === true && typeof calls[field].value === "string");
   const evmMissingField = nativeExists && fields.find((field) => calls?.[field]?.kind === "metadata-missing");
   const sharedBlock = sharedBlockEvidence(report);
-  const evidenceStatus = !sharedBlock.number
+  const evidenceStatus = dependency
+    ? "UNKNOWN"
+    : !sharedBlock.number
     ? "UNKNOWN"
     : native?.exists === false && evmMissing
     ? "PASS"
@@ -583,7 +641,9 @@ function metadataGuidance(report, check) {
           ? "FAIL"
           : "UNKNOWN";
   const evidenceDescription = evidenceStatus === "UNKNOWN"
-    ? !sharedBlock.number && (native?.exists === false && evmMissing || valuesAvailable || evmMissingField || (native?.exists === false && evmHasValue))
+    ? dependency
+      ? `${dependency.reason}.`
+      : !sharedBlock.number && (native?.exists === false && evmMissing || valuesAvailable || evmMissingField || (native?.exists === false && evmHasValue))
       ? `the metadata observations are not tied to one verified shared finalized block: ${sharedBlock.issues.join("; ")}.`
       : "the report does not contain a complete, recognized pair of metadata observations."
     : native?.exists === false && evmMissing
@@ -597,6 +657,15 @@ function metadataGuidance(report, check) {
             : "the available native and EVM metadata fields match exactly.";
   const inconsistent = evidenceStatusGuidance(check, evidenceStatus, evidenceDescription, refs);
   if (inconsistent) return inconsistent;
+  if (dependency) {
+    return result(
+      `The metadata comparison was suppressed because ${dependency.reason}.`,
+      "FIRMA cannot establish metadata agreement or contradiction while an evaluator prerequisite is unresolved.",
+      "Structurally present metadata values do not override the runtime-support and native-asset gates.",
+      [dependency.nextStep],
+      refs,
+    );
+  }
   if (sharedBlock.number && native?.exists === false && evmMissing) {
     return result(
       "Native metadata storage was absent, and the EVM name, symbol, and decimals calls all returned the recognized metadata-missing result.",

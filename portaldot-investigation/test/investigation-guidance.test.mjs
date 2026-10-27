@@ -3,7 +3,7 @@ import test from "node:test";
 import { assessReportIntegrity, guidanceForCheck, projectInvestigation } from "../public/investigation.js";
 import { evaluateSnapshot } from "../src/evaluate.mjs";
 import { parseImportedReport } from "../src/report-import.mjs";
-import { matchingSnapshot } from "../test-support/fixtures.mjs";
+import { genuineReportSnapshots, matchingSnapshot } from "../test-support/fixtures.mjs";
 import { clone, validImportedReport } from "../test-support/report-fixtures.mjs";
 
 function reportFrom(snapshot) {
@@ -35,6 +35,31 @@ function alignCounts(report) {
   ]));
   return report;
 }
+
+test("genuine evaluator reports preserve dependency-suppressed verdicts without integrity false positives", () => {
+  for (const { label, overall, snapshot } of genuineReportSnapshots()) {
+    const report = reportFrom(snapshot);
+    const before = JSON.stringify(report);
+    const integrity = assessReportIntegrity(report);
+    const projected = projectInvestigation(report);
+    assert.equal(report.verdict.overall, overall, label);
+    assert.equal(integrity.trusted, true, `${label}: ${integrity.issues.join("; ")}`);
+    assert.equal(integrity.evidenceSupportedOverall, overall, label);
+    assert.equal(projected.overall, overall, label);
+    for (const check of report.verdict.checks) {
+      const finding = guidanceForCheck(report, check);
+      assert.equal(finding.integrity, "SUPPORTED", `${label}: ${check.id}`);
+      if (check.status === "UNKNOWN") {
+        assert.doesNotMatch(
+          finding.proves,
+          /reported exactly the same|contradict each other|demonstrably inconsistent|runtime-backed native account/i,
+          `${label}: ${check.id}`,
+        );
+      }
+    }
+    assert.equal(JSON.stringify(report), before, `${label}: original report changed`);
+  }
+});
 
 test("matching observations produce bounded PASS guidance for every existing check", () => {
   const report = reportFrom(matchingSnapshot());

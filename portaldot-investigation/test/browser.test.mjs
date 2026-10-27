@@ -7,6 +7,7 @@ import { chromium } from "playwright-core";
 import { evaluateSnapshot } from "../src/evaluate.mjs";
 import { independentlyVerifyReport } from "../src/independent-verifier.mjs";
 import { browserStartupTimeout, startManagedHttpServer } from "../test-support/browser-server.mjs";
+import { genuineReportSnapshots } from "../test-support/fixtures.mjs";
 import { validHistoricalSnapshot, validImportedReport } from "../test-support/report-fixtures.mjs";
 
 const require = createRequire(import.meta.url);
@@ -57,6 +58,23 @@ test("report upload works in Chrome and has no serious accessibility violations"
   assert.match(await page.locator("#checks").textContent(), /<script data-injected>/);
   assert.equal(await page.locator("script[data-injected]").count(), 0);
   assert.equal(await page.evaluate(() => globalThis.__firmaInjected), undefined);
+
+  for (const { label, overall, snapshot } of genuineReportSnapshots()) {
+    verificationReport = {
+      schema: "firma.report.v1",
+      input: snapshot.input,
+      evidence: snapshot,
+      verdict: evaluateSnapshot(snapshot),
+    };
+    const responseFinished = page.waitForResponse((item) => item.url().includes("/api/verify"));
+    await page.getByRole("button", { name: "Check asset" }).click();
+    await responseFinished;
+    const expectedTitle = { PASS: "Passed", FAIL: "Failed", UNKNOWN: "Couldn't verify" }[overall];
+    await page.getByRole("heading", { name: expectedTitle, exact: true }).waitFor();
+    assert.equal(await page.locator("#result").getAttribute("data-status"), overall, label);
+    assert.equal(await page.locator("#form-error").isHidden(), true, label);
+    assert.match(await page.locator("#investigation-summary").textContent(), /Report integrityConsistent/i, label);
+  }
 
   const passWithFail = structuredClone(hostileReport);
   passWithFail.evidence.substrate.asset.supply = "9";
