@@ -42,6 +42,20 @@ function integerText(value) {
   return typeof value === "string" && /^(0|[1-9]\d*)$/.test(value) ? value : null;
 }
 
+function sharedBlockNumber(report) {
+  const native = integerText(report?.evidence?.substrate?.finalized?.number);
+  const evm = integerText(report?.evidence?.evm?.block?.number);
+  return native && evm && native === evm ? native : null;
+}
+
+function h160Text(value) {
+  return typeof value === "string" && /^0x[0-9a-fA-F]{40}$/.test(value) ? value : null;
+}
+
+function accountIdText(value) {
+  return typeof value === "string" && /^[1-9A-HJ-NP-Za-km-z]{47,48}$/.test(value) ? value : null;
+}
+
 function evidenceStatusGuidance(check, evidenceStatus, evidenceDescription, refs) {
   if (VALID_STATUS.has(check?.status) && check.status === evidenceStatus) return null;
   const reportedStatus = text(check?.status) ?? "missing";
@@ -270,21 +284,26 @@ function supplyGuidance(report, check) {
     reference("evidence.evm.calls.totalSupply.error", "Recorded EVM error", errorText(evmCall?.error)),
   );
   const valuesAvailable = nativeAsset?.exists === true && Boolean(native && evm);
-  const evidenceStatus = !valuesAvailable ? "UNKNOWN" : native === evm ? "PASS" : "FAIL";
+  const sharedBlock = sharedBlockNumber(report);
+  const evidenceStatus = !valuesAvailable || !sharedBlock ? "UNKNOWN" : native === evm ? "PASS" : "FAIL";
   const inconsistent = evidenceStatusGuidance(
     check,
     evidenceStatus,
     evidenceStatus === "UNKNOWN"
-      ? "a complete pair of valid native and EVM integer supply observations is not available."
+      ? !valuesAvailable
+        ? "a complete pair of valid native and EVM integer supply observations is not available."
+        : "the supply observations are not tied to one shared finalized block."
       : evidenceStatus === "PASS"
         ? `both supply observations equal ${native} base units.`
         : `native supply ${native} and EVM totalSupply ${evm} are different.`,
     refs,
   );
   if (inconsistent) return inconsistent;
-  if (!nativeAsset || nativeAsset.exists !== true || !native || !evm) {
+  if (!nativeAsset || nativeAsset.exists !== true || !native || !evm || !sharedBlock) {
     const reason = nativeAsset?.exists === false
       ? "The native asset record was absent, so no native supply observation was available."
+      : valuesAvailable && !sharedBlock
+        ? "The native and EVM supply observations were not tied to one shared finalized block."
       : unavailableObservation("A complete native/EVM supply pair", evmCall?.error);
     return result(
       reason,
@@ -317,8 +336,8 @@ function supplyGuidance(report, check) {
 
 function mappingGuidance(report, check) {
   const mapping = report?.evidence?.substrate?.accountMapping;
-  const h160 = text(mapping?.h160) ?? text(report?.input?.account);
-  const accountId = text(mapping?.accountId);
+  const h160 = h160Text(mapping?.h160) ?? h160Text(report?.input?.account);
+  const accountId = accountIdText(mapping?.accountId);
   const refs = references(
     reference("evidence.substrate.accountMapping.h160", "EVM address", h160),
     reference("evidence.substrate.accountMapping.accountId", "Native AccountId", accountId),
@@ -373,23 +392,30 @@ function balanceGuidance(report, check) {
     reference("evidence.evm.calls.balanceOf.raw", "Raw EVM result", evmCall?.raw),
     reference("evidence.evm.calls.balanceOf.error", "Recorded EVM error", errorText(evmCall?.error)),
   );
-  const valuesAvailable = mapping?.exists === true && nativeBalance?.exists === true && Boolean(native && evm);
-  const evidenceStatus = !valuesAvailable ? "UNKNOWN" : native === evm ? "PASS" : "FAIL";
+  const mappingAvailable = mapping?.exists === true
+    && Boolean(h160Text(mapping?.h160) ?? h160Text(report?.input?.account))
+    && Boolean(accountIdText(mapping?.accountId));
+  const valuesAvailable = mappingAvailable && nativeBalance?.exists === true && Boolean(native && evm);
+  const sharedBlock = sharedBlockNumber(report);
+  const evidenceStatus = !valuesAvailable || !sharedBlock ? "UNKNOWN" : native === evm ? "PASS" : "FAIL";
   const inconsistent = evidenceStatusGuidance(
     check,
     evidenceStatus,
     evidenceStatus === "UNKNOWN"
-      ? "a mapping and complete pair of valid native and EVM integer balance observations are not available."
+      ? !valuesAvailable
+        ? "a valid mapping and complete pair of native and EVM integer balance observations are not available."
+        : "the balance observations are not tied to one shared finalized block."
       : evidenceStatus === "PASS"
         ? `both balance observations equal ${native} base units.`
         : `native balance ${native} and EVM balanceOf ${evm} are different.`,
     refs,
   );
   if (inconsistent) return inconsistent;
-  if (!native || !evm || mapping?.exists !== true) {
+  if (!native || !evm || !mappingAvailable || !sharedBlock) {
     let observed;
-    if (mapping?.exists !== true) observed = "No runtime-backed account mapping was available, so FIRMA could not select a native balance record.";
+    if (!mappingAvailable) observed = "No valid runtime-backed account mapping was available, so FIRMA could not select a native balance record.";
     else if (nativeBalance?.exists === false) observed = "The mapped native account had no Assets account record at the checked block.";
+    else if (valuesAvailable && !sharedBlock) observed = "The native and EVM balance observations were not tied to one shared finalized block.";
     else observed = unavailableObservation("A complete native/EVM balance pair", evmCall?.error);
     return result(
       observed,
@@ -448,7 +474,10 @@ function metadataGuidance(report, check) {
   );
   const evmHasValue = fields.some((field) => calls?.[field]?.ok === true && typeof calls[field].value === "string");
   const evmMissingField = nativeExists && fields.find((field) => calls?.[field]?.kind === "metadata-missing");
-  const evidenceStatus = native?.exists === false && evmMissing
+  const sharedBlock = sharedBlockNumber(report);
+  const evidenceStatus = !sharedBlock
+    ? "UNKNOWN"
+    : native?.exists === false && evmMissing
     ? "PASS"
     : native?.exists === false && evmHasValue
       ? "FAIL"
@@ -458,7 +487,9 @@ function metadataGuidance(report, check) {
           ? "FAIL"
           : "UNKNOWN";
   const evidenceDescription = evidenceStatus === "UNKNOWN"
-    ? "the report does not contain a complete, recognized pair of metadata observations."
+    ? !sharedBlock && (native?.exists === false && evmMissing || valuesAvailable || evmMissingField || (native?.exists === false && evmHasValue))
+      ? "the metadata observations are not tied to one shared finalized block."
+      : "the report does not contain a complete, recognized pair of metadata observations."
     : native?.exists === false && evmMissing
       ? "both interfaces consistently represent metadata as absent."
       : native?.exists === false
@@ -470,7 +501,7 @@ function metadataGuidance(report, check) {
             : "the available native and EVM metadata fields match exactly.";
   const inconsistent = evidenceStatusGuidance(check, evidenceStatus, evidenceDescription, refs);
   if (inconsistent) return inconsistent;
-  if (native?.exists === false && evmMissing) {
+  if (sharedBlock && native?.exists === false && evmMissing) {
     return result(
       "Native metadata storage was absent, and the EVM name, symbol, and decimals calls all returned the recognized metadata-missing result.",
       "Both interfaces consistently represented metadata as absent at this block.",
@@ -479,7 +510,7 @@ function metadataGuidance(report, check) {
       refs,
     );
   }
-  if (valuesAvailable && mismatches.length === 0) {
+  if (sharedBlock && valuesAvailable && mismatches.length === 0) {
     return result(
       `Native and EVM metadata matched: name “${native.name}”, symbol “${native.symbol}”, decimals ${native.decimals}.`,
       "The name, symbol, and decimal observations were equal across both interfaces at this block.",

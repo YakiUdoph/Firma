@@ -257,6 +257,42 @@ test("every status and evidence inconsistency category remains explicit and non-
   }
 });
 
+test("different or malformed block contexts cannot establish cross-interface contradictions", () => {
+  const cases = [
+    ["asset.supply", { substrate: { asset: { supply: "9" } } }],
+    ["asset.balance", { substrate: { balance: { value: "9" } } }],
+    ["asset.metadata", { substrate: { asset: { metadata: { symbol: "OTHER" } } } }],
+  ];
+  for (const [id, overrides] of cases) {
+    const report = reportFrom(matchingSnapshot(overrides));
+    const check = report.verdict.checks.find((item) => item.id === id);
+    assert.equal(check.status, "FAIL");
+    report.evidence.evm.block.number = "120901";
+    const before = JSON.stringify(report);
+    const projected = guidanceForCheck(report, check);
+    assert.equal(projected.integrity, "INCONSISTENT");
+    assert.match(projected.observed, /not tied to one shared finalized block/i);
+    assert.doesNotMatch(`${projected.observed} ${projected.proves}`, /contradict(?:ion|s|ed)?/i);
+    assert.equal(check.status, "FAIL");
+    assert.equal(JSON.stringify(report), before);
+  }
+});
+
+test("malformed Revive mapping fields cannot be presented as a valid mapping", () => {
+  const report = reportFrom(matchingSnapshot());
+  report.evidence.substrate.accountMapping.h160 = "0x1234";
+  report.evidence.substrate.accountMapping.accountId = "not-an-account-id";
+  const check = report.verdict.checks.find((item) => item.id === "account.mapping");
+  assert.equal(check.status, "PASS");
+  const before = JSON.stringify(report);
+  const projected = guidanceForCheck(report, check);
+  assert.equal(projected.integrity, "INCONSISTENT");
+  assert.match(projected.observed, /does not contain a complete, usable Revive mapping/i);
+  assert.doesNotMatch(projected.observed, /evidence contains a Revive mapping/i);
+  assert.equal(check.status, "PASS");
+  assert.equal(JSON.stringify(report), before);
+});
+
 test("inconsistent metadata guidance neither invents differing fields nor executes hostile text", () => {
   const payload = `</p><script data-remediation-injected>globalThis.__firmaRemediationInjected=true</script>`;
   const report = reportFrom(matchingSnapshot({
