@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { guidanceForCheck, projectInvestigation } from "../public/investigation.js";
+import { assessReportIntegrity, guidanceForCheck, projectInvestigation } from "../public/investigation.js";
 import { evaluateSnapshot } from "../src/evaluate.mjs";
 import { parseImportedReport } from "../src/report-import.mjs";
 import { matchingSnapshot } from "../test-support/fixtures.mjs";
@@ -26,6 +26,14 @@ function setCheckStatus(report, id, status) {
   assert.ok(check, `Expected check ${id}`);
   check.status = status;
   return check;
+}
+
+function alignCounts(report) {
+  report.verdict.counts = Object.fromEntries(["PASS", "FAIL", "UNKNOWN"].map((status) => [
+    status,
+    report.verdict.checks.filter((check) => check?.status === status).length,
+  ]));
+  return report;
 }
 
 test("matching observations produce bounded PASS guidance for every existing check", () => {
@@ -154,7 +162,7 @@ test("historical unavailability and shared-block failure never substitute curren
 
   const differentBlocks = reportFrom(matchingSnapshot({ evm: { block: { number: "120901" } } }));
   const shared = guidance(differentBlocks, "context.block");
-  assert.match(shared.observed, /Native block: 120900; EVM block: 120901/i);
+  assert.match(shared.observed, /native block 120900 and EVM block 120901 differ/i);
   assert.match(shared.doesNotProve, /not a demonstrated.*contradiction/i);
 });
 
@@ -257,6 +265,133 @@ test("every status and evidence inconsistency category remains explicit and non-
   }
 });
 
+test("report integrity reconciles overall verdicts, required checks, statuses, counts, and evidence", () => {
+  const valid = reportFrom(matchingSnapshot());
+  assert.deepEqual(assessReportIntegrity(valid), {
+    trusted: true,
+    reportedOverall: "PASS",
+    checkOverall: "PASS",
+    evidenceSupportedOverall: "PASS",
+    issues: [],
+  });
+
+  const cases = [
+    ["PASS overall with FAIL check", (report) => {
+      report.evidence.substrate.asset.supply = "9";
+      report.verdict = evaluateSnapshot(report.evidence);
+      report.verdict.overall = "PASS";
+    }, /reported overall PASS.*individual check result FAIL/i],
+    ["PASS overall with UNKNOWN check", (report) => {
+      setCheckStatus(report, "asset.supply", "UNKNOWN");
+      alignCounts(report);
+      report.verdict.overall = "PASS";
+    }, /reported overall PASS.*individual check result UNKNOWN/i],
+    ["FAIL overall with only PASS checks", (report) => { report.verdict.overall = "FAIL"; }, /reported overall FAIL.*individual check result PASS/i],
+    ["UNKNOWN overall with all PASS checks", (report) => { report.verdict.overall = "UNKNOWN"; }, /reported overall UNKNOWN.*individual check result PASS/i],
+    ["missing required check", (report) => {
+      report.verdict.checks = report.verdict.checks.filter((check) => check.id !== "asset.supply");
+      alignCounts(report);
+    }, /required check asset\.supply is missing/i],
+    ["duplicate check", (report) => {
+      report.verdict.checks.push(clone(report.verdict.checks[0]));
+      alignCounts(report);
+    }, /appears more than once/i],
+    ["unknown check ID", (report) => { report.verdict.checks[0].id = "unknown.check"; }, /unknown ID unknown\.check/i],
+    ["malformed check status", (report) => { report.verdict.checks[0].status = "BROKEN"; }, /missing or unexpected status/i],
+    ["missing verdict", (report) => { delete report.verdict; }, /verdict is missing or malformed/i],
+    ["malformed verdict", (report) => { report.verdict = []; }, /verdict is missing or malformed/i],
+    ["conflicting integrity signals", (report) => {
+      setCheckStatus(report, "asset.supply", "FAIL");
+      alignCounts(report);
+      report.verdict.overall = "FAIL";
+    }, /status or evidence that cannot be reconciled/i],
+  ];
+
+  for (const [label, mutate, expected] of cases) {
+    const report = reportFrom(matchingSnapshot());
+    mutate(report);
+    const before = JSON.stringify(report);
+    const integrity = assessReportIntegrity(report);
+    assert.equal(integrity.trusted, false, label);
+    assert.match(integrity.issues.join("; "), expected, label);
+    assert.equal(integrity.evidenceSupportedOverall, null, label);
+    assert.equal(JSON.stringify(report), before, `${label} mutated the report`);
+  }
+
+  const multipleFailures = reportFrom(matchingSnapshot({
+    substrate: { asset: { supply: "9", metadata: { symbol: "OTHER" } }, balance: { value: "8" } },
+  }));
+  const before = JSON.stringify(multipleFailures);
+  const integrity = assessReportIntegrity(multipleFailures);
+  assert.equal(integrity.trusted, true);
+  assert.equal(integrity.reportedOverall, "FAIL");
+  assert.equal(integrity.checkOverall, "FAIL");
+  assert.equal(integrity.evidenceSupportedOverall, "FAIL");
+  assert.equal(JSON.stringify(multipleFailures), before);
+});
+
+test("shared-block evidence fails closed on unavailable, missing, malformed, or contradictory context", () => {
+  const cases = [
+    ["EVM unavailable", (report) => { report.evidence.evm.block.available = false; }, /not affirmatively recorded as available/i],
+    ["missing native finality", (report) => { report.evidence.substrate.finalized = null; }, /native finalized-block observation is missing/i],
+    ["native historical block not finalized", (report) => {
+      report.evidence.substrate.historical = { requestedNumber: "120900", available: true, finalized: false };
+    }, /native historical-block finality evidence is missing, unavailable, or malformed/i],
+    ["missing EVM block", (report) => { report.evidence.evm.block = null; }, /EVM block observation is missing/i],
+    ["malformed native block", (report) => { report.evidence.substrate.finalized.number = "12.5"; }, /native finalized-block observation is missing or malformed/i],
+    ["malformed EVM block", (report) => { report.evidence.evm.block.number = "0x1"; }, /EVM block observation is missing or malformed/i],
+    ["contradictory EVM tag", (report) => { report.evidence.evm.block.requestedTag = "0x1"; }, /requested EVM block tag does not match/i],
+    ["contradictory finalized head", (report) => {
+      report.evidence.substrate.latestFinalized = { ...report.evidence.substrate.finalized, hash: "0xdifferent" };
+    }, /selected native block hash conflicts/i],
+  ];
+  for (const [label, mutate, expected] of cases) {
+    const report = reportFrom(matchingSnapshot({ substrate: { asset: { supply: "9" }, balance: { value: "8" } } }));
+    mutate(report);
+    for (const id of ["context.block", "asset.supply", "asset.balance"]) {
+      const projected = guidance(report, id);
+      assert.match(projected.observed, expected, `${label}: ${id}`);
+      assert.doesNotMatch(`${projected.observed} ${projected.proves}`, /values contradict|balances contradict|same-block contradiction/i, `${label}: ${id}`);
+    }
+  }
+
+  const genuine = reportFrom(matchingSnapshot({ substrate: { asset: { supply: "9" }, balance: { value: "8" } } }));
+  assert.match(guidance(genuine, "asset.supply").proves, /supply values contradict/i);
+  assert.match(guidance(genuine, "asset.balance").proves, /balances contradict/i);
+});
+
+test("Revive guidance distinguishes valid, missing, malformed, mismatched, and unavailable observations", () => {
+  const valid = reportFrom(matchingSnapshot());
+  assert.match(guidance(valid, "account.mapping").observed, /Revive storage mapped/i);
+
+  const missing = reportFrom(matchingSnapshot({
+    substrate: { accountMapping: { exists: false, accountId: null }, balance: { exists: false, value: null } },
+  }));
+  assert.match(guidance(missing, "account.mapping").observed, /No usable Revive OriginalAccount mapping was observed/i);
+
+  const cases = [
+    ["malformed H160", (report) => { report.evidence.substrate.accountMapping.h160 = "0x1234"; }, /observed mapping H160 is missing or malformed/i],
+    ["malformed AccountId", (report) => { report.evidence.substrate.accountMapping.accountId = "not-an-account"; }, /mapped AccountId is missing or malformed/i],
+    ["input mismatch", (report) => { report.evidence.substrate.accountMapping.h160 = "0x1111111111111111111111111111111111111111"; }, /does not match the requested account/i],
+    ["decode failure", (report) => { delete report.evidence.substrate.accountMapping; }, /observed Revive mapping is missing or malformed/i],
+  ];
+  for (const [label, mutate, expected] of cases) {
+    const report = reportFrom(matchingSnapshot());
+    mutate(report);
+    const mapping = guidance(report, "account.mapping");
+    const balance = guidance(report, "asset.balance");
+    assert.match(mapping.observed, expected, label);
+    assert.match(balance.observed, expected, `${label}: dependent balance`);
+    assert.doesNotMatch(`${mapping.observed} ${mapping.proves}`, /Revive storage mapped/i, label);
+    if (label === "decode failure") assert.doesNotMatch(mapping.observed, /No usable Revive OriginalAccount mapping was observed/i);
+    assert.doesNotMatch(`${balance.observed} ${balance.proves}`, /balances (?:match|contradict)/i, label);
+  }
+
+  const inconsistent = reportFrom(matchingSnapshot());
+  setCheckStatus(inconsistent, "account.mapping", "FAIL");
+  assert.equal(guidance(inconsistent, "account.mapping").integrity, "INCONSISTENT");
+});
+
 test("different or malformed block contexts cannot establish cross-interface contradictions", () => {
   const cases = [
     ["asset.supply", { substrate: { asset: { supply: "9" } } }],
@@ -271,7 +406,7 @@ test("different or malformed block contexts cannot establish cross-interface con
     const before = JSON.stringify(report);
     const projected = guidanceForCheck(report, check);
     assert.equal(projected.integrity, "INCONSISTENT");
-    assert.match(projected.observed, /not tied to one shared finalized block/i);
+    assert.match(projected.observed, /not tied to one verified shared finalized block/i);
     assert.doesNotMatch(`${projected.observed} ${projected.proves}`, /contradict(?:ion|s|ed)?/i);
     assert.equal(check.status, "FAIL");
     assert.equal(JSON.stringify(report), before);
@@ -287,7 +422,7 @@ test("malformed Revive mapping fields cannot be presented as a valid mapping", (
   const before = JSON.stringify(report);
   const projected = guidanceForCheck(report, check);
   assert.equal(projected.integrity, "INCONSISTENT");
-  assert.match(projected.observed, /does not contain a complete, usable Revive mapping/i);
+  assert.match(projected.observed, /observed mapping H160 is missing or malformed/i);
   assert.doesNotMatch(projected.observed, /evidence contains a Revive mapping/i);
   assert.equal(check.status, "PASS");
   assert.equal(JSON.stringify(report), before);
@@ -340,8 +475,10 @@ test("summary precedence is FAIL then UNKNOWN then PASS across simultaneous resu
 test("projection leaves valid firma.report.v1 evidence byte-for-byte unchanged", () => {
   const report = validImportedReport();
   const before = JSON.stringify(report);
+  assert.equal(report.schema, "firma.report.v1");
   assert.equal(parseImportedReport(report), report);
   projectInvestigation(report);
+  assert.equal(assessReportIntegrity(report).trusted, true);
   for (const check of report.verdict.checks) guidanceForCheck(report, check);
   assert.equal(JSON.stringify(report), before);
   assert.equal(parseImportedReport(report), report);

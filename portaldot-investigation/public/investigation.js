@@ -1,4 +1,19 @@
 const VALID_STATUS = new Set(["PASS", "FAIL", "UNKNOWN"]);
+const REQUIRED_CHECK_IDS = Object.freeze([
+  "network.substrate",
+  "network.evm",
+  "identity.chainId",
+  "runtime.support",
+  "context.block",
+  "asset.supply",
+  "account.mapping",
+  "asset.balance",
+  "asset.metadata",
+]);
+
+function isRecord(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
 
 function text(value) {
   return typeof value === "string" && value.length ? value : null;
@@ -42,10 +57,56 @@ function integerText(value) {
   return typeof value === "string" && /^(0|[1-9]\d*)$/.test(value) ? value : null;
 }
 
-function sharedBlockNumber(report) {
-  const native = integerText(report?.evidence?.substrate?.finalized?.number);
-  const evm = integerText(report?.evidence?.evm?.block?.number);
-  return native && evm && native === evm ? native : null;
+function sharedBlockEvidence(report) {
+  const substrate = report?.evidence?.substrate;
+  const finalized = substrate?.finalized;
+  const historical = substrate?.historical;
+  const latestFinalized = substrate?.latestFinalized;
+  const block = report?.evidence?.evm?.block;
+  const native = integerText(finalized?.number);
+  const evm = integerText(block?.number);
+  const issues = [];
+
+  if (!isRecord(finalized) || !native || !text(finalized?.hash)) {
+    issues.push("the native finalized-block observation is missing or malformed");
+  }
+  if (!isRecord(block) || !evm || !text(block?.hash)) {
+    issues.push("the EVM block observation is missing or malformed");
+  }
+  if (block?.available !== true) issues.push("the EVM block is not affirmatively recorded as available");
+  if (native && evm && native !== evm) issues.push(`native block ${native} and EVM block ${evm} differ`);
+
+  if (historical !== undefined) {
+    const requested = integerText(historical?.requestedNumber);
+    if (!isRecord(historical) || historical.available !== true || historical.finalized !== true || !requested) {
+      issues.push("the native historical-block finality evidence is missing, unavailable, or malformed");
+    } else if (native && requested !== native) {
+      issues.push(`the native historical request ${requested} does not match finalized block ${native}`);
+    }
+  }
+
+  if (latestFinalized !== undefined) {
+    const latest = integerText(latestFinalized?.number);
+    if (!isRecord(latestFinalized) || !latest || !text(latestFinalized?.hash)) {
+      issues.push("the latest finalized-head context is malformed");
+    } else if (native && BigInt(latest) < BigInt(native)) {
+      issues.push(`finalized block ${native} is newer than the recorded finalized head ${latest}`);
+    } else if (native === latest && text(finalized?.hash) !== text(latestFinalized.hash)) {
+      issues.push("the selected native block hash conflicts with the finalized-head hash");
+    }
+  }
+
+  if (block?.requestedTag !== undefined) {
+    const tag = typeof block.requestedTag === "string" && /^0x[0-9a-fA-F]+$/.test(block.requestedTag)
+      ? BigInt(block.requestedTag).toString()
+      : null;
+    if (!tag || (evm && tag !== evm)) issues.push("the requested EVM block tag does not match the observed EVM block");
+  }
+
+  return Object.freeze({
+    number: issues.length === 0 ? native : null,
+    issues: Object.freeze(issues),
+  });
 }
 
 function h160Text(value) {
@@ -54,6 +115,38 @@ function h160Text(value) {
 
 function accountIdText(value) {
   return typeof value === "string" && /^[1-9A-HJ-NP-Za-km-z]{47,48}$/.test(value) ? value : null;
+}
+
+function mappingEvidence(report) {
+  const mapping = report?.evidence?.substrate?.accountMapping;
+  const requested = h160Text(report?.input?.account);
+  if (!isRecord(mapping)) {
+    return Object.freeze({ kind: "INCOMPLETE", h160: null, accountId: null, reason: "the observed Revive mapping is missing or malformed" });
+  }
+  const observed = h160Text(mapping.h160);
+  const accountId = accountIdText(mapping.accountId);
+  if (!requested) {
+    return Object.freeze({ kind: "INCOMPLETE", h160: observed, accountId, reason: "the requested account is missing or malformed" });
+  }
+  if (!observed) {
+    return Object.freeze({ kind: "INCOMPLETE", h160: null, accountId, reason: "the observed mapping H160 is missing or malformed" });
+  }
+  if (observed.toLowerCase() !== requested.toLowerCase()) {
+    return Object.freeze({ kind: "INCOMPLETE", h160: observed, accountId, reason: "the observed mapping H160 does not match the requested account" });
+  }
+  if (mapping.exists === false) {
+    if (mapping.accountId !== null && mapping.accountId !== undefined) {
+      return Object.freeze({ kind: "INCOMPLETE", h160: observed, accountId, reason: "a mapping recorded as absent also contains an AccountId" });
+    }
+    return Object.freeze({ kind: "MISSING", h160: observed, accountId: null, reason: "the observed Revive mapping is explicitly absent" });
+  }
+  if (mapping.exists !== true) {
+    return Object.freeze({ kind: "INCOMPLETE", h160: observed, accountId, reason: "the observed mapping presence flag is missing or malformed" });
+  }
+  if (!accountId) {
+    return Object.freeze({ kind: "INCOMPLETE", h160: observed, accountId: null, reason: "the observed mapped AccountId is missing or malformed" });
+  }
+  return Object.freeze({ kind: "VALID", h160: observed, accountId, reason: null });
 }
 
 function evidenceStatusGuidance(check, evidenceStatus, evidenceDescription, refs) {
@@ -219,8 +312,9 @@ function runtimeGuidance(report, check) {
 function blockGuidance(report, check) {
   const substrate = report?.evidence?.substrate;
   const evm = report?.evidence?.evm;
-  const nativeBlock = text(substrate?.finalized?.number);
-  const evmBlock = text(evm?.block?.number);
+  const nativeBlock = integerText(substrate?.finalized?.number);
+  const evmBlock = integerText(evm?.block?.number);
+  const sharedBlock = sharedBlockEvidence(report);
   const requested = text(substrate?.historical?.requestedNumber) ?? text(evm?.block?.requestedNumber);
   const substrateError = errorText(substrate?.error);
   const historicalUnavailable = substrate?.historical?.available === false
@@ -234,19 +328,19 @@ function blockGuidance(report, check) {
     reference("evidence.substrate.historical.requestedNumber", "Requested historical block", requested),
     reference("evidence.substrate.error", "Recorded native error", substrateError),
   );
-  const evidenceStatus = nativeBlock && evmBlock && nativeBlock === evmBlock ? "PASS" : "UNKNOWN";
+  const evidenceStatus = sharedBlock.number ? "PASS" : "UNKNOWN";
   const inconsistent = evidenceStatusGuidance(
     check,
     evidenceStatus,
     evidenceStatus === "PASS"
-      ? `both interfaces are recorded at block ${nativeBlock}.`
-      : "the report does not establish one shared block context.",
+      ? `both interfaces are recorded as available at finalized block ${sharedBlock.number}.`
+      : `the report does not establish one shared finalized-block context: ${sharedBlock.issues.join("; ") || "required block evidence is unavailable"}.`,
     refs,
   );
   if (inconsistent) return inconsistent;
   if (evidenceStatus === "PASS") {
     return result(
-      `The native and EVM reads were both pinned to finalized block ${nativeBlock}.`,
+      `The native and EVM reads were both pinned to available finalized block ${sharedBlock.number}.`,
       "The compared observations share one block height, so differences are not explained by reading different heights.",
       "Equal heights do not prove the two endpoints are honest or expose identical block representations.",
       ["Use the recorded block hashes and per-check evidence when reproducing this result."],
@@ -255,7 +349,9 @@ function blockGuidance(report, check) {
   }
   const observed = historicalUnavailable
     ? `The exact historical block${requested ? ` ${requested}` : ""} was not available from every required interface.`
-    : nativeBlock || evmBlock
+    : sharedBlock.issues.length
+      ? `A shared finalized-block context was not established: ${sharedBlock.issues.join("; ")}.`
+      : nativeBlock || evmBlock
       ? `A shared block context was not established. Native block: ${nativeBlock ?? "unavailable"}; EVM block: ${evmBlock ?? "unavailable"}.`
       : "The report does not contain two usable block observations.";
   return result(
@@ -284,26 +380,26 @@ function supplyGuidance(report, check) {
     reference("evidence.evm.calls.totalSupply.error", "Recorded EVM error", errorText(evmCall?.error)),
   );
   const valuesAvailable = nativeAsset?.exists === true && Boolean(native && evm);
-  const sharedBlock = sharedBlockNumber(report);
-  const evidenceStatus = !valuesAvailable || !sharedBlock ? "UNKNOWN" : native === evm ? "PASS" : "FAIL";
+  const sharedBlock = sharedBlockEvidence(report);
+  const evidenceStatus = !valuesAvailable || !sharedBlock.number ? "UNKNOWN" : native === evm ? "PASS" : "FAIL";
   const inconsistent = evidenceStatusGuidance(
     check,
     evidenceStatus,
     evidenceStatus === "UNKNOWN"
       ? !valuesAvailable
         ? "a complete pair of valid native and EVM integer supply observations is not available."
-        : "the supply observations are not tied to one shared finalized block."
+        : `the supply observations are not tied to one verified shared finalized block: ${sharedBlock.issues.join("; ")}.`
       : evidenceStatus === "PASS"
         ? `both supply observations equal ${native} base units.`
         : `native supply ${native} and EVM totalSupply ${evm} are different.`,
     refs,
   );
   if (inconsistent) return inconsistent;
-  if (!nativeAsset || nativeAsset.exists !== true || !native || !evm || !sharedBlock) {
+  if (!nativeAsset || nativeAsset.exists !== true || !native || !evm || !sharedBlock.number) {
     const reason = nativeAsset?.exists === false
       ? "The native asset record was absent, so no native supply observation was available."
-      : valuesAvailable && !sharedBlock
-        ? "The native and EVM supply observations were not tied to one shared finalized block."
+      : valuesAvailable && !sharedBlock.number
+        ? `The native and EVM supply observations were not tied to one verified shared finalized block: ${sharedBlock.issues.join("; ")}.`
       : unavailableObservation("A complete native/EVM supply pair", evmCall?.error);
     return result(
       reason,
@@ -336,21 +432,22 @@ function supplyGuidance(report, check) {
 
 function mappingGuidance(report, check) {
   const mapping = report?.evidence?.substrate?.accountMapping;
-  const h160 = h160Text(mapping?.h160) ?? h160Text(report?.input?.account);
-  const accountId = accountIdText(mapping?.accountId);
+  const assessment = mappingEvidence(report);
+  const h160 = assessment.h160;
+  const accountId = assessment.accountId;
   const refs = references(
     reference("evidence.substrate.accountMapping.h160", "EVM address", h160),
     reference("evidence.substrate.accountMapping.accountId", "Native AccountId", accountId),
     reference("evidence.substrate.accountMapping.storageKey", "Revive mapping storage key", mapping?.storageKey),
   );
-  const mappingAvailable = mapping?.exists === true && Boolean(h160 && accountId);
+  const mappingAvailable = assessment.kind === "VALID";
   const evidenceStatus = mappingAvailable ? "PASS" : "UNKNOWN";
   const inconsistent = evidenceStatusGuidance(
     check,
     evidenceStatus,
     mappingAvailable
       ? `the evidence contains a Revive mapping from ${h160} to ${accountId}.`
-      : "the report does not contain a complete, usable Revive mapping observation.",
+      : `${assessment.reason}.`,
     refs,
   );
   if (inconsistent) return inconsistent;
@@ -364,9 +461,9 @@ function mappingGuidance(report, check) {
     );
   }
   return result(
-    h160
+    assessment.kind === "MISSING"
       ? `No usable Revive OriginalAccount mapping was observed for ${h160} at the checked block.`
-      : "The report does not contain a usable EVM address or Revive mapping observation.",
+      : `The Revive mapping evidence is incomplete or malformed: ${assessment.reason}.`,
     "FIRMA cannot select a runtime-authoritative native AccountId for the balance comparison.",
     "A missing mapping does not prove the address is invalid, either balance is zero, or the chain is malfunctioning.",
     [
@@ -392,30 +489,29 @@ function balanceGuidance(report, check) {
     reference("evidence.evm.calls.balanceOf.raw", "Raw EVM result", evmCall?.raw),
     reference("evidence.evm.calls.balanceOf.error", "Recorded EVM error", errorText(evmCall?.error)),
   );
-  const mappingAvailable = mapping?.exists === true
-    && Boolean(h160Text(mapping?.h160) ?? h160Text(report?.input?.account))
-    && Boolean(accountIdText(mapping?.accountId));
+  const mappingAssessment = mappingEvidence(report);
+  const mappingAvailable = mappingAssessment.kind === "VALID";
   const valuesAvailable = mappingAvailable && nativeBalance?.exists === true && Boolean(native && evm);
-  const sharedBlock = sharedBlockNumber(report);
-  const evidenceStatus = !valuesAvailable || !sharedBlock ? "UNKNOWN" : native === evm ? "PASS" : "FAIL";
+  const sharedBlock = sharedBlockEvidence(report);
+  const evidenceStatus = !valuesAvailable || !sharedBlock.number ? "UNKNOWN" : native === evm ? "PASS" : "FAIL";
   const inconsistent = evidenceStatusGuidance(
     check,
     evidenceStatus,
     evidenceStatus === "UNKNOWN"
       ? !valuesAvailable
-        ? "a valid mapping and complete pair of native and EVM integer balance observations are not available."
-        : "the balance observations are not tied to one shared finalized block."
+        ? `${mappingAvailable ? "a complete pair of native and EVM integer balance observations is not available" : mappingAssessment.reason}.`
+        : `the balance observations are not tied to one verified shared finalized block: ${sharedBlock.issues.join("; ")}.`
       : evidenceStatus === "PASS"
         ? `both balance observations equal ${native} base units.`
         : `native balance ${native} and EVM balanceOf ${evm} are different.`,
     refs,
   );
   if (inconsistent) return inconsistent;
-  if (!native || !evm || !mappingAvailable || !sharedBlock) {
+  if (!native || !evm || !mappingAvailable || !sharedBlock.number) {
     let observed;
-    if (!mappingAvailable) observed = "No valid runtime-backed account mapping was available, so FIRMA could not select a native balance record.";
+    if (!mappingAvailable) observed = `The balance comparison has no valid observed Revive mapping: ${mappingAssessment.reason}.`;
     else if (nativeBalance?.exists === false) observed = "The mapped native account had no Assets account record at the checked block.";
-    else if (valuesAvailable && !sharedBlock) observed = "The native and EVM balance observations were not tied to one shared finalized block.";
+    else if (valuesAvailable && !sharedBlock.number) observed = `The native and EVM balance observations were not tied to one verified shared finalized block: ${sharedBlock.issues.join("; ")}.`;
     else observed = unavailableObservation("A complete native/EVM balance pair", evmCall?.error);
     return result(
       observed,
@@ -474,8 +570,8 @@ function metadataGuidance(report, check) {
   );
   const evmHasValue = fields.some((field) => calls?.[field]?.ok === true && typeof calls[field].value === "string");
   const evmMissingField = nativeExists && fields.find((field) => calls?.[field]?.kind === "metadata-missing");
-  const sharedBlock = sharedBlockNumber(report);
-  const evidenceStatus = !sharedBlock
+  const sharedBlock = sharedBlockEvidence(report);
+  const evidenceStatus = !sharedBlock.number
     ? "UNKNOWN"
     : native?.exists === false && evmMissing
     ? "PASS"
@@ -487,8 +583,8 @@ function metadataGuidance(report, check) {
           ? "FAIL"
           : "UNKNOWN";
   const evidenceDescription = evidenceStatus === "UNKNOWN"
-    ? !sharedBlock && (native?.exists === false && evmMissing || valuesAvailable || evmMissingField || (native?.exists === false && evmHasValue))
-      ? "the metadata observations are not tied to one shared finalized block."
+    ? !sharedBlock.number && (native?.exists === false && evmMissing || valuesAvailable || evmMissingField || (native?.exists === false && evmHasValue))
+      ? `the metadata observations are not tied to one verified shared finalized block: ${sharedBlock.issues.join("; ")}.`
       : "the report does not contain a complete, recognized pair of metadata observations."
     : native?.exists === false && evmMissing
       ? "both interfaces consistently represent metadata as absent."
@@ -501,7 +597,7 @@ function metadataGuidance(report, check) {
             : "the available native and EVM metadata fields match exactly.";
   const inconsistent = evidenceStatusGuidance(check, evidenceStatus, evidenceDescription, refs);
   if (inconsistent) return inconsistent;
-  if (sharedBlock && native?.exists === false && evmMissing) {
+  if (sharedBlock.number && native?.exists === false && evmMissing) {
     return result(
       "Native metadata storage was absent, and the EVM name, symbol, and decimals calls all returned the recognized metadata-missing result.",
       "Both interfaces consistently represented metadata as absent at this block.",
@@ -510,7 +606,7 @@ function metadataGuidance(report, check) {
       refs,
     );
   }
-  if (sharedBlock && valuesAvailable && mismatches.length === 0) {
+  if (sharedBlock.number && valuesAvailable && mismatches.length === 0) {
     return result(
       `Native and EVM metadata matched: name “${native.name}”, symbol “${native.symbol}”, decimals ${native.decimals}.`,
       "The name, symbol, and decimal observations were equal across both interfaces at this block.",
@@ -579,9 +675,11 @@ export function guidanceForCheck(report, check) {
 }
 
 function blockContext(report) {
-  const native = text(report?.evidence?.substrate?.finalized?.number);
-  const evm = text(report?.evidence?.evm?.block?.number);
-  if (native && evm && native === evm) return `Native and EVM evidence was collected at finalized block ${native}.`;
+  const shared = sharedBlockEvidence(report);
+  const native = integerText(report?.evidence?.substrate?.finalized?.number);
+  const evm = integerText(report?.evidence?.evm?.block?.number);
+  if (shared.number) return `Native and EVM evidence was collected at available finalized block ${shared.number}.`;
+  if (shared.issues.length) return `A shared finalized block was not established: ${shared.issues.join("; ")}.`;
   if (native || evm) return `A shared block was not established (native: ${native ?? "unavailable"}; EVM: ${evm ?? "unavailable"}).`;
   const requested = text(report?.evidence?.substrate?.historical?.requestedNumber)
     ?? text(report?.evidence?.evm?.block?.requestedNumber);
@@ -622,5 +720,73 @@ export function projectInvestigation(report) {
     nextAction,
     hasIntegrityIssue: Boolean(firstIntegrityIssue),
     checks: Object.freeze(projectedChecks),
+  });
+}
+
+export function assessReportIntegrity(report, investigation = projectInvestigation(report)) {
+  const issues = [];
+  const verdict = isRecord(report?.verdict) ? report.verdict : null;
+  const checks = Array.isArray(verdict?.checks) ? verdict.checks : [];
+  const reportedOverall = VALID_STATUS.has(verdict?.overall) ? verdict.overall : null;
+
+  if (!isRecord(report)) issues.push("the response is not a report object");
+  if (report?.schema !== "firma.report.v1") issues.push("the report schema is missing or unrecognized");
+  if (!isRecord(report?.evidence)) issues.push("the report evidence is missing or malformed");
+  if (!verdict) issues.push("the reported verdict is missing or malformed");
+  if (!Array.isArray(verdict?.checks)) issues.push("the reported check list is missing or malformed");
+  if (!reportedOverall) issues.push("the reported overall verdict is missing or unrecognized");
+
+  const seen = new Map();
+  for (const [index, check] of checks.entries()) {
+    if (!isRecord(check)) {
+      issues.push(`check ${index + 1} is not an object`);
+      continue;
+    }
+    if (!text(check.id)) issues.push(`check ${index + 1} has no recognizable ID`);
+    else if (!REQUIRED_CHECK_IDS.includes(check.id)) issues.push(`check ${index + 1} has unknown ID ${check.id}`);
+    else seen.set(check.id, (seen.get(check.id) ?? 0) + 1);
+    if (!VALID_STATUS.has(check.status)) issues.push(`check ${index + 1} has a missing or unexpected status`);
+    if (!text(check.title)) issues.push(`check ${index + 1} has no usable title`);
+    if (!text(check.summary)) issues.push(`check ${index + 1} has no usable summary`);
+    if (!isRecord(check.evidence)) issues.push(`check ${index + 1} has malformed evidence`);
+  }
+  for (const id of REQUIRED_CHECK_IDS) {
+    const count = seen.get(id) ?? 0;
+    if (count === 0) issues.push(`required check ${id} is missing`);
+    if (count > 1) issues.push(`required check ${id} appears more than once`);
+  }
+
+  const statusesRecognized = checks.length > 0 && checks.every((check) => isRecord(check) && VALID_STATUS.has(check.status));
+  const checkOverall = statusesRecognized
+    ? checks.some((check) => check.status === "FAIL")
+      ? "FAIL"
+      : checks.some((check) => check.status === "UNKNOWN") ? "UNKNOWN" : "PASS"
+    : null;
+  if (reportedOverall && checkOverall && reportedOverall !== checkOverall) {
+    issues.push(`reported overall ${reportedOverall} does not match the individual check result ${checkOverall}`);
+  }
+
+  const counts = isRecord(verdict?.counts) ? verdict.counts : null;
+  if (!counts) issues.push("the reported verdict counts are missing or malformed");
+  for (const status of VALID_STATUS) {
+    const expected = checks.filter((check) => check?.status === status).length;
+    if (!Number.isSafeInteger(counts?.[status]) || counts[status] < 0 || counts[status] !== expected) {
+      issues.push(`the reported ${status} count does not match the check list`);
+    }
+  }
+
+  for (const item of investigation.checks) {
+    if (item.guidance.integrity !== "SUPPORTED") {
+      issues.push(`check ${item.id} has status or evidence that cannot be reconciled`);
+    }
+  }
+
+  const uniqueIssues = [...new Set(issues)];
+  return Object.freeze({
+    trusted: uniqueIssues.length === 0,
+    reportedOverall,
+    checkOverall,
+    evidenceSupportedOverall: uniqueIssues.length === 0 ? investigation.overall : null,
+    issues: Object.freeze(uniqueIssues),
   });
 }

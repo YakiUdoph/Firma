@@ -1,5 +1,5 @@
 import { LABEL, VERDICT_COPY, evidenceFilename, reportContext } from "/view-model.js";
-import { guidanceForCheck, projectInvestigation } from "/investigation.js";
+import { assessReportIntegrity, guidanceForCheck, projectInvestigation } from "/investigation.js";
 
 const form = document.querySelector("#verify-form");
 const button = document.querySelector("#run-button");
@@ -42,9 +42,8 @@ function safeJson(value) {
   }
 }
 
-function normalizeCheckForDisplay(check, index, issues) {
+function normalizeCheckForDisplay(check, index) {
   if (!isRecord(check)) {
-    issues.push(`check ${index + 1} is not an object`);
     return {
       id: "unknown",
       title: `Incomplete check ${index + 1}`,
@@ -54,9 +53,6 @@ function normalizeCheckForDisplay(check, index, issues) {
     };
   }
   const status = VALID_VERDICT_STATUS.has(check.status) ? check.status : "UNKNOWN";
-  if (status !== check.status) issues.push(`check ${index + 1} has a missing or unexpected status`);
-  if (typeof check.title !== "string" || !check.title) issues.push(`check ${index + 1} has no usable title`);
-  if (typeof check.summary !== "string" || !check.summary) issues.push(`check ${index + 1} has no usable summary`);
   return {
     ...check,
     id: typeof check.id === "string" && check.id ? check.id : "unknown",
@@ -70,18 +66,12 @@ function normalizeCheckForDisplay(check, index, issues) {
 }
 
 function reportForDisplay(report) {
-  const issues = [];
   const source = isRecord(report) ? report : {};
-  if (source !== report) issues.push("the response is not a report object");
   const verdict = isRecord(source.verdict) ? source.verdict : {};
-  if (verdict !== source.verdict) issues.push("verdict is absent or malformed");
   const sourceChecks = Array.isArray(verdict.checks) ? verdict.checks : [];
-  if (!Array.isArray(verdict.checks)) issues.push("verdict.checks is absent or is not an array");
-  if (!isRecord(source.evidence)) issues.push("evidence is absent or malformed");
-  const checks = sourceChecks.map((check, index) => normalizeCheckForDisplay(check, index, issues));
+  const checks = sourceChecks.map((check, index) => normalizeCheckForDisplay(check, index));
   const status = VALID_VERDICT_STATUS.has(verdict.overall) ? verdict.overall : "UNKNOWN";
-  if (status !== verdict.overall) issues.push("verdict.overall is missing or unexpected");
-  return { source, verdict, sourceChecks, checks, status, issues };
+  return { source, verdict, sourceChecks, checks, status };
 }
 
 function contextItem({ label, value, title }) {
@@ -208,9 +198,19 @@ function checkRow(item, index, labels = LABEL, guidance = null) {
   return row;
 }
 
-function renderInvestigationSummary(report, investigation = projectInvestigation(report), displayStatus = investigation.overall) {
+function renderInvestigationSummary(
+  report,
+  investigation = projectInvestigation(report),
+  displayStatus = investigation.overall,
+  integrity = assessReportIntegrity(report, investigation),
+) {
   investigationSummary.dataset.status = displayStatus;
   const values = [
+    ["Reported verdict", integrity.reportedOverall ? `${LABEL[integrity.reportedOverall]} (${integrity.reportedOverall})` : "Missing or unrecognized"],
+    ["Evidence-supported findings", integrity.evidenceSupportedOverall
+      ? `${LABEL[integrity.evidenceSupportedOverall]} (${integrity.evidenceSupportedOverall})`
+      : "Couldn't establish — report integrity is unresolved"],
+    ["Report integrity", integrity.trusted ? "Consistent" : "Untrusted — independently reproduce before relying on it"],
     ["Primary finding", investigation.primaryFinding],
     ["Block context", investigation.blockContext],
     ["Priority", investigation.priorityIssue],
@@ -291,18 +291,19 @@ function showError(message) {
 function render(report) {
   latestReport = report;
   const display = reportForDisplay(report);
-  const investigation = projectInvestigation(display.source);
-  const incomplete = display.issues.length > 0 || investigation.hasIntegrityIssue;
-  const status = display.status === "FAIL" ? "FAIL" : incomplete ? "UNKNOWN" : display.status;
+  const investigation = projectInvestigation(report);
+  const integrity = assessReportIntegrity(report, investigation);
+  const incomplete = !integrity.trusted;
+  const status = incomplete ? "UNKNOWN" : display.status;
   result.hidden = false;
   result.dataset.status = status;
   verdictTitle.textContent = LABEL[status];
   verdictSymbol.textContent = status === "PASS" ? "\u2713" : status === "FAIL" ? "\u00d7" : "?";
   verdictSummary.textContent = incomplete
-    ? "The report is incomplete or internally inconsistent, so FIRMA cannot present it as a successful verification."
+    ? `FIRMA cannot trust this report's ${integrity.reportedOverall ?? "unrecognized"} verdict because its checks, evidence, or integrity signals do not agree. The original report remains unchanged and available for inspection.`
     : VERDICT_COPY[status];
   verdictCounts.replaceChildren(...["PASS", "FAIL", "UNKNOWN"].map((item) => countItem(item, display.verdict.counts?.[item])));
-  renderInvestigationSummary(display.source, investigation, status);
+  renderInvestigationSummary(report, investigation, status, integrity);
   context.replaceChildren(...reportContext(display.source).map(contextItem));
   checks.replaceChildren(...display.checks.map((item, index) => checkRow(
     item,
@@ -312,8 +313,8 @@ function render(report) {
   )));
   evidenceJson.textContent = safeJson(report);
   if (incomplete) {
-    const detail = display.issues.length ? ` ${display.issues.join("; ")}.` : "";
-    showError(`FIRMA received an incomplete or internally inconsistent report.${detail} The original report remains available for inspection.`);
+    const detail = integrity.issues.length ? ` ${integrity.issues.join("; ")}.` : "";
+    showError(`FIRMA received an untrusted, incomplete or internally inconsistent report.${detail} Independently reproduce the report before relying on its verdict.`);
   }
   result.scrollIntoView({ behavior: "smooth", block: "start" });
   verdictTitle.tabIndex = -1;

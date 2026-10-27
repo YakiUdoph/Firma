@@ -58,7 +58,30 @@ test("report upload works in Chrome and has no serious accessibility violations"
   assert.equal(await page.locator("script[data-injected]").count(), 0);
   assert.equal(await page.evaluate(() => globalThis.__firmaInjected), undefined);
 
+  const passWithFail = structuredClone(hostileReport);
+  passWithFail.evidence.substrate.asset.supply = "9";
+  passWithFail.verdict = evaluateSnapshot(passWithFail.evidence);
+  passWithFail.verdict.overall = "PASS";
+  const passWithUnknown = structuredClone(hostileReport);
+  passWithUnknown.verdict.checks.find(({ id }) => id === "asset.supply").status = "UNKNOWN";
+  passWithUnknown.verdict.counts = { PASS: 8, FAIL: 0, UNKNOWN: 1 };
+  const failWithPasses = structuredClone(hostileReport);
+  failWithPasses.verdict.overall = "FAIL";
+  const unknownWithPasses = structuredClone(hostileReport);
+  unknownWithPasses.verdict.overall = "UNKNOWN";
+  const duplicateCheck = structuredClone(hostileReport);
+  duplicateCheck.verdict.checks.push(structuredClone(duplicateCheck.verdict.checks[0]));
+  duplicateCheck.verdict.counts.PASS += 1;
+  const unknownCheck = structuredClone(hostileReport);
+  unknownCheck.verdict.checks[0].id = "unexpected.check";
+
   const incompleteReports = [
+    passWithFail,
+    passWithUnknown,
+    failWithPasses,
+    unknownWithPasses,
+    duplicateCheck,
+    unknownCheck,
     {},
     { schema: "firma.report.v1", evidence: {}, verdict: { overall: "PASS", counts: { PASS: 0, FAIL: 0, UNKNOWN: 0 } } },
     { schema: "firma.report.v1", evidence: {}, verdict: { overall: "PASS", counts: {}, checks: {} } },
@@ -78,6 +101,8 @@ test("report upload works in Chrome and has no serious accessibility violations"
     assert.equal(await page.locator("#result").getAttribute("data-status"), "UNKNOWN");
     assert.match(await page.locator("#form-error").textContent(), /incomplete or internally inconsistent report/i);
     assert.equal(await page.locator("#form-error").isHidden(), false);
+    assert.notEqual(await page.locator("#verdict-title").textContent(), "Passed");
+    assert.match(await page.locator("#evidence-json").textContent(), /"verdict"|^\{\}$/);
   }
   assert.equal(pageErrors.length, 0);
   await page.locator("#result").evaluate((element) => { element.hidden = true; });

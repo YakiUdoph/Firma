@@ -33,6 +33,8 @@ node bin/firma.mjs --help
 node bin/firma.mjs --output evidence\my-run.json
 ```
 
+The repository pins the Solidity registry source to LF so its committed artifact is reproducible on Windows and Unix-like systems. A Windows checkout created before that Git attribute was added must re-check out that source file (after preserving any local work), or use a fresh worktree, before running the artifact test.
+
 The output file is created with no-overwrite semantics. Choose a new filename for every run.
 
 Known missing-metadata edge case:
