@@ -61,6 +61,7 @@ export function createCheckReportHandler({
   verifyFn = independentlyVerifyReport,
   defaultsFn = configuredDefaults,
   verificationTimeoutMs = VERIFICATION_TIMEOUT_MS,
+  logger = console.error,
 } = {}) {
   const limiter = new BoundedRateLimiter({ limit: 3, windowMs: 60_000, maxKeys: 10_000 });
   let active = 0;
@@ -94,7 +95,7 @@ export function createCheckReportHandler({
         if (error instanceof RequestTooLargeError) return json(413, { error: error.message, requestId });
         if (error?.name === "TimeoutError") return json(504, { error: "Independent verification timed out.", requestId });
         const expected = error instanceof InvalidReportError || error instanceof InputError || error instanceof SyntaxError;
-        if (!expected) console.error("FIRMA independent verification failed", { requestId, name: error?.name, message: error?.message });
+        if (!expected) logger("FIRMA independent verification failed", { requestId, category: "unexpected_error" });
         return json(expected ? 400 : 500, { error: expected ? error.message : "Independent verification failed unexpectedly.", requestId });
       } finally {
         active -= 1;

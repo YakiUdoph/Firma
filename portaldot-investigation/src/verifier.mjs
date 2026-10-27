@@ -21,26 +21,32 @@ async function readEvmCall(client, to, data, blockTag, decoder) {
   }
 }
 
-export async function collectEvm(options, blockNumber) {
+export async function collectEvm(options, blockNumber, diagnostics = null) {
   const client = new EvmRpcClient(options.evmEndpoint, options);
   const evidence = { reachable: false, endpoint: options.evmEndpoint, identity: null, block: null, calls: {}, requests: client.history };
   try {
+    diagnostics?.start("evm.identity");
     const [chainIdHex, clientVersion] = await Promise.all([
       client.call("eth_chainId"),
       client.call("web3_clientVersion"),
     ]);
+    diagnostics?.end("ok");
     evidence.reachable = true;
     evidence.identity = { chainId: BigInt(chainIdHex).toString(), chainIdHex, clientVersion };
     if (blockNumber == null) return evidence;
     const blockTag = numberToHex(blockNumber);
+    diagnostics?.start("evm.block");
     const block = await client.call("eth_getBlockByNumber", [blockTag, false]);
     if (!block) {
+      diagnostics?.end("unavailable", "block_unavailable");
       evidence.block = { requestedNumber: String(blockNumber), available: false };
       return evidence;
     }
+    diagnostics?.end("ok");
     evidence.block = { number: BigInt(block.number).toString(), hash: block.hash, requestedTag: blockTag, available: true };
     const address = assetPrecompileAddress(options.assetId);
     evidence.precompileAddress = address;
+    diagnostics?.start("evm.contract_reads");
     evidence.calls = {
       totalSupply: await readEvmCall(client, address, SELECTORS.totalSupply, blockTag, decodeUint256),
       balanceOf: await readEvmCall(client, address, encodeBalanceOf(options.account), blockTag, decodeUint256),
@@ -48,8 +54,11 @@ export async function collectEvm(options, blockNumber) {
       symbol: await readEvmCall(client, address, SELECTORS.symbol, blockTag, decodeAbiString),
       decimals: await readEvmCall(client, address, SELECTORS.decimals, blockTag, decodeUint256),
     };
+    const allContractReadsSucceeded = Object.values(evidence.calls).every((call) => call.ok);
+    diagnostics?.end(allContractReadsSucceeded ? "ok" : "partial", allContractReadsSucceeded ? null : "rpc_read_incomplete");
     return evidence;
   } catch (error) {
+    diagnostics?.fail(error);
     evidence.error = compactError(error);
     return evidence;
   }
@@ -88,13 +97,17 @@ export async function collectRuntimeFingerprint(api, finalizedHash, timeoutMs) {
   };
 }
 
-export async function collectSubstrate(options, targetBlockNumber = null) {
+export async function collectSubstrate(options, targetBlockNumber = null, diagnostics = null) {
   const provider = new WsProvider(options.substrateEndpoint, 2_500);
   let api;
   try {
+    diagnostics?.start("substrate.connection");
     api = await withTimeout(ApiPromise.create({ provider, throwOnConnect: true, noInitWarn: true }), options.timeoutMs, "Substrate connection");
+    diagnostics?.end("ok");
+    diagnostics?.start("substrate.finalized_head");
     const latestFinalizedHash = await withTimeout(api.rpc.chain.getFinalizedHead(), options.timeoutMs, "Finalized-head query");
     const latestFinalizedHeader = await withTimeout(api.rpc.chain.getHeader(latestFinalizedHash), options.timeoutMs, "Finalized-head header query");
+    diagnostics?.end("ok");
     const latestFinalized = { number: latestFinalizedHeader.number.toString(), hash: latestFinalizedHash.toHex() };
     if (targetBlockNumber !== null && BigInt(targetBlockNumber) > BigInt(latestFinalized.number)) {
       return {
@@ -123,11 +136,15 @@ export async function collectSubstrate(options, targetBlockNumber = null) {
         error: { name: "HistoricalStateUnavailable", message: `Block ${targetBlockNumber} is not available from the Substrate endpoint.` },
       };
     }
+    diagnostics?.start("substrate.runtime_metadata");
     const [header, chain, nodeName, nodeVersion, properties, runtimeVersion, metadata] = await withTimeout(Promise.all([
       api.rpc.chain.getHeader(finalizedHash), api.rpc.system.chain(), api.rpc.system.name(), api.rpc.system.version(),
       api.rpc.system.properties(), api.rpc.state.getRuntimeVersion(finalizedHash), api.rpc.state.getMetadata(finalizedHash),
     ]), options.timeoutMs, "Substrate identity and metadata queries");
+    diagnostics?.end("ok");
+    diagnostics?.start("substrate.historical_decoration");
     const apiAt = await withTimeout(api.at(finalizedHash), options.timeoutMs, "Historic runtime decoration");
+    diagnostics?.end("ok");
     const pallets = metadata.asLatest.pallets.map((pallet) => pallet.name.toString().toLowerCase());
     const querySurfaces = {
       "assets.asset": Boolean(apiAt.query.assets?.asset),
@@ -135,7 +152,9 @@ export async function collectSubstrate(options, targetBlockNumber = null) {
       "assets.account": Boolean(apiAt.query.assets?.account),
       "revive.originalAccount": Boolean(apiAt.query.revive?.originalAccount),
     };
+    diagnostics?.start("substrate.runtime_fingerprint");
     const fingerprint = await collectRuntimeFingerprint(api, finalizedHash, options.timeoutMs);
+    diagnostics?.end(fingerprint.errors ? "partial" : "ok", fingerprint.errors ? "rpc_read_incomplete" : null);
     const metadataHex = metadata.toHex();
     const runtime = {
       specName: runtimeVersion.specName.toString(), specVersion: runtimeVersion.specVersion.toString(),
@@ -157,6 +176,7 @@ export async function collectSubstrate(options, targetBlockNumber = null) {
         balance: { exists: false, value: null },
       };
     }
+    diagnostics?.start("substrate.native_storage");
     const assetOption = await withTimeout(apiAt.query.assets.asset(options.assetId), options.timeoutMs, "Native asset query");
     const assetExists = assetOption.isSome;
     const asset = assetExists ? assetOption.unwrap() : null;
@@ -174,6 +194,7 @@ export async function collectSubstrate(options, targetBlockNumber = null) {
       const exists = entry.isSome;
       balance = { exists, value: exists ? entry.unwrap().balance.toString() : "0", storageKey: accountStorageKey };
     }
+    diagnostics?.end("ok");
     return {
       reachable: true,
       endpoint: options.substrateEndpoint,
@@ -196,6 +217,7 @@ export async function collectSubstrate(options, targetBlockNumber = null) {
       balance,
     };
   } catch (error) {
+    diagnostics?.fail(error);
     return { reachable: false, endpoint: options.substrateEndpoint, error: compactError(error) };
   } finally {
     if (api) await withTimeout(api.disconnect(), 2_000, "Substrate disconnect").catch(() => {});
@@ -203,9 +225,9 @@ export async function collectSubstrate(options, targetBlockNumber = null) {
   }
 }
 
-export async function verify(input = {}) {
+export async function verify(input = {}, { diagnostics = null, collectSnapshotFn = collectSnapshot } = {}) {
   const startedAt = new Date().toISOString();
-  const { options, snapshot } = await collectSnapshot(input);
+  const { options, snapshot } = await collectSnapshotFn(input, null, diagnostics);
   const verdict = evaluateSnapshot(snapshot);
   return {
     schema: SCHEMA_VERSION,
@@ -223,11 +245,11 @@ export async function verify(input = {}) {
   };
 }
 
-export async function collectSnapshot(input = {}, targetBlockNumber = null) {
+export async function collectSnapshot(input = {}, targetBlockNumber = null, diagnostics = null) {
   const options = normalizeOptions({ ...DEFAULTS, ...input });
-  const substrate = await collectSubstrate(options, targetBlockNumber);
+  const substrate = await collectSubstrate(options, targetBlockNumber, diagnostics);
   const blockNumber = targetBlockNumber ?? substrate.finalized?.number;
-  const evm = await collectEvm(options, blockNumber);
+  const evm = await collectEvm(options, blockNumber, diagnostics);
   return { options, snapshot: { input: options, substrate, evm } };
 }
 

@@ -80,7 +80,7 @@ const server = createServer(async (request, response) => {
     } catch (error) {
       if (error?.name === "TimeoutError") return sendJson(response, 504, { error: "Independent verification timed out." });
       const expected = error instanceof InputError || error instanceof InvalidReportError || error instanceof SyntaxError;
-      if (!expected) console.error("Verification request failed", { name: error?.name, message: error?.message });
+      if (!expected) console.error("Verification request failed", { category: "unexpected_error" });
       return sendJson(response, expected ? 400 : 500, { error: expected ? error.message : "Verification failed unexpectedly." });
     } finally {
       active.delete(key);
