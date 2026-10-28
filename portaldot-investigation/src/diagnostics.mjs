@@ -49,6 +49,7 @@ export function createVerificationDiagnostics({ requestId, logger = defaultLogge
   let active = null;
   let emitted = false;
   let failure = null;
+  const retries = {};
 
   function closeActive(outcome, category = null) {
     if (!active) return;
@@ -82,6 +83,10 @@ export function createVerificationDiagnostics({ requestId, logger = defaultLogge
       if (emitted) return;
       recordFailure(error);
     },
+    retry(stage) {
+      if (emitted || !STAGES.has(stage)) return;
+      retries[stage] = (retries[stage] ?? 0) + 1;
+    },
     emit(verdict = null, error = null) {
       if (emitted) return;
       if (error) recordFailure(error);
@@ -98,6 +103,7 @@ export function createVerificationDiagnostics({ requestId, logger = defaultLogge
           UNKNOWN: safeCount(verdict?.counts?.UNKNOWN),
         },
         failure,
+        ...(Object.keys(retries).length ? { retries } : {}),
       };
       try {
         logger(entry);

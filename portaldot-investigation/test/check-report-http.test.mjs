@@ -68,6 +68,7 @@ test("report API classifies deadlines, endpoint unavailability, and unexpected e
   const body = JSON.stringify({ reportText: JSON.stringify(validImportedReport()) });
   const timeout = createCheckReportHandler({
     verificationTimeoutMs: 5,
+    cleanupGraceMs: 20,
     verifyFn: async () => new Promise(() => {}),
   });
   const timedOut = await timeout.fetch(request(body));
@@ -92,4 +93,28 @@ test("report API classifies deadlines, endpoint unavailability, and unexpected e
   assert.equal(logs.length, 1);
   assert.deepEqual(logs[0][1].category, "unexpected_error");
   assert.doesNotMatch(JSON.stringify(logs), /implementation fault|user|secret|example\.invalid/i);
+});
+
+test("report API aborts timed-out work and waits for owned cleanup", async () => {
+  const body = JSON.stringify({ reportText: JSON.stringify(validImportedReport()) });
+  let aborted = false;
+  let cleaned = false;
+  const handler = createCheckReportHandler({
+    verificationTimeoutMs: 5,
+    cleanupGraceMs: 100,
+    diagnosticsLogger: () => {},
+    verifyFn: ({ signal }) => new Promise((resolve, reject) => {
+      signal.addEventListener("abort", () => {
+        aborted = true;
+        setTimeout(() => {
+          cleaned = true;
+          reject(signal.reason);
+        }, 10);
+      }, { once: true });
+    }),
+  });
+  const response = await handler.fetch(request(body));
+  assert.equal(response.status, 504);
+  assert.equal(aborted, true);
+  assert.equal(cleaned, true);
 });

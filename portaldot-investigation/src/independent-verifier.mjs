@@ -194,14 +194,26 @@ function verdictComparisons(report, reproducedVerdict, snapshot) {
   });
 }
 
-export async function independentlyVerifyReport({ report, expectedCommitment = null, network = {}, collectSnapshotFn = collectSnapshot }) {
+export async function independentlyVerifyReport({
+  report,
+  expectedCommitment = null,
+  network = {},
+  collectSnapshotFn = collectSnapshot,
+  signal = null,
+  deadlineAt = null,
+  diagnostics = null,
+}) {
   parseImportedReport(report);
   const normalizedCommitment = parseExpectedCommitment(expectedCommitment);
   const originalBefore = JSON.stringify(report);
   const targetBlock = report.evidence.substrate.finalized.number;
   const input = { ...DEFAULTS, ...network, expectedChainId: report.input.expectedChainId, assetId: report.input.assetId, account: report.input.account };
   const startedAt = new Date().toISOString();
-  const collected = await collectSnapshotFn(input, targetBlock);
+  const collected = await collectSnapshotFn(input, targetBlock, diagnostics, {
+    signal,
+    deadlineAt,
+    substrateTimeoutRetries: 1,
+  });
   // RPC libraries may expose codec wrapper objects. The imported artifact and
   // HTTP response are JSON, so compare against the same plain-JSON boundary.
   const snapshot = JSON.parse(JSON.stringify(collected.snapshot));

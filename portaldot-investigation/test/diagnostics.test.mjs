@@ -163,3 +163,15 @@ test("disabled diagnostics and unavailable stages cannot affect verifier output"
   assert.equal(entries[0].stages["evm.block"].category, "block_unavailable");
   assert.equal(report.verdict.overall, "UNKNOWN");
 });
+
+test("bounded historical retries are counted without logging endpoint details", () => {
+  const entries = [];
+  const diagnostics = createVerificationDiagnostics({ requestId: "historical-retry", logger: (entry) => entries.push(entry), now: clock() });
+  diagnostics.start("substrate.runtime_metadata");
+  diagnostics.fail(Object.assign(new Error("secret endpoint timed out"), { name: "TimeoutError" }));
+  diagnostics.retry("substrate.connection");
+  diagnostics.emit({ counts: { PASS: 0, FAIL: 0, UNKNOWN: 9 } });
+  assert.deepEqual(entries[0].retries, { "substrate.connection": 1 });
+  assert.deepEqual(entries[0].failure, { stage: "substrate.runtime_metadata", category: "timeout" });
+  assert.doesNotMatch(JSON.stringify(entries[0]), /secret|endpoint/i);
+});

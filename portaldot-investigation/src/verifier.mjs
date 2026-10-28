@@ -3,7 +3,7 @@ import { ApiPromise, WsProvider } from "@polkadot/api";
 import { DEFAULTS, READ_ONLY_EVM_METHODS, RUNTIME_CODE_STORAGE_KEY, SCHEMA_VERSION, VERSION } from "./constants.mjs";
 import { assetPrecompileAddress, compactError, decodeAbiString, decodeUint256, encodeBalanceOf, numberToHex } from "./codec.mjs";
 import { evaluateSnapshot } from "./evaluate.mjs";
-import { EvmRpcClient, RpcError, withTimeout } from "./rpc.mjs";
+import { boundedTimeoutMs, EvmRpcClient, RpcError, withTimeout } from "./rpc.mjs";
 import { normalizeOptions } from "./validation.mjs";
 
 const SELECTORS = Object.freeze({ name: "0x06fdde03", symbol: "0x95d89b41", decimals: "0x313ce567", totalSupply: "0x18160ddd" });
@@ -21,8 +21,22 @@ async function readEvmCall(client, to, data, blockTag, decoder) {
   }
 }
 
-export async function collectEvm(options, blockNumber, diagnostics = null) {
-  const client = new EvmRpcClient(options.evmEndpoint, options);
+function lifecycleOptions(lifecycle) {
+  return { signal: lifecycle?.signal ?? null, deadlineAt: lifecycle?.deadlineAt ?? null };
+}
+
+function rpcWait(promise, options, label, lifecycle = null) {
+  const timeoutMs = boundedTimeoutMs(options.timeoutMs, lifecycle?.deadlineAt ?? null, label);
+  return withTimeout(promise, timeoutMs, label, { signal: lifecycle?.signal ?? null });
+}
+
+function throwIfCancelled(lifecycle) {
+  if (lifecycle?.signal?.aborted) throw lifecycle.signal.reason ?? Object.assign(new Error("Verification was cancelled."), { name: "AbortError" });
+}
+
+export async function collectEvm(options, blockNumber, diagnostics = null, lifecycle = null) {
+  throwIfCancelled(lifecycle);
+  const client = new EvmRpcClient(options.evmEndpoint, { ...options, ...lifecycleOptions(lifecycle) });
   const evidence = { reachable: false, endpoint: options.evmEndpoint, identity: null, block: null, calls: {}, requests: client.history };
   try {
     diagnostics?.start("evm.identity");
@@ -74,11 +88,12 @@ function hashHex(value) {
   return typeof hex === "string" && /^0x[0-9a-f]{64}$/i.test(hex) ? hex.toLowerCase() : null;
 }
 
-export async function collectRuntimeFingerprint(api, finalizedHash, timeoutMs) {
+export async function collectRuntimeFingerprint(api, finalizedHash, options, lifecycle = null) {
+  const normalizedOptions = typeof options === "number" ? { timeoutMs: options } : options;
   const blockHash = hashHex(finalizedHash);
   const [genesisResult, codeHashResult] = await Promise.allSettled([
-    withTimeout(api.rpc.chain.getBlockHash(0), timeoutMs, "Genesis-hash query"),
-    withTimeout(api.rpc.state.getStorageHash(RUNTIME_CODE_STORAGE_KEY, finalizedHash), timeoutMs, "Finalized runtime-code hash query"),
+    rpcWait(api.rpc.chain.getBlockHash(0), normalizedOptions, "Genesis-hash query", lifecycle),
+    rpcWait(api.rpc.state.getStorageHash(RUNTIME_CODE_STORAGE_KEY, finalizedHash), normalizedOptions, "Finalized runtime-code hash query", lifecycle),
   ]);
   const errors = {};
   const genesisHash = genesisResult.status === "fulfilled" ? hashHex(genesisResult.value) : null;
@@ -98,40 +113,42 @@ export async function collectRuntimeFingerprint(api, finalizedHash, timeoutMs) {
 }
 
 export async function closeSubstrateSession({ api = null, provider = null } = {}) {
-  if (api) {
-    await withTimeout(Promise.resolve().then(() => api.disconnect()), 2_000, "Substrate API disconnect").catch(() => {});
-  }
-  if (provider) {
-    await withTimeout(Promise.resolve().then(() => provider.disconnect()), 2_000, "Substrate provider disconnect").catch(() => {});
-  }
+  await Promise.allSettled([
+    api ? withTimeout(Promise.resolve().then(() => api.disconnect()), 2_000, "Substrate API disconnect") : Promise.resolve(),
+    provider ? withTimeout(Promise.resolve().then(() => provider.disconnect()), 2_000, "Substrate provider disconnect") : Promise.resolve(),
+  ]);
 }
 
 export async function openSubstrateSession(options, {
   ApiPromiseClass = ApiPromise,
   WsProviderClass = WsProvider,
-} = {}) {
+} = {}, lifecycle = null) {
+  throwIfCancelled(lifecycle);
   const provider = new WsProviderClass(options.substrateEndpoint, 2_500);
   let api = null;
+  let readiness = null;
   try {
     api = new ApiPromiseClass({ provider, throwOnConnect: true, noInitWarn: true });
-    await withTimeout(api.isReadyOrError, options.timeoutMs, "Substrate connection");
+    readiness = api.isReadyOrError;
+    await rpcWait(readiness, options, "Substrate connection", lifecycle);
     return { api, provider };
   } catch (error) {
     await closeSubstrateSession({ api, provider });
+    if (readiness) await withTimeout(Promise.resolve(readiness).catch(() => {}), 250, "Substrate readiness settlement").catch(() => {});
     throw error;
   }
 }
 
-export async function collectSubstrate(options, targetBlockNumber = null, diagnostics = null) {
+export async function collectSubstrate(options, targetBlockNumber = null, diagnostics = null, lifecycle = null) {
   let session = null;
   try {
     diagnostics?.start("substrate.connection");
-    session = await openSubstrateSession(options);
+    session = await openSubstrateSession(options, {}, lifecycle);
     const { api } = session;
     diagnostics?.end("ok");
     diagnostics?.start("substrate.finalized_head");
-    const latestFinalizedHash = await withTimeout(api.rpc.chain.getFinalizedHead(), options.timeoutMs, "Finalized-head query");
-    const latestFinalizedHeader = await withTimeout(api.rpc.chain.getHeader(latestFinalizedHash), options.timeoutMs, "Finalized-head header query");
+    const latestFinalizedHash = await rpcWait(api.rpc.chain.getFinalizedHead(), options, "Finalized-head query", lifecycle);
+    const latestFinalizedHeader = await rpcWait(api.rpc.chain.getHeader(latestFinalizedHash), options, "Finalized-head header query", lifecycle);
     diagnostics?.end("ok");
     const latestFinalized = { number: latestFinalizedHeader.number.toString(), hash: latestFinalizedHash.toHex() };
     if (targetBlockNumber !== null && BigInt(targetBlockNumber) > BigInt(latestFinalized.number)) {
@@ -149,7 +166,7 @@ export async function collectSubstrate(options, targetBlockNumber = null, diagno
     }
     const finalizedHash = targetBlockNumber === null
       ? latestFinalizedHash
-      : await withTimeout(api.rpc.chain.getBlockHash(targetBlockNumber), options.timeoutMs, "Historical block-hash query");
+      : await rpcWait(api.rpc.chain.getBlockHash(targetBlockNumber), options, "Historical block-hash query", lifecycle);
     const finalizedHashHex = hashHex(finalizedHash);
     if (!finalizedHashHex || /^0x0{64}$/i.test(finalizedHashHex)) {
       return {
@@ -162,13 +179,13 @@ export async function collectSubstrate(options, targetBlockNumber = null, diagno
       };
     }
     diagnostics?.start("substrate.runtime_metadata");
-    const [header, chain, nodeName, nodeVersion, properties, runtimeVersion, metadata] = await withTimeout(Promise.all([
+    const [header, chain, nodeName, nodeVersion, properties, runtimeVersion, metadata] = await rpcWait(Promise.all([
       api.rpc.chain.getHeader(finalizedHash), api.rpc.system.chain(), api.rpc.system.name(), api.rpc.system.version(),
       api.rpc.system.properties(), api.rpc.state.getRuntimeVersion(finalizedHash), api.rpc.state.getMetadata(finalizedHash),
-    ]), options.timeoutMs, "Substrate identity and metadata queries");
+    ]), options, "Substrate identity and metadata queries", lifecycle);
     diagnostics?.end("ok");
     diagnostics?.start("substrate.historical_decoration");
-    const apiAt = await withTimeout(api.at(finalizedHash), options.timeoutMs, "Historic runtime decoration");
+    const apiAt = await rpcWait(api.at(finalizedHash), options, "Historic runtime decoration", lifecycle);
     diagnostics?.end("ok");
     const pallets = metadata.asLatest.pallets.map((pallet) => pallet.name.toString().toLowerCase());
     const querySurfaces = {
@@ -178,7 +195,7 @@ export async function collectSubstrate(options, targetBlockNumber = null, diagno
       "revive.originalAccount": Boolean(apiAt.query.revive?.originalAccount),
     };
     diagnostics?.start("substrate.runtime_fingerprint");
-    const fingerprint = await collectRuntimeFingerprint(api, finalizedHash, options.timeoutMs);
+    const fingerprint = await collectRuntimeFingerprint(api, finalizedHash, options, lifecycle);
     diagnostics?.end(fingerprint.errors ? "partial" : "ok", fingerprint.errors ? "rpc_read_incomplete" : null);
     const metadataHex = metadata.toHex();
     const runtime = {
@@ -202,20 +219,20 @@ export async function collectSubstrate(options, targetBlockNumber = null, diagno
       };
     }
     diagnostics?.start("substrate.native_storage");
-    const assetOption = await withTimeout(apiAt.query.assets.asset(options.assetId), options.timeoutMs, "Native asset query");
+    const assetOption = await rpcWait(apiAt.query.assets.asset(options.assetId), options, "Native asset query", lifecycle);
     const assetExists = assetOption.isSome;
     const asset = assetExists ? assetOption.unwrap() : null;
     const metadataKey = apiAt.query.assets.metadata.key(options.assetId);
-    const metadataExists = await withTimeout(storageExists(api, metadataKey, finalizedHash), options.timeoutMs, "Native metadata-presence query");
-    const nativeMetadata = await withTimeout(apiAt.query.assets.metadata(options.assetId), options.timeoutMs, "Native metadata query");
-    const mappingOption = await withTimeout(apiAt.query.revive.originalAccount(options.account), options.timeoutMs, "Revive account-mapping query");
+    const metadataExists = await rpcWait(storageExists(api, metadataKey, finalizedHash), options, "Native metadata-presence query", lifecycle);
+    const nativeMetadata = await rpcWait(apiAt.query.assets.metadata(options.assetId), options, "Native metadata query", lifecycle);
+    const mappingOption = await rpcWait(apiAt.query.revive.originalAccount(options.account), options, "Revive account-mapping query", lifecycle);
     const mappingExists = mappingOption.isSome;
     const accountId = mappingExists ? mappingOption.unwrap().toString() : null;
     let balance = { exists: false, value: null };
     let accountStorageKey = null;
     if (assetExists && accountId) {
       accountStorageKey = apiAt.query.assets.account.key(options.assetId, accountId);
-      const entry = await withTimeout(apiAt.query.assets.account(options.assetId, accountId), options.timeoutMs, "Native account-balance query");
+      const entry = await rpcWait(apiAt.query.assets.account(options.assetId, accountId), options, "Native account-balance query", lifecycle);
       const exists = entry.isSome;
       balance = { exists, value: exists ? entry.unwrap().balance.toString() : "0", storageKey: accountStorageKey };
     }
@@ -243,6 +260,7 @@ export async function collectSubstrate(options, targetBlockNumber = null, diagno
     };
   } catch (error) {
     diagnostics?.fail(error);
+    if (lifecycle?.signal?.aborted) throw lifecycle.signal.reason ?? error;
     return { reachable: false, endpoint: options.substrateEndpoint, error: compactError(error) };
   } finally {
     await closeSubstrateSession(session ?? {});
@@ -269,11 +287,21 @@ export async function verify(input = {}, { diagnostics = null, collectSnapshotFn
   };
 }
 
-export async function collectSnapshot(input = {}, targetBlockNumber = null, diagnostics = null) {
+export async function collectSnapshot(input = {}, targetBlockNumber = null, diagnostics = null, lifecycle = {}) {
   const options = normalizeOptions({ ...DEFAULTS, ...input });
-  const substrate = await collectSubstrate(options, targetBlockNumber, diagnostics);
+  const substrateCollector = lifecycle.collectSubstrateFn ?? collectSubstrate;
+  const evmCollector = lifecycle.collectEvmFn ?? collectEvm;
+  const retries = targetBlockNumber === null ? 0 : Math.max(0, Math.min(1, lifecycle.substrateTimeoutRetries ?? 0));
+  let substrate;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    throwIfCancelled(lifecycle);
+    substrate = await substrateCollector(options, targetBlockNumber, diagnostics, lifecycle);
+    if (substrate?.error?.name !== "TimeoutError" || attempt === retries) break;
+    diagnostics?.retry?.("substrate.connection");
+  }
   const blockNumber = targetBlockNumber ?? substrate.finalized?.number;
-  const evm = await collectEvm(options, blockNumber, diagnostics);
+  throwIfCancelled(lifecycle);
+  const evm = await evmCollector(options, blockNumber, diagnostics, lifecycle);
   return { options, snapshot: { input: options, substrate, evm } };
 }
 

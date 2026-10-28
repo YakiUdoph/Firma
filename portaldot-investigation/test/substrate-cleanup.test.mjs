@@ -72,3 +72,28 @@ test("a readiness promise settling after the deadline cannot leave an owned conn
   assert.equal(instances.apis[0].disconnectCalls, 1);
   assert.equal(instances.providers[0].disconnectCalls, 1);
 });
+
+test("request cancellation owns initialization cleanup and a following session remains clean", async () => {
+  let attempt = 0;
+  const { instances, FakeApi, FakeProvider } = fakes((api) => {
+    attempt += 1;
+    return attempt === 1 ? new Promise(() => {}) : Promise.resolve(api);
+  });
+  const controller = new AbortController();
+  const pending = openSubstrateSession(
+    { ...options, timeoutMs: 1_000 },
+    { ApiPromiseClass: FakeApi, WsProviderClass: FakeProvider },
+    { signal: controller.signal },
+  );
+  controller.abort(Object.assign(new Error("request deadline"), { name: "TimeoutError" }));
+  await assert.rejects(pending, (error) => error?.name === "TimeoutError");
+  assert.equal(instances.apis[0].disconnectCalls, 1);
+  assert.equal(instances.providers[0].disconnectCalls, 1);
+
+  const next = await openSubstrateSession(options, { ApiPromiseClass: FakeApi, WsProviderClass: FakeProvider });
+  assert.equal(instances.apis[1].disconnectCalls, 0);
+  assert.equal(instances.providers[1].disconnectCalls, 0);
+  await closeSubstrateSession(next);
+  assert.equal(instances.apis[1].disconnectCalls, 1);
+  assert.equal(instances.providers[1].disconnectCalls, 1);
+});

@@ -8,6 +8,7 @@
 - Credentials embedded in endpoint URLs are rejected.
 - Every Substrate and EVM operation has a bounded timeout; EVM transport retries are capped at two.
 - Substrate initialization retains the `ApiPromise` instance before waiting for readiness. On timeout FIRMA disconnects both that instance and its `WsProvider`, so a timed-out readiness promise cannot later leave an unowned connection open. The Polkadot API readiness promise has no `AbortSignal` interface; disconnect is the available cancellation boundary, and the timeout still remains `UNKNOWN` evidence.
+- Independent historical checks own one shared request deadline. A transient Substrate timeout permits exactly one fresh-session retry at the same imported block; both attempts, EVM reads, and cleanup remain inside that deadline. Exhaustion stays `UNAVAILABLE`, never `VERIFIED` or `MISMATCH`. Polkadot API initialization cannot be force-cancelled internally, so FIRMA disconnects the owned API/provider and briefly drains readiness settlement; library callbacks may still finish during that bounded cleanup window.
 - Public request bodies cannot select RPC endpoints. Endpoint overrides are operator-controlled environment settings and are validated before use.
 - Verification requests are limited to 8 KiB. Independent report-check requests are limited to a 1 MiB envelope, while imported report text is limited to 256 KiB. Both adapters cap concurrent work and apply bounded per-client rate limits.
 - Exported errors omit stack traces so evidence cannot leak deployment or developer filesystem paths.

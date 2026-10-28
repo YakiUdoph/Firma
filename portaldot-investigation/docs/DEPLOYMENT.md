@@ -4,7 +4,7 @@
 
 Use Vercel with `portaldot-investigation` as the project root. The repository already separates the static site (`dist`) from the Node.js functions (`api/verify.mjs` and `api/check-report.mjs`) and declares the production settings in `vercel.json`.
 
-This deployment shape is appropriate because the UI is static, verification is stateless, and every request must make short-lived read-only HTTPS and WebSocket calls. The configured function ceiling is 60 seconds; the verifier also enforces shorter operation-level timeouts.
+This deployment shape is appropriate because the UI is static, verification is stateless, and every request must make short-lived read-only HTTPS and WebSocket calls. The configured function ceiling is 60 seconds; the verifier also enforces shorter operation-level timeouts. Independent report checks have a 55-second request deadline and reserve a bounded cleanup window before the platform ceiling. A historical Substrate timeout may open one fresh session and retry the same imported block, but it does not reset that deadline.
 
 ## Configuration
 
@@ -29,7 +29,7 @@ Do not add wallet mnemonics, private keys, RPC write credentials, or signing ser
 3. Keep Deployment Protection enabled for the first preview.
 4. Confirm the build uses Node.js 22 or newer and runs `npm run build`.
 5. Run the acceptance checks in `PRODUCTION_READINESS.md` against the protected URL.
-6. Review function logs for timeouts, sanitized error messages, and request duration.
+6. Review `firma.verification.timing.v1` function logs for bounded stage timings, timeout categories, retry counts, and request duration. These diagnostics contain categories and counts, not endpoint URLs or credential-bearing error text.
 
 ## Platform rate limiting
 
