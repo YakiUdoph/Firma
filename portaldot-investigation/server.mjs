@@ -44,7 +44,7 @@ async function readBody(request, maxBytes = 8_192) {
 
 const server = createServer(async (request, response) => {
   response.setHeader("referrer-policy", "no-referrer");
-  response.setHeader("content-security-policy", "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'none'; frame-ancestors 'none'");
+  response.setHeader("content-security-policy", "default-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; frame-ancestors 'none'");
   if (request.method === "POST" && ["/api/verify", "/api/check-report"].includes(request.url)) {
     const key = clientKey(request);
     const rate = limiter.consume(key);

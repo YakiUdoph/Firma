@@ -6,6 +6,7 @@ import test from "node:test";
 import { chromium } from "playwright-core";
 import { evaluateSnapshot } from "../src/evaluate.mjs";
 import { independentlyVerifyReport } from "../src/independent-verifier.mjs";
+import { parseImportedReportText } from "../src/report-import.mjs";
 import { browserStartupTimeout, startManagedHttpServer } from "../test-support/browser-server.mjs";
 import { genuineReportSnapshots } from "../test-support/fixtures.mjs";
 import { validHistoricalSnapshot, validImportedReport } from "../test-support/report-fixtures.mjs";
@@ -54,7 +55,7 @@ test("report upload works in Chrome and has no serious accessibility violations"
   let verificationReport = hostileReport;
   await page.route("**/api/verify", async (route) => {
     if (gateInitialVerification) await initialVerificationGate;
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(verificationReport) });
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...verificationReport, requestId: "transport-only" }) });
   });
   await page.route("**/api/check-report", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(routedResponse) }));
   await page.goto(`${server.url}/`, { waitUntil: "networkidle" });
@@ -75,6 +76,12 @@ test("report upload works in Chrome and has no serious accessibility violations"
   await page.getByRole("button", { name: "Export evidence" }).click();
   const download = await downloadPromise;
   assert.equal(download.suggestedFilename(), `firma-${verificationReport.input.assetId}-${verificationReport.completedAt.replaceAll(":", "-")}.json`);
+  const downloadStream = await download.createReadStream();
+  const downloadedChunks = [];
+  for await (const chunk of downloadStream) downloadedChunks.push(chunk);
+  const downloadedReport = parseImportedReportText(Buffer.concat(downloadedChunks).toString("utf8"));
+  assert.deepEqual(downloadedReport, verificationReport);
+  assert.equal(Object.hasOwn(downloadedReport, "requestId"), false);
 
   for (const { label, overall, snapshot } of genuineReportSnapshots()) {
     verificationReport = {

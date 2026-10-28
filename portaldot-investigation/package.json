@@ -21,7 +21,7 @@
     "verify": "node bin/firma.mjs",
     "verify:json": "node bin/firma.mjs --json",
     "test": "node --test test/*.test.mjs test/onchain-proof/*.test.mjs",
-    "check": "node --check server.mjs && node --check api/verify.mjs && node --check api/check-report.mjs && node --check bin/firma.mjs && node --check public/app.js && node --check public/view-model.js && node --check src/diagnostics.mjs && node --check src/verifier.mjs && node --check src/report-import.mjs && node --check src/independent-verifier.mjs && node --check experimental/onchain-proof/src/report-commitment.mjs && node --check experimental/onchain-proof/src/proof-transaction.mjs && npm test",
+    "check": "node --check server.mjs && node --check api/verify.mjs && node --check api/check-report.mjs && node --check bin/firma.mjs && node --check public/app.js && node --check public/report-transport.js && node --check public/view-model.js && node --check src/diagnostics.mjs && node --check src/verifier.mjs && node --check src/report-import.mjs && node --check src/independent-verifier.mjs && node --check experimental/onchain-proof/src/report-commitment.mjs && node --check experimental/onchain-proof/src/proof-transaction.mjs && npm test",
     "probe:evm": "node evm-probe.mjs",
     "probe:assets": "node evm-asset-probe.mjs",
     "probe:substrate": "node substrate-probe.mjs",

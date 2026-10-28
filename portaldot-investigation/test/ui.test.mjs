@@ -8,6 +8,11 @@ const [html, css, client] = await Promise.all([
   readFile(new URL("../public/styles.css", import.meta.url), "utf8"),
   readFile(new URL("../public/app.js", import.meta.url), "utf8"),
 ]);
+const [vercelConfig, localServer, noiseAsset] = await Promise.all([
+  readFile(new URL("../vercel.json", import.meta.url), "utf8"),
+  readFile(new URL("../server.mjs", import.meta.url), "utf8"),
+  readFile(new URL("../public/noise.svg", import.meta.url), "utf8"),
+]);
 
 test("the page leads with the real verification task and primary action", () => {
   assert.match(html, /native system and its Ethereum-compatible interface/i);
@@ -92,6 +97,16 @@ test("the workspace provides keyboard and responsive accessibility affordances",
   assert.match(css, /@media \(max-width: 470px\)/);
   assert.match(css, /@media \(forced-colors: active\)/);
   assert.match(html, /rel="icon" href="\/favicon\.svg"/);
+});
+
+test("the noise texture is same-origin and compatible with deployed and local CSP", () => {
+  assert.match(css, /url\(["']?\/noise\.svg["']?\)/);
+  assert.doesNotMatch(css, /data:image/i);
+  assert.match(noiseAsset, /<feTurbulence\b/);
+  for (const policySource of [vercelConfig, localServer]) {
+    assert.match(policySource, /img-src 'self'/);
+    assert.doesNotMatch(policySource, /img-src[^;\r\n]*data:/);
+  }
 });
 
 test("independent report verification keeps original and reproduced results separate", () => {

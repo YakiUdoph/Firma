@@ -1,5 +1,6 @@
 import { LABEL, VERDICT_COPY, evidenceFilename, reportContext } from "/view-model.js";
 import { assessReportIntegrity, guidanceForCheck, projectInvestigation } from "/investigation.js";
+import { serializeFirmaReport, splitVerificationResponse } from "/report-transport.js";
 
 const form = document.querySelector("#verify-form");
 const button = document.querySelector("#run-button");
@@ -29,6 +30,7 @@ const INDEPENDENT_LABEL = Object.freeze({ VERIFIED: "Verified", MISMATCH: "Misma
 const MAX_REPORT_BYTES = 262_144;
 const VALID_VERDICT_STATUS = new Set(["PASS", "FAIL", "UNKNOWN"]);
 let latestReport = null;
+let latestRequestId = null;
 
 function isRecord(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -333,7 +335,9 @@ form.addEventListener("submit", async (event) => {
     });
     const body = await response.json();
     if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`);
-    render(body);
+    const verification = splitVerificationResponse(body);
+    latestRequestId = verification.requestId;
+    render(verification.report);
   } catch (error) {
     showError(error instanceof Error ? error.message : "Verification failed unexpectedly.");
   } finally {
@@ -373,7 +377,7 @@ document.querySelector("#report-form").addEventListener("submit", async (event) 
 copyButton.addEventListener("click", async () => {
   if (!latestReport) return;
   try {
-    await navigator.clipboard.writeText(JSON.stringify(latestReport, null, 2));
+    await navigator.clipboard.writeText(serializeFirmaReport(latestReport));
     copyButton.textContent = "Copied";
   } catch {
     copyButton.textContent = "Copy failed";
@@ -383,7 +387,7 @@ copyButton.addEventListener("click", async () => {
 
 document.querySelector("#download-button").addEventListener("click", () => {
   if (!latestReport) return;
-  const blob = new Blob([`${JSON.stringify(latestReport, null, 2)}\n`], { type: "application/json" });
+  const blob = new Blob([serializeFirmaReport(latestReport)], { type: "application/json" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
   link.download = evidenceFilename(latestReport);

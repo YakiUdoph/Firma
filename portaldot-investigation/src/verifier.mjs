@@ -97,12 +97,37 @@ export async function collectRuntimeFingerprint(api, finalizedHash, timeoutMs) {
   };
 }
 
+export async function closeSubstrateSession({ api = null, provider = null } = {}) {
+  if (api) {
+    await withTimeout(Promise.resolve().then(() => api.disconnect()), 2_000, "Substrate API disconnect").catch(() => {});
+  }
+  if (provider) {
+    await withTimeout(Promise.resolve().then(() => provider.disconnect()), 2_000, "Substrate provider disconnect").catch(() => {});
+  }
+}
+
+export async function openSubstrateSession(options, {
+  ApiPromiseClass = ApiPromise,
+  WsProviderClass = WsProvider,
+} = {}) {
+  const provider = new WsProviderClass(options.substrateEndpoint, 2_500);
+  let api = null;
+  try {
+    api = new ApiPromiseClass({ provider, throwOnConnect: true, noInitWarn: true });
+    await withTimeout(api.isReadyOrError, options.timeoutMs, "Substrate connection");
+    return { api, provider };
+  } catch (error) {
+    await closeSubstrateSession({ api, provider });
+    throw error;
+  }
+}
+
 export async function collectSubstrate(options, targetBlockNumber = null, diagnostics = null) {
-  const provider = new WsProvider(options.substrateEndpoint, 2_500);
-  let api;
+  let session = null;
   try {
     diagnostics?.start("substrate.connection");
-    api = await withTimeout(ApiPromise.create({ provider, throwOnConnect: true, noInitWarn: true }), options.timeoutMs, "Substrate connection");
+    session = await openSubstrateSession(options);
+    const { api } = session;
     diagnostics?.end("ok");
     diagnostics?.start("substrate.finalized_head");
     const latestFinalizedHash = await withTimeout(api.rpc.chain.getFinalizedHead(), options.timeoutMs, "Finalized-head query");
@@ -220,8 +245,7 @@ export async function collectSubstrate(options, targetBlockNumber = null, diagno
     diagnostics?.fail(error);
     return { reachable: false, endpoint: options.substrateEndpoint, error: compactError(error) };
   } finally {
-    if (api) await withTimeout(api.disconnect(), 2_000, "Substrate disconnect").catch(() => {});
-    else await withTimeout(provider.disconnect(), 2_000, "Substrate provider disconnect").catch(() => {});
+    await closeSubstrateSession(session ?? {});
   }
 }
 
