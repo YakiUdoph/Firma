@@ -122,7 +122,6 @@ test("diagnostics do not change the report schema and logging failures are fail-
   const existingReport = validImportedReport();
   assert.equal(parseImportedReport(existingReport), existingReport);
 });
-
 test("diagnostic error categories are bounded labels without sensitive error content", () => {
   const cases = [
     [Object.assign(new Error("secret timeout detail"), { name: "TimeoutError" }), "timeout"],

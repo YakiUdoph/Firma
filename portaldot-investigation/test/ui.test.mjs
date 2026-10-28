@@ -14,7 +14,8 @@ test("the page leads with the real verification task and primary action", () => 
   assert.ok(html.indexOf('id="verify-form"') < html.indexOf('id="method"'));
   assert.match(html, /<span class="button-label">Check asset<\/span>/);
   assert.match(html, /<label for="asset-id">Asset ID<\/label>/);
-  assert.match(html, /<label for="account">Wallet address<\/label>/);
+  assert.match(html, /<label for="account">Account address<\/label>/);
+  assert.match(html, /not the asset's EVM precompile address/i);
   assert.doesNotMatch(html, /READ-ONLY MODE|Run read-only verification/i);
 });
 
@@ -50,6 +51,7 @@ test("PASS FAIL and UNKNOWN retain distinct language and technical codes", () =>
 
 test("result context uses only fields supplied by the backend report", () => {
   const report = {
+    input: { assetId: "2" },
     completedAt: "2026-10-22T21:16:52.843Z",
     evidence: {
       substrate: {
@@ -57,12 +59,14 @@ test("result context uses only fields supplied by the backend report", () => {
         identity: { chain: "PortaldotV3 Test" },
         runtime: { specName: "portaldot-v3", specVersion: "3002", fingerprint: { runtimeCodeHash: "0xcode" } },
       },
-      evm: { identity: { chainId: "420420777", chainIdHex: "0x190f1ca9" } },
+      evm: { precompileAddress: "0x0000000000000000000000000000000000000002", identity: { chainId: "420420777", chainIdHex: "0x190f1ca9" } },
     },
   };
   const items = reportContext(report);
-  assert.deepEqual(items.map(({ label, value }) => ({ label, value })).slice(0, 4), [
+  assert.deepEqual(items.map(({ label, value }) => ({ label, value })).slice(0, 6), [
     { label: "Finalized block", value: "151221" },
+    { label: "Asset ID", value: "2" },
+    { label: "Asset precompile", value: "0x0000000000000000000000000000000000000002" },
     { label: "Native chain", value: "PortaldotV3 Test" },
     { label: "Runtime", value: "portaldot-v3/3002" },
     { label: "EVM chain ID", value: "420420777" },

@@ -8,7 +8,7 @@
 - Credentials embedded in endpoint URLs are rejected.
 - Every Substrate and EVM operation has a bounded timeout; EVM transport retries are capped at two.
 - Public request bodies cannot select RPC endpoints. Endpoint overrides are operator-controlled environment settings and are validated before use.
-- Local and production HTTP adapters limit requests to 8 KiB, cap concurrent work per instance, and apply a bounded five-per-minute client limiter.
+- Verification requests are limited to 8 KiB. Independent report-check requests are limited to a 1 MiB envelope, while imported report text is limited to 256 KiB. Both adapters cap concurrent work and apply bounded per-client rate limits.
 - Exported errors omit stack traces so evidence cannot leak deployment or developer filesystem paths.
 - Runtime support is fail-closed against an exact reviewed chain/runtime profile. Missing, invalid, mismatched, or differently pinned identity evidence suppresses all dependent parity verdicts instead of displaying misleading individual passes.
 - The CLI refuses to overwrite an existing evidence file.
@@ -34,7 +34,7 @@
 
 ## Publication gate
 
-Before sharing a public URL, stage a Vercel Firewall rule for `POST /api/verify`, observe it in log mode, test enforcement on a preview, and only then publish the production rate limit. See `DEPLOYMENT.md`. Vercel's automatic DDoS mitigation does not replace this endpoint-specific usage control.
+Before sharing a public URL, stage Vercel Firewall protection for both `POST /api/verify` and `POST /api/check-report`, observe it in log mode, test enforcement on a preview, and only then publish the production rate limit. See `DEPLOYMENT.md`. Vercel's automatic DDoS mitigation does not replace this endpoint-specific usage control.
 
 ## Responsible extension
 

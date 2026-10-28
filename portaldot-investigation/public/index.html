@@ -51,9 +51,9 @@
             <small id="asset-help">The number Portaldot uses to identify the asset — for example, 2.</small>
           </div>
           <div class="field">
-            <label for="account">Wallet address</label>
+            <label for="account">Account address</label>
             <input id="account" name="account" value="0x578f0a6155551b3b7c7ff255ea7dc2b08968e380" spellcheck="false" required pattern="0x[0-9a-fA-F]{40}" maxlength="42" aria-describedby="account-help" autocomplete="off" title="Enter 0x followed by 40 letters or numbers.">
-            <small id="account-help">The 0x account whose asset balance you want to compare. FIRMA will not connect to it.</small>
+            <small id="account-help">The 0x account whose asset balance you want to compare. This is not the asset's EVM precompile address, and FIRMA will not connect to it.</small>
           </div>
           <button id="run-button" class="primary-button" type="submit">
             <span class="button-label">Check asset</span>
@@ -77,7 +77,7 @@
 
         <details class="field-help">
           <summary>How FIRMA uses these fields</summary>
-          <p>Behind the scenes, the asset ID selects native Assets storage and its EVM precompile. Portaldot's Revive mapping links the wallet address to its native account. FIRMA only reads public data; it cannot connect a wallet, sign, transfer, or submit a transaction.</p>
+          <p>FIRMA derives the asset's EVM precompile address from the native asset ID. It uses the separate account address only for Revive mapping and balance checks. FIRMA only reads public data; it cannot connect a wallet, sign, transfer, or submit a transaction.</p>
         </details>
       </section>
     </section>

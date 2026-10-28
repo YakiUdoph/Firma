@@ -2,7 +2,7 @@
 
 ## Recommended platform
 
-Use Vercel with `portaldot-investigation` as the project root. The repository already separates the static site (`dist`) from the Node.js verification function (`api/verify.mjs`) and declares the production settings in `vercel.json`.
+Use Vercel with `portaldot-investigation` as the project root. The repository already separates the static site (`dist`) from the Node.js functions (`api/verify.mjs` and `api/check-report.mjs`) and declares the production settings in `vercel.json`.
 
 This deployment shape is appropriate because the UI is static, verification is stateless, and every request must make short-lived read-only HTTPS and WebSocket calls. The configured function ceiling is 60 seconds; the verifier also enforces shorter operation-level timeouts.
 
@@ -33,13 +33,13 @@ Do not add wallet mnemonics, private keys, RPC write credentials, or signing ser
 
 ## Platform rate limiting
 
-The code includes a bounded best-effort limiter, but serverless instances do not share that memory. Before public promotion, add a Vercel Firewall rule for `POST /api/verify`.
+The code includes bounded best-effort limiters, but serverless instances do not share that memory. Before public promotion, protect both `POST /api/verify` and `POST /api/check-report` with Vercel Firewall rate limits. The report checker performs historical RPC reads and therefore needs the same platform-level protection even though its in-process limit is stricter.
 
 Start with a log-only rule and inspect real preview traffic:
 
 ```text
-vercel firewall rules add "Observe FIRMA verification rate" \
-  --condition '{"type":"path","op":"eq","value":"/api/verify"}' \
+vercel firewall rules add "Observe FIRMA API rate" \
+  --condition '{"type":"path","op":"pre","value":"/api/"}' \
   --condition '{"type":"method","op":"eq","value":"POST"}' \
   --action log --yes
 vercel firewall diff

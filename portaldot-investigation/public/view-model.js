@@ -23,6 +23,8 @@ export function reportContext(report) {
     : "Unavailable";
   return [
     { label: "Finalized block", value: available(substrate?.finalized?.number), title: available(substrate?.finalized?.hash) },
+    { label: "Asset ID", value: available(report?.input?.assetId), title: available(report?.input?.assetId) },
+    { label: "Asset precompile", value: available(evm?.precompileAddress), title: available(evm?.precompileAddress) },
     { label: "Native chain", value: available(substrate?.identity?.chain), title: available(substrate?.identity?.chain) },
     { label: "Runtime", value: substrate?.runtime ? `${available(substrate.runtime.specName)}/${available(substrate.runtime.specVersion)}` : "Unavailable", title: available(substrate?.runtime?.fingerprint?.runtimeCodeHash) },
     { label: "EVM chain ID", value: available(evm?.identity?.chainId), title: available(evm?.identity?.chainIdHex) },

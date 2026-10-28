@@ -20,7 +20,9 @@ For a native asset ID and EVM account, FIRMA:
 7. compares base-unit values as arbitrary-precision integers; and
 8. emits a machine-readable report with `PASS`, `FAIL`, or `UNKNOWN` for every check.
 
-`FAIL` means FIRMA proved a contradiction. A timeout, missing historical block, unsupported runtime, unavailable endpoint, or undecodable response is `UNKNOWN` (“Couldn't verify”), not a failure.
+`PASS` means all nine required comparisons agreed using observations collected at one finalized block. It is not a guarantee that the asset, endpoints, or chain are safe. `FAIL` means FIRMA proved a contradiction. A timeout, missing historical block, unsupported runtime, unavailable endpoint, or undecodable response is `UNKNOWN` (“Couldn't verify”), not a failure.
+
+The account address is the account whose balance and Revive mapping FIRMA checks. It is not an asset contract address. FIRMA derives the asset's EVM precompile address from the native asset ID and records both values separately in the evidence.
 
 ## Quick start
 
@@ -58,7 +60,7 @@ npm run check
 npm run build
 ```
 
-The production target is a static frontend plus one stateless Node.js function. Vercel is the recommended host because this request/response architecture fits Vercel Functions; FIRMA does not require an always-on WebSocket server. The function opens a bounded outbound Substrate WebSocket only while processing a verification.
+The production target is a static frontend plus two stateless Node.js functions: one creates reports and one independently checks imported reports. Vercel is the recommended host because this request/response architecture fits Vercel Functions; FIRMA does not require an always-on WebSocket server. Each function opens bounded outbound RPC connections only while processing a request.
 
 Set the Vercel project Root Directory to `portaldot-investigation`. No secret is required. Optional environment overrides are documented in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Platform-level rate limiting must be staged and reviewed before making the URL public.
 
@@ -100,6 +102,7 @@ src/evaluate.mjs       Pure PASS / FAIL / UNKNOWN policy
 public/                Beginner-friendly report UI
 test/                  Offline fixtures and edge-case tests
 api/verify.mjs         Production serverless API entrypoint
+api/check-report.mjs   Independent historical report checker
 scripts/               Production build and function smoke check
 evidence/              Successful live JSON evidence
 docs/                  Architecture, security, and progress notes
@@ -114,6 +117,11 @@ raw/                   Original investigation evidence
 - The product verifies reads only. It makes no claim about transfers, approvals, permits, events, gas, fees, dust, or signed origins.
 - The precompile address convention is scoped to the runtime evidence documented in this repository.
 - Public-search results cannot establish that no private or unpublished competitor exists.
+- Public endpoints can rate-limit requests or prune historical state. FIRMA reports those observations as `UNKNOWN` or an unavailable independent check; it does not substitute current state.
+
+## Why check an exported report?
+
+An exported report preserves the block, evidence, and original verdict. The **Check a report** interface re-reads the saved finalized block and compares the new historical observations with the imported claims while leaving the original report unchanged. A verified reproduction increases confidence that the evidence can be retrieved again; a mismatch or unavailable historical read is shown separately and never rewrites the original verdict. Reproduction still depends on the configured endpoints and is not independent provider consensus or a cryptographic state proof.
 
 Read [docs/SECURITY.md](docs/SECURITY.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before extending the verifier.
 

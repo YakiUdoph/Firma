@@ -43,21 +43,38 @@ test("report upload works in Chrome and has no serious accessibility violations"
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   let routedResponse = response;
+  let releaseInitialVerification;
+  const initialVerificationGate = new Promise((resolve) => { releaseInitialVerification = resolve; });
+  let gateInitialVerification = true;
   const hostileText = `</p><script data-injected>globalThis.__firmaInjected=true</script>`;
   const hostileReport = structuredClone(report);
   hostileReport.evidence.substrate.asset.metadata.name = hostileText;
   hostileReport.evidence.evm.calls.name.value = hostileText;
   hostileReport.verdict = evaluateSnapshot(hostileReport.evidence);
   let verificationReport = hostileReport;
-  await page.route("**/api/verify", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(verificationReport) }));
+  await page.route("**/api/verify", async (route) => {
+    if (gateInitialVerification) await initialVerificationGate;
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(verificationReport) });
+  });
   await page.route("**/api/check-report", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(routedResponse) }));
   await page.goto(`${server.url}/`, { waitUntil: "networkidle" });
 
   await page.getByRole("button", { name: "Check asset" }).click();
+  await page.locator("#progress").waitFor({ state: "visible" });
+  assert.equal(await page.getByRole("button", { name: "Checking asset" }).isDisabled(), true);
+  assert.equal(await page.getByLabel("Asset ID").isDisabled(), true);
+  assert.match(await page.locator("#progress").textContent(), /collecting live evidence/i);
+  gateInitialVerification = false;
+  releaseInitialVerification();
   await page.getByRole("heading", { name: "Passed", exact: true }).waitFor();
   assert.match(await page.locator("#checks").textContent(), /<script data-injected>/);
   assert.equal(await page.locator("script[data-injected]").count(), 0);
   assert.equal(await page.evaluate(() => globalThis.__firmaInjected), undefined);
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export evidence" }).click();
+  const download = await downloadPromise;
+  assert.equal(download.suggestedFilename(), `firma-${verificationReport.input.assetId}-${verificationReport.completedAt.replaceAll(":", "-")}.json`);
 
   for (const { label, overall, snapshot } of genuineReportSnapshots()) {
     verificationReport = {
@@ -144,6 +161,34 @@ test("report upload works in Chrome and has no serious accessibility violations"
   const accessibility = await page.evaluate(async () => globalThis.axe.run(document, { resultTypes: ["violations"] }));
   const serious = accessibility.violations.filter((violation) => ["serious", "critical"].includes(violation.impact));
   assert.deepEqual(serious.map(({ id, impact }) => ({ id, impact })), []);
+
+  const mobilePage = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
+  await mobilePage.addInitScript({ path: require.resolve("axe-core/axe.min.js") });
+  await mobilePage.route("**/api/verify", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(hostileReport) }));
+  await mobilePage.goto(`${server.url}/`, { waitUntil: "networkidle" });
+  await mobilePage.getByRole("button", { name: "Check asset" }).click();
+  await mobilePage.getByRole("heading", { name: "Passed", exact: true }).waitFor();
+  const horizontalOverflow = await mobilePage.evaluate(() => {
+    const viewportWidth = document.documentElement.clientWidth;
+    return [...document.querySelectorAll("body *")]
+      .map((element) => ({
+        selector: `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ""}${element.className && typeof element.className === "string" ? `.${element.className.trim().replaceAll(/\s+/g, ".")}` : ""}`,
+        left: Math.round(element.getBoundingClientRect().left),
+        right: Math.round(element.getBoundingClientRect().right),
+      }))
+      .filter(({ left, right }) => left < 0 || right > viewportWidth + 1);
+  });
+  assert.deepEqual(horizontalOverflow, []);
+  assert.equal(await mobilePage.getByRole("heading", { name: "Check an asset" }).isVisible(), true);
+  assert.equal(await mobilePage.getByRole("heading", { name: "Passed", exact: true }).isVisible(), true);
+  const mobileAccessibility = await mobilePage.evaluate(async () => globalThis.axe.run(document, { resultTypes: ["violations"] }));
+  assert.deepEqual(
+    mobileAccessibility.violations
+      .filter((violation) => ["serious", "critical"].includes(violation.impact))
+      .map(({ id, impact }) => ({ id, impact })),
+    [],
+  );
+  await mobilePage.close();
 
   await page.locator("#report-result").screenshot({ path: screenshotPath });
 
