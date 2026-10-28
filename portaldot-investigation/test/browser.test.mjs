@@ -114,8 +114,11 @@ test("report upload works in Chrome and has no serious accessibility violations"
   ];
   for (const incompleteReport of incompleteReports) {
     verificationReport = incompleteReport;
+    const responseFinished = page.waitForResponse((item) => item.url().includes("/api/verify"));
     await page.getByRole("button", { name: "Check asset" }).click();
+    await responseFinished;
     await page.getByRole("heading", { name: "Couldn't verify", exact: true }).waitFor();
+    await page.locator("#form-error").waitFor({ state: "visible" });
     assert.equal(await page.locator("#result").getAttribute("data-status"), "UNKNOWN");
     assert.match(await page.locator("#form-error").textContent(), /incomplete or internally inconsistent report/i);
     assert.equal(await page.locator("#form-error").isHidden(), false);
