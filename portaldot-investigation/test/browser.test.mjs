@@ -44,6 +44,7 @@ test("report upload works in Chrome and has no serious accessibility violations"
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   let routedResponse = response;
+  let uploadedReportText = null;
   let releaseInitialVerification;
   const initialVerificationGate = new Promise((resolve) => { releaseInitialVerification = resolve; });
   let gateInitialVerification = true;
@@ -61,7 +62,10 @@ test("report upload works in Chrome and has no serious accessibility violations"
     if (gateInitialVerification) await initialVerificationGate;
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...verificationReport, requestId: "transport-only" }) });
   });
-  await page.route("**/api/check-report", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(routedResponse) }));
+  await page.route("**/api/check-report", async (route) => {
+    uploadedReportText = (await route.request().postDataJSON()).reportText;
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(routedResponse) });
+  });
   await page.goto(`${server.url}/`, { waitUntil: "networkidle" });
 
   await page.getByRole("button", { name: "Check asset" }).click();
@@ -83,7 +87,9 @@ test("report upload works in Chrome and has no serious accessibility violations"
   const downloadStream = await download.createReadStream();
   const downloadedChunks = [];
   for await (const chunk of downloadStream) downloadedChunks.push(chunk);
-  const downloadedReport = parseImportedReportText(Buffer.concat(downloadedChunks).toString("utf8"));
+  const downloadedBuffer = Buffer.concat(downloadedChunks);
+  const downloadedText = downloadedBuffer.toString("utf8");
+  const downloadedReport = parseImportedReportText(downloadedText);
   assert.deepEqual(downloadedReport, verificationReport);
   assert.equal(Object.hasOwn(downloadedReport, "requestId"), false);
 
@@ -157,9 +163,11 @@ test("report upload works in Chrome and has no serious accessibility violations"
   await page.locator("#result").evaluate((element) => { element.hidden = true; });
 
   await assert.doesNotReject(() => page.getByRole("heading", { name: "Check a report" }).waitFor());
-  await page.getByLabel("Upload report").setInputFiles({ name: "firma-report.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(report)) });
+  await page.getByLabel("Upload report").setInputFiles({ name: download.suggestedFilename(), mimeType: "application/json", buffer: downloadedBuffer });
   await page.getByRole("button", { name: "Check evidence" }).click();
   await page.getByRole("heading", { name: "Reproduced", exact: true }).waitFor();
+  assert.equal(uploadedReportText, downloadedText);
+  assert.deepEqual(parseImportedReportText(uploadedReportText), downloadedReport);
   assert.equal(await page.locator("#imported-verdict").textContent(), "PASS");
   assert.equal(await page.locator("#report-result").getAttribute("data-status"), "REPRODUCED");
   assert.equal(await page.locator("#evidence-consistency").textContent(), "VALID");

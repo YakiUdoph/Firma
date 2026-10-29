@@ -36,6 +36,7 @@ flowchart LR
 `firma.report.v1` remains the exported artifact format. `firma.independent-verification.v2` separates four conclusions that must not be conflated:
 
 - `firma.report.v1` includes both complete observations and structurally bounded unavailable-evidence states emitted by the verifier. An exported `UNKNOWN` report remains importable, but the checker returns historical `UNAVAILABLE` when the original run never obtained a finalized block; it never substitutes current state.
+- API correlation fields such as `requestId` belong to the HTTP transport envelope, not `firma.report.v1`. The browser separates them before rendering, copying, or exporting; the importer continues to reject arbitrary top-level fields.
 
 - `reportValidation.structure` confirms the supported schema and bounded JSON shape.
 - `reportValidation.evidenceConsistency` confirms that block tags, derived addresses, decoded values, request transcripts, and duplicated verdict content agree internally.
