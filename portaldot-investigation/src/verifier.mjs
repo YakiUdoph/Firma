@@ -1,12 +1,10 @@
 import { createHash } from "node:crypto";
 import { ApiPromise, WsProvider } from "@polkadot/api";
-import { DEFAULTS, READ_ONLY_EVM_METHODS, RUNTIME_CODE_STORAGE_KEY, SCHEMA_VERSION, VERSION } from "./constants.mjs";
+import { DEFAULTS, EVM_ASSET_SELECTORS, READ_ONLY_EVM_METHODS, RUNTIME_CODE_STORAGE_KEY, SCHEMA_VERSION, VERSION } from "./constants.mjs";
 import { assetPrecompileAddress, compactError, decodeAbiString, decodeUint256, encodeBalanceOf, numberToHex } from "./codec.mjs";
 import { evaluateSnapshot } from "./evaluate.mjs";
 import { boundedTimeoutMs, EvmRpcClient, RpcError, withTimeout } from "./rpc.mjs";
 import { normalizeOptions } from "./validation.mjs";
-
-const SELECTORS = Object.freeze({ name: "0x06fdde03", symbol: "0x95d89b41", decimals: "0x313ce567", totalSupply: "0x18160ddd" });
 
 function metadataMissing(error) {
   return error instanceof RpcError && /metadata not found/i.test(JSON.stringify(error.detail));
@@ -62,11 +60,11 @@ export async function collectEvm(options, blockNumber, diagnostics = null, lifec
     evidence.precompileAddress = address;
     diagnostics?.start("evm.contract_reads");
     evidence.calls = {
-      totalSupply: await readEvmCall(client, address, SELECTORS.totalSupply, blockTag, decodeUint256),
+      totalSupply: await readEvmCall(client, address, EVM_ASSET_SELECTORS.totalSupply, blockTag, decodeUint256),
       balanceOf: await readEvmCall(client, address, encodeBalanceOf(options.account), blockTag, decodeUint256),
-      name: await readEvmCall(client, address, SELECTORS.name, blockTag, decodeAbiString),
-      symbol: await readEvmCall(client, address, SELECTORS.symbol, blockTag, decodeAbiString),
-      decimals: await readEvmCall(client, address, SELECTORS.decimals, blockTag, decodeUint256),
+      name: await readEvmCall(client, address, EVM_ASSET_SELECTORS.name, blockTag, decodeAbiString),
+      symbol: await readEvmCall(client, address, EVM_ASSET_SELECTORS.symbol, blockTag, decodeAbiString),
+      decimals: await readEvmCall(client, address, EVM_ASSET_SELECTORS.decimals, blockTag, decodeUint256),
     };
     const allContractReadsSucceeded = Object.values(evidence.calls).every((call) => call.ok);
     diagnostics?.end(allContractReadsSucceeded ? "ok" : "partial", allContractReadsSucceeded ? null : "rpc_read_incomplete");

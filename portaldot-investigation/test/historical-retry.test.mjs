@@ -44,9 +44,9 @@ test("historical metadata timeout is retried once and exhaustion remains UNAVAIL
   });
   assert.equal(calls, 2);
   assert.equal(result.independent.overall, "UNAVAILABLE");
-  assert.equal(result.independent.counts.MISMATCH, 0);
-  assert.ok(result.independent.counts.UNAVAILABLE > 0);
-  assert.equal(result.independent.checks.find((check) => check.id === "claim.block.substrate").status, "UNAVAILABLE");
+  assert.equal(result.historical.counts.MISMATCH, 0);
+  assert.ok(result.historical.counts.UNAVAILABLE > 0);
+  assert.equal(result.historical.checks.find((check) => check.id === "claim.block.substrate").status, "UNAVAILABLE");
 });
 
 test("non-timeout historical failures are not retried", async () => {

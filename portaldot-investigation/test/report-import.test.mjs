@@ -47,5 +47,6 @@ test("incomplete, internally inconsistent, and extended core schemas fail safely
 test("wrong-network claims remain importable evidence rather than executable configuration", () => {
   const report = clone(validImportedReport());
   report.evidence.input.substrateEndpoint = "wss://attacker.invalid";
+  report.evidence.substrate.endpoint = "wss://attacker.invalid";
   assert.equal(parseImportedReport(report), report);
 });

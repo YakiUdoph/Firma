@@ -60,9 +60,7 @@ code, pre { font-family: var(--mono); }
 .site-header, main, footer { width: min(1240px, calc(100% - 56px)); margin-inline: auto; }
 .site-header { min-height: 76px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(103, 108, 98, .24); }
 .brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; }
-.brand-mark { position: relative; width: 35px; height: 35px; display: grid; place-items: center; overflow: hidden; border-radius: 10px; background: var(--emerald); color: var(--lime); box-shadow: inset 0 0 0 1px rgba(255,255,255,.16); }
-.brand-mark::after { content: ""; position: absolute; width: 18px; height: 1px; right: -5px; bottom: 7px; transform: rotate(-42deg); background: var(--lime); opacity: .65; }
-.brand-mark span { font-family: var(--serif); font-size: 1.2rem; font-style: italic; transform: translateY(-1px); }
+.brand-logo { width: 40px; height: 40px; display: block; border-radius: 11px; box-shadow: 0 3px 12px rgba(21,91,67,.14); }
 .brand-name { font-size: .84rem; font-weight: 800; letter-spacing: .23em; }
 .site-header nav { display: flex; gap: 30px; }
 .site-header nav a { position: relative; color: var(--muted); font-size: .78rem; font-weight: 650; text-decoration: none; }
@@ -204,8 +202,8 @@ pre { max-height: 520px; overflow: auto; padding: 20px; border: 1px solid #3b443
 .report-status-guide { display: grid; gap: 0; max-width: 600px; padding: 0; margin: 34px 0 0; list-style: none; border-top: 1px solid var(--line-strong); }
 .report-status-guide li { display: grid; grid-template-columns: 110px 1fr; gap: 18px; padding: 15px 0; border-bottom: 1px solid var(--line); }
 .report-status-guide strong { color: var(--emerald); font-size: .74rem; letter-spacing: .04em; text-transform: uppercase; }
-.report-status-guide li:nth-child(2) strong { color: var(--fail); }
-.report-status-guide li:nth-child(3) strong { color: var(--unknown); }
+.report-status-guide li:nth-child(3) strong { color: var(--fail); }
+.report-status-guide li:nth-child(4) strong { color: var(--unknown); }
 .report-status-guide span { color: var(--muted); font-size: .8rem; line-height: 1.5; }
 .report-card { padding: clamp(26px, 3.5vw, 44px); border: 1px solid var(--line-strong); border-radius: 24px; background: var(--surface); box-shadow: var(--shadow); }
 .report-result { scroll-margin-top: 24px; padding: clamp(38px, 5vw, 62px); border: 1px solid var(--line); border-radius: 28px; background: var(--surface); box-shadow: var(--shadow); }
@@ -313,7 +311,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visibl
 }
 
 @media (forced-colors: active) {
-  .brand-mark, .button-icon, .verdict-symbol, .status-badge > span { border: 1px solid currentColor; }
+  .brand-logo, .button-icon, .verdict-symbol, .status-badge > span { border: 1px solid currentColor; }
   .progress-track span, .result::before { background: CanvasText; }
 }
 

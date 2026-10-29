@@ -28,6 +28,19 @@ flowchart LR
 - The raw metadata SHA-256 is exported as block-specific evidence but is not used as an approval key. Portaldot V3 metadata contains a block-varying `Revive.EthBlockBuilderIR` fallback even when the runtime code is unchanged.
 - Revive's `OriginalAccount` storage is the authority for the EVM-to-native account mapping. FIRMA does not hash, truncate, or guess an AccountId.
 - JSON-RPC response data remains in the exported report so a result is inspectable rather than merely asserted.
+- EVM HTTP responses are streamed under a 512 KiB ceiling before JSON parsing. Successful responses must use JSON-RPC 2.0, match the request ID, and contain exactly one of `result` or `error`.
+- Dynamic ABI strings are accepted only in the canonical one-value encoding with a 32-byte offset, aligned exact payload, zero padding, and strict UTF-8.
+
+## Imported-report verification
+
+`firma.report.v1` remains the exported artifact format. `firma.independent-verification.v2` separates four conclusions that must not be conflated:
+
+- `reportValidation.structure` confirms the supported schema and bounded JSON shape.
+- `reportValidation.evidenceConsistency` confirms that block tags, derived addresses, decoded values, request transcripts, and duplicated verdict content agree internally.
+- `historical.overall` reports only whether supported blockchain claims reproduced as `VERIFIED`, `MISMATCH`, or `UNAVAILABLE`.
+- `authentication.status` is `AUTHENTICATED` only when an independently supplied trusted commitment matches the complete report. A locally recomputed hash without that trust anchor is `UNANCHORED`.
+
+The aggregate result is `AUTHENTICATED`, `REPRODUCED`, `MISMATCH`, or `UNAVAILABLE`. `REPRODUCED` means internally consistent historical claims reproduced but report origin/authenticity remains unanchored. Fields that are not historical blockchain claims are listed explicitly in `reportValidation.notHistoricallyReproducible`.
 
 ## Read-only call surface
 
@@ -40,6 +53,6 @@ Substrate: system identity, genesis hash, finalized head/header, runtime version
 - `public/` is copied to `dist/` as immutable build output.
 - `api/verify.mjs` is a stateless Node.js Vercel Function using the Web Request/Response API.
 - The function owns no durable state and closes its outbound Substrate connection after each request.
-- Application limits protect each warm instance. A platform firewall rule is required for a global public rate limit because function memory is not shared across instances.
+- Application limits protect each warm instance. The `firma` project additionally has a live Vercel fixed-window rule covering `/api/` at 10 requests per minute per IP; function memory is still not treated as shared state.
 - `server.mjs` remains the loopback-only local development adapter; it is not the production entrypoint.
 

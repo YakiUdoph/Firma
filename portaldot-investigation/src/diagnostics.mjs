@@ -24,6 +24,7 @@ export function classifyDiagnosticError(error) {
   if (/abort/i.test(name)) return "cancelled";
   if (/rpc/i.test(name)) return "rpc_error";
   if (/historical(state|finality)unavailable/i.test(name)) return "historical_unavailable";
+  if (/responsetoolarge/i.test(name)) return "response_too_large";
   if (/syntax/i.test(name)) return "malformed_response";
   if (/input/i.test(name)) return "input_error";
   if (/HTTP\s+\d{3}/i.test(message)) return "http_error";

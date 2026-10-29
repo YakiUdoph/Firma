@@ -27,25 +27,29 @@ Do not add wallet mnemonics, private keys, RPC write credentials, or signing ser
 1. Review and push the local commits to the intended Git remote.
 2. Import the repository into Vercel and set the Root Directory to `portaldot-investigation`.
 3. Keep Deployment Protection enabled for the first preview.
-4. Confirm the build uses Node.js 22 or newer and runs `npm run build`.
+4. Confirm the build uses the configured Node.js 24 runtime and runs `npm run build`. CI must continue testing both Node.js 22 and 24.
 5. Run the acceptance checks in `PRODUCTION_READINESS.md` against the protected URL.
 6. Review `firma.verification.timing.v1` function logs for bounded stage timings, timeout categories, retry counts, and request duration. These diagnostics contain categories and counts, not endpoint URLs or credential-bearing error text.
 
 ## Platform rate limiting
 
-The code includes bounded best-effort limiters, but serverless instances do not share that memory. Before public promotion, protect both `POST /api/verify` and `POST /api/check-report` with Vercel Firewall rate limits. The report checker performs historical RPC reads and therefore needs the same platform-level protection even though its in-process limit is stricter.
+The application includes bounded best-effort limiters, but serverless instances do not share that memory. The existing `firma` project has one live, valid custom firewall rule named `FIRMA API Rate Limit`:
 
-Start with a log-only rule and inspect real preview traffic:
+- path starts with `/api/`, covering both API routes;
+- fixed window of 60 seconds;
+- limit of 10 requests per IP;
+- platform `rate_limit` action;
+- no draft or pending firewall changes.
 
-```text
-vercel firewall rules add "Observe FIRMA API rate" \
-  --condition '{"type":"path","op":"pre","value":"/api/"}' \
-  --condition '{"type":"method","op":"eq","value":"POST"}' \
-  --action log --yes
-vercel firewall diff
+Inspect it read-only before every release with a reviewed, pinned Vercel CLI:
+
+```powershell
+npx --yes vercel@65.7.0 project inspect --non-interactive
+npx --yes vercel@65.7.0 firewall status --json
+npx --yes vercel@65.7.0 firewall rules list --expand --json
 ```
 
-After observing the preview, begin with approximately 20 requests per minute per IP, validate it in preview, and adjust for legitimate demo traffic before enabling it in production. Treat this as an initial operating value, not a proven universal threshold.
+The legacy Seawall configuration endpoint may return `404 Seawall Config not found` even while the first-class firewall interface reports the live rule. Use `vercel firewall status` and `vercel firewall rules list` as the configuration evidence. Do not stage, publish, disable, or reorder firewall rules during an application release without separate authorization.
 
 ## Post-deployment acceptance
 
@@ -60,6 +64,16 @@ The response must have `verdict.overall` equal to `PASS`, chain ID `420420777`, 
 
 Also verify HTTP 405 for GET on the API, HTTP 400 for malformed input, HTTP 413 for an oversized body, and HTTP 429 under the reviewed rate rule.
 
+Verify the report workflow separately: export the exact browser-generated JSON, upload that same file, confirm structural and evidence consistency, reproduce its historical claims, and require an independently obtained commitment before calling it authenticated. A self-computed commitment is only an identifier for the uploaded contents.
+
+## Monitoring and maintenance
+
+- Review bounded `firma.verification.timing.v1` logs after preview validation and after release. Logs contain request IDs, stage durations, retry counts, verdict counts, and sanitized categories—not endpoint credentials or raw error strings.
+- Treat a new genesis hash, runtime-code hash, version tuple, missing required pallet, or missing query surface as unsupported. Update the reviewed support profile only after a separate chain/runtime audit and new live evidence.
+- Run `npm audit --omit=dev` and the Node.js 22/24 CI matrix on dependency updates. Avoid broad upgrades unrelated to a confirmed advisory or platform requirement.
+- If paid log retention or external error monitoring is unavailable, preserve sanitized deployment logs during an incident and use bounded Vercel runtime-log queries. Never add RPC URLs containing credentials to an incident artifact.
+- Record the current production deployment ID and commit before promotion so rollback targets are explicit.
+
 ## Rollback
 
-If the preview exposes secrets, paths, stack traces, excessive latency, or inconsistent parity results, do not promote it. Keep the last known-good deployment, save sanitized logs, reproduce locally, and issue a normal corrective commit. Do not weaken the runtime gate or convert UNKNOWN into PASS to make the demo appear successful.
+If the preview exposes secrets, paths, stack traces, excessive latency, or inconsistent parity results, do not promote it. Keep the last known-good deployment, save sanitized logs, reproduce locally, and issue a normal corrective commit. If a production release later regresses, use the recorded known-good deployment as the rollback candidate and verify domain assignment after rollback. Do not weaken the runtime gate or convert UNKNOWN into PASS to make a release appear successful.

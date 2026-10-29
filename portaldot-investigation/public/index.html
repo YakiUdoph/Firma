@@ -6,7 +6,10 @@
   <meta name="description" content="FIRMA verifies whether Portaldot native and EVM asset observations agree at one finalized block.">
   <meta name="theme-color" content="#f3f0e7">
   <title>FIRMA | Portaldot asset verification</title>
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">
+  <link rel="manifest" href="/site.webmanifest">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -14,7 +17,7 @@
 
   <header class="site-header">
     <a class="brand" href="/" aria-label="FIRMA home">
-      <span class="brand-mark" aria-hidden="true"><span>F</span></span>
+      <img class="brand-logo" src="/firma-logo-header.png" width="40" height="40" alt="">
       <span class="brand-name">FIRMA</span>
     </a>
     <nav aria-label="Primary navigation">
@@ -152,10 +155,11 @@
       <div class="report-intro">
         <p class="eyebrow"><span aria-hidden="true"></span> Independent evidence</p>
         <h2 id="report-title">Check a report</h2>
-        <p>Upload a FIRMA JSON report. FIRMA will return to the report's exact finalized block, repeat the supported reads, and show whether the saved claims still agree with the chain.</p>
+        <p>Upload a FIRMA JSON report. FIRMA validates the complete evidence record, returns to the exact finalized block, and separately states whether a trusted commitment authenticates the file.</p>
         <ul class="report-status-guide" aria-label="Independent result meanings">
-          <li><strong>Verified</strong><span>Historical evidence was reproduced.</span></li>
-          <li><strong>Mismatch</strong><span>A saved claim disagrees with the chain.</span></li>
+          <li><strong>Authenticated</strong><span>Evidence is consistent, history reproduced, and a supplied trusted commitment matched.</span></li>
+          <li><strong>Reproduced</strong><span>Evidence is consistent and history reproduced, but no independent trust anchor was supplied.</span></li>
+          <li><strong>Mismatch</strong><span>A historical claim or supplied commitment disagrees.</span></li>
           <li><strong>Unavailable</strong><span>The exact history could not be checked safely.</span></li>
         </ul>
       </div>
@@ -170,7 +174,7 @@
           <div class="field">
             <label for="expected-commitment">Expected commitment <span class="optional">Optional</span></label>
             <input id="expected-commitment" name="expectedCommitment" spellcheck="false" autocomplete="off" pattern="0x[0-9a-fA-F]{64}" maxlength="66" aria-describedby="commitment-help" placeholder="0x…">
-            <small id="commitment-help">Paste a Phase 7B report commitment to compare it with the uploaded file.</small>
+            <small id="commitment-help">Paste an independently obtained trusted commitment to authenticate the complete file. Without one, FIRMA reports Reproduced, not Authenticated.</small>
           </div>
           <button id="report-button" class="primary-button" type="submit">
             <span class="button-label">Check evidence</span>
@@ -199,10 +203,13 @@
         <dl class="report-summary-list">
           <div><dt>Original verdict</dt><dd id="imported-verdict"></dd></div>
           <div><dt>Historical block</dt><dd id="imported-block"></dd></div>
-          <div><dt>Report commitment</dt><dd id="report-commitment"></dd></div>
+          <div><dt>Evidence consistency</dt><dd id="evidence-consistency"></dd></div>
+          <div><dt>Historical claims</dt><dd id="historical-outcome"></dd></div>
+          <div><dt>Authentication</dt><dd id="authentication-outcome"></dd></div>
+          <div><dt>Computed commitment</dt><dd id="report-commitment"></dd></div>
         </dl>
       </div>
-      <p class="separation-note"><strong>The original report is preserved.</strong> Its asset verdict and this independent result answer different questions.</p>
+      <p class="separation-note"><strong>The original report is preserved.</strong> Internal consistency, historical reproduction, and commitment authentication are reported separately.</p>
       <div id="independent-counts" class="verdict-counts" aria-label="Independent verification totals"></div>
       <div id="independent-checks" class="checks"></div>
       <details class="raw-evidence">
@@ -241,7 +248,7 @@
   </main>
 
   <footer>
-    <a class="brand footer-brand" href="/" aria-label="FIRMA home"><span class="brand-mark" aria-hidden="true"><span>F</span></span><span class="brand-name">FIRMA</span></a>
+    <a class="brand footer-brand" href="/" aria-label="FIRMA home"><img class="brand-logo" src="/firma-logo-header.png" width="40" height="40" alt=""><span class="brand-name">FIRMA</span></a>
     <p>Portaldot V3 cross-interface evidence<br><span>Read-only verification. No transaction behavior is claimed.</span></p>
     <p class="version">Version 0.1.0</p>
   </footer>

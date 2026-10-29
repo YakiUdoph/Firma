@@ -1,0 +1,650 @@
+{
+  "schema": "firma.report.v1",
+  "tool": {
+    "name": "FIRMA",
+    "version": "0.1.0",
+    "mode": "read-only",
+    "allowedEvmMethods": [
+      "eth_chainId",
+      "web3_clientVersion",
+      "eth_getBlockByNumber",
+      "eth_call"
+    ]
+  },
+  "startedAt": "2026-10-29T09:20:37.882Z",
+  "completedAt": "2026-10-29T09:20:57.046Z",
+  "input": {
+    "expectedChainId": "420420777",
+    "assetId": "2",
+    "account": "0x0000000000000000000000000000000000000001"
+  },
+  "verdict": {
+    "overall": "UNKNOWN",
+    "counts": {
+      "PASS": 7,
+      "FAIL": 0,
+      "UNKNOWN": 2
+    },
+    "checks": [
+      {
+        "id": "network.substrate",
+        "title": "Substrate endpoint",
+        "status": "PASS",
+        "summary": "The Substrate endpoint returned a finalized block.",
+        "evidence": {
+          "chain": "PortaldotV3 Test",
+          "nodeName": "PortaldotV3 Node",
+          "nodeVersion": "3.0.0-dev-fddd43141f2",
+          "properties": {
+            "isEthereum": false,
+            "ss58Format": 42,
+            "tokenDecimals": [
+              14
+            ],
+            "tokenSymbol": [
+              "tPOT"
+            ]
+          }
+        }
+      },
+      {
+        "id": "network.evm",
+        "title": "EVM endpoint",
+        "status": "PASS",
+        "summary": "The EVM endpoint answered standard read-only JSON-RPC methods.",
+        "evidence": {
+          "chainId": "420420777",
+          "chainIdHex": "0x190f1ca9",
+          "clientVersion": "eth-rpc/main-fddd431/x86_64-unknown-linux-gnu/rustc1.98.0"
+        }
+      },
+      {
+        "id": "identity.chainId",
+        "title": "Expected EVM chain ID",
+        "status": "PASS",
+        "summary": "Chain ID is 420420777.",
+        "evidence": {
+          "expected": "420420777",
+          "actual": "420420777"
+        }
+      },
+      {
+        "id": "runtime.support",
+        "title": "Runtime support",
+        "status": "PASS",
+        "summary": "Runtime portaldot-v3/3002 matches FIRMA's verified support profile.",
+        "evidence": {
+          "specName": "portaldot-v3",
+          "specVersion": "3002",
+          "transactionVersion": "2",
+          "metadataVersion": 14,
+          "metadataSha256": "58115eaa5439821d923b09d88511c5f3a45261eabbafc12aad46c3e2a5f74070",
+          "pallets": [
+            "system",
+            "utility",
+            "babe",
+            "timestamp",
+            "authorship",
+            "indices",
+            "balances",
+            "transactionpayment",
+            "assetconversiontxpayment",
+            "electionprovidermultiphase",
+            "staking",
+            "session",
+            "technicalcommittee",
+            "technicalmembership",
+            "grandpa",
+            "treasury",
+            "assetrate",
+            "contracts",
+            "sudo",
+            "imonline",
+            "authoritydiscovery",
+            "offences",
+            "historical",
+            "identity",
+            "recovery",
+            "vesting",
+            "scheduler",
+            "preimage",
+            "proxy",
+            "multisig",
+            "bounties",
+            "assets",
+            "poolassets",
+            "beefy",
+            "mmr",
+            "mmrleaf",
+            "lottery",
+            "uniques",
+            "nfts",
+            "nftfractionalization",
+            "transactionstorage",
+            "voterlist",
+            "childbounties",
+            "remark",
+            "nominationpools",
+            "assetconversion",
+            "fastunstake",
+            "messagequeue",
+            "txpause",
+            "safemode",
+            "statement",
+            "multiblockmigrations",
+            "broker",
+            "mixnet",
+            "parameters",
+            "skipfeelesspayment",
+            "assetconversionmigration",
+            "revive",
+            "verifysignature",
+            "delegatedstaking",
+            "assetsfreezer",
+            "oracle",
+            "metatx",
+            "multiassetbounties",
+            "assetsprecompiles",
+            "assetsprecompilespermit",
+            "vestingprecompiles",
+            "registrarpara",
+            "registrarrelay"
+          ],
+          "querySurfaces": {
+            "assets.asset": true,
+            "assets.metadata": true,
+            "assets.account": true,
+            "revive.originalAccount": true
+          },
+          "fingerprint": {
+            "genesisHash": "0xd4f9acbcf7f52388d8b095abe3c198d19fc510e0343e643e87cfbccb155283bd",
+            "runtimeCodeHash": "0xedc03c9dc81d39fea5c02893cc34cf2ec898d55d7ee8f8e89eb27597a724c7c2",
+            "runtimeCodeHashAlgorithm": "blake2-256",
+            "runtimeCodeStorageKey": "0x3a636f6465",
+            "collectedAtBlockHash": "0x3d025b141d2c012a62ac7ec3383128ea821b8604bdc500f18dad3c78b694627d"
+          },
+          "supportProfile": "portaldot-v3-3002-edc03c9d",
+          "mismatchReasons": []
+        }
+      },
+      {
+        "id": "context.block",
+        "title": "Shared block context",
+        "status": "PASS",
+        "summary": "Both reads are pinned to finalized block 236356.",
+        "evidence": {
+          "substrate": {
+            "number": "236356",
+            "hash": "0x3d025b141d2c012a62ac7ec3383128ea821b8604bdc500f18dad3c78b694627d"
+          },
+          "evm": {
+            "number": "236356",
+            "hash": "0x96a044985c9942cbacc9f5d8bb2869ec90b1ef9a9641d22a6ca835248bec99e6",
+            "requestedTag": "0x39b44",
+            "available": true
+          }
+        }
+      },
+      {
+        "id": "asset.supply",
+        "title": "Total supply parity",
+        "status": "PASS",
+        "summary": "Native supply and EVM totalSupply match exactly.",
+        "evidence": {
+          "native": "15000000000000000000",
+          "evm": "15000000000000000000",
+          "unit": "base units"
+        }
+      },
+      {
+        "id": "account.mapping",
+        "title": "Runtime account mapping",
+        "status": "UNKNOWN",
+        "summary": "No runtime-backed EVM-to-native account mapping was found.",
+        "evidence": {
+          "exists": false,
+          "h160": "0x0000000000000000000000000000000000000001",
+          "accountId": null,
+          "storageKey": "0x735f040a5d490f1107ad9c56f5ca00d2c56ab6c1f203b345fe5879f8196277230000000000000000000000000000000000000001"
+        }
+      },
+      {
+        "id": "asset.balance",
+        "title": "Account balance parity",
+        "status": "UNKNOWN",
+        "summary": "A mapped, same-block balance pair was unavailable.",
+        "evidence": {}
+      },
+      {
+        "id": "asset.metadata",
+        "title": "Metadata parity",
+        "status": "PASS",
+        "summary": "Name, symbol, and decimals match exactly across both surfaces.",
+        "evidence": {
+          "native": {
+            "exists": true,
+            "storageKey": "0x682a59d51ab9e48a8c8cc418ff9708d2b5f3822e35ca2f31ce3526eab1363fd2754faa9acf0378f8c3543d9f132d85bc02000000",
+            "name": "test asset",
+            "symbol": "TEST",
+            "decimals": "18"
+          },
+          "evm": {
+            "totalSupply": {
+              "ok": true,
+              "value": "15000000000000000000",
+              "raw": "0x000000000000000000000000000000000000000000000000d02ab486cedc0000"
+            },
+            "balanceOf": {
+              "ok": true,
+              "value": "0",
+              "raw": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            "name": {
+              "ok": true,
+              "value": "test asset",
+              "raw": "0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000a7465737420617373657400000000000000000000000000000000000000000000"
+            },
+            "symbol": {
+              "ok": true,
+              "value": "TEST",
+              "raw": "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000045445535400000000000000000000000000000000000000000000000000000000"
+            },
+            "decimals": {
+              "ok": true,
+              "value": "18",
+              "raw": "0x0000000000000000000000000000000000000000000000000000000000000012"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "evidence": {
+    "input": {
+      "substrateEndpoint": "wss://test-node-v3.portaldot.dev",
+      "evmEndpoint": "https://test-evm-rpc-v3.portaldot.dev",
+      "expectedChainId": "420420777",
+      "assetId": "2",
+      "account": "0x0000000000000000000000000000000000000001",
+      "timeoutMs": 15000,
+      "retries": 1
+    },
+    "substrate": {
+      "reachable": true,
+      "endpoint": "wss://test-node-v3.portaldot.dev",
+      "identity": {
+        "chain": "PortaldotV3 Test",
+        "nodeName": "PortaldotV3 Node",
+        "nodeVersion": "3.0.0-dev-fddd43141f2",
+        "properties": {
+          "isEthereum": false,
+          "ss58Format": 42,
+          "tokenDecimals": [
+            14
+          ],
+          "tokenSymbol": [
+            "tPOT"
+          ]
+        }
+      },
+      "finalized": {
+        "number": "236356",
+        "hash": "0x3d025b141d2c012a62ac7ec3383128ea821b8604bdc500f18dad3c78b694627d"
+      },
+      "latestFinalized": {
+        "number": "236356",
+        "hash": "0x3d025b141d2c012a62ac7ec3383128ea821b8604bdc500f18dad3c78b694627d"
+      },
+      "runtime": {
+        "specName": "portaldot-v3",
+        "specVersion": "3002",
+        "transactionVersion": "2",
+        "metadataVersion": 14,
+        "metadataSha256": "58115eaa5439821d923b09d88511c5f3a45261eabbafc12aad46c3e2a5f74070",
+        "pallets": [
+          "system",
+          "utility",
+          "babe",
+          "timestamp",
+          "authorship",
+          "indices",
+          "balances",
+          "transactionpayment",
+          "assetconversiontxpayment",
+          "electionprovidermultiphase",
+          "staking",
+          "session",
+          "technicalcommittee",
+          "technicalmembership",
+          "grandpa",
+          "treasury",
+          "assetrate",
+          "contracts",
+          "sudo",
+          "imonline",
+          "authoritydiscovery",
+          "offences",
+          "historical",
+          "identity",
+          "recovery",
+          "vesting",
+          "scheduler",
+          "preimage",
+          "proxy",
+          "multisig",
+          "bounties",
+          "assets",
+          "poolassets",
+          "beefy",
+          "mmr",
+          "mmrleaf",
+          "lottery",
+          "uniques",
+          "nfts",
+          "nftfractionalization",
+          "transactionstorage",
+          "voterlist",
+          "childbounties",
+          "remark",
+          "nominationpools",
+          "assetconversion",
+          "fastunstake",
+          "messagequeue",
+          "txpause",
+          "safemode",
+          "statement",
+          "multiblockmigrations",
+          "broker",
+          "mixnet",
+          "parameters",
+          "skipfeelesspayment",
+          "assetconversionmigration",
+          "revive",
+          "verifysignature",
+          "delegatedstaking",
+          "assetsfreezer",
+          "oracle",
+          "metatx",
+          "multiassetbounties",
+          "assetsprecompiles",
+          "assetsprecompilespermit",
+          "vestingprecompiles",
+          "registrarpara",
+          "registrarrelay"
+        ],
+        "querySurfaces": {
+          "assets.asset": true,
+          "assets.metadata": true,
+          "assets.account": true,
+          "revive.originalAccount": true
+        },
+        "fingerprint": {
+          "genesisHash": "0xd4f9acbcf7f52388d8b095abe3c198d19fc510e0343e643e87cfbccb155283bd",
+          "runtimeCodeHash": "0xedc03c9dc81d39fea5c02893cc34cf2ec898d55d7ee8f8e89eb27597a724c7c2",
+          "runtimeCodeHashAlgorithm": "blake2-256",
+          "runtimeCodeStorageKey": "0x3a636f6465",
+          "collectedAtBlockHash": "0x3d025b141d2c012a62ac7ec3383128ea821b8604bdc500f18dad3c78b694627d"
+        }
+      },
+      "asset": {
+        "exists": true,
+        "id": "2",
+        "storageKey": "0x682a59d51ab9e48a8c8cc418ff9708d2d34371a193a751eea5883e9553457b2e754faa9acf0378f8c3543d9f132d85bc02000000",
+        "supply": "15000000000000000000",
+        "metadata": {
+          "exists": true,
+          "storageKey": "0x682a59d51ab9e48a8c8cc418ff9708d2b5f3822e35ca2f31ce3526eab1363fd2754faa9acf0378f8c3543d9f132d85bc02000000",
+          "name": "test asset",
+          "symbol": "TEST",
+          "decimals": "18"
+        }
+      },
+      "accountMapping": {
+        "exists": false,
+        "h160": "0x0000000000000000000000000000000000000001",
+        "accountId": null,
+        "storageKey": "0x735f040a5d490f1107ad9c56f5ca00d2c56ab6c1f203b345fe5879f8196277230000000000000000000000000000000000000001"
+      },
+      "balance": {
+        "exists": false,
+        "value": null
+      }
+    },
+    "evm": {
+      "reachable": true,
+      "endpoint": "https://test-evm-rpc-v3.portaldot.dev",
+      "identity": {
+        "chainId": "420420777",
+        "chainIdHex": "0x190f1ca9",
+        "clientVersion": "eth-rpc/main-fddd431/x86_64-unknown-linux-gnu/rustc1.98.0"
+      },
+      "block": {
+        "number": "236356",
+        "hash": "0x96a044985c9942cbacc9f5d8bb2869ec90b1ef9a9641d22a6ca835248bec99e6",
+        "requestedTag": "0x39b44",
+        "available": true
+      },
+      "calls": {
+        "totalSupply": {
+          "ok": true,
+          "value": "15000000000000000000",
+          "raw": "0x000000000000000000000000000000000000000000000000d02ab486cedc0000"
+        },
+        "balanceOf": {
+          "ok": true,
+          "value": "0",
+          "raw": "0x0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "name": {
+          "ok": true,
+          "value": "test asset",
+          "raw": "0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000a7465737420617373657400000000000000000000000000000000000000000000"
+        },
+        "symbol": {
+          "ok": true,
+          "value": "TEST",
+          "raw": "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000045445535400000000000000000000000000000000000000000000000000000000"
+        },
+        "decimals": {
+          "ok": true,
+          "value": "18",
+          "raw": "0x0000000000000000000000000000000000000000000000000000000000000012"
+        }
+      },
+      "requests": [
+        {
+          "startedAt": "2026-10-29T09:20:51.414Z",
+          "attempt": 0,
+          "request": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "eth_chainId",
+            "params": []
+          },
+          "httpStatus": 200,
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "result": "0x190f1ca9"
+          }
+        },
+        {
+          "startedAt": "2026-10-29T09:20:51.433Z",
+          "attempt": 0,
+          "request": {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "web3_clientVersion",
+            "params": []
+          },
+          "httpStatus": 200,
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "result": "eth-rpc/main-fddd431/x86_64-unknown-linux-gnu/rustc1.98.0"
+          }
+        },
+        {
+          "startedAt": "2026-10-29T09:20:54.027Z",
+          "attempt": 0,
+          "request": {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "eth_getBlockByNumber",
+            "params": [
+              "0x39b44",
+              false
+            ]
+          },
+          "httpStatus": 200,
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "result": {
+              "baseFeePerGas": "0x6c2a",
+              "blobGasUsed": "0x0",
+              "difficulty": "0x0",
+              "excessBlobGas": "0x0",
+              "extraData": "0x",
+              "gasLimit": "0xffffffffffffffff",
+              "gasUsed": "0x0",
+              "hash": "0x96a044985c9942cbacc9f5d8bb2869ec90b1ef9a9641d22a6ca835248bec99e6",
+              "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+              "miner": "0x578f0a6155551b3b7c7ff255ea7dc2b08968e380",
+              "mixHash": "0x0000000000000000000000000000000000000000000000000008e1bc9bf04000",
+              "nonce": "0x0000000000000000",
+              "number": "0x39b44",
+              "parentHash": "0xe24b7f65915353dd6b0fca4ba0a727bbb24ec95845692fbd90d892befb511baa",
+              "receiptsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "sha3Uncles": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "size": "0x0",
+              "stateRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "timestamp": "0x6ae30fde",
+              "transactions": [],
+              "transactionsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "uncles": [],
+              "withdrawals": [],
+              "withdrawalsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            }
+          }
+        },
+        {
+          "startedAt": "2026-10-29T09:20:54.503Z",
+          "attempt": 0,
+          "request": {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "eth_call",
+            "params": [
+              {
+                "to": "0x0000000200000000000000000000000000010000",
+                "data": "0x18160ddd"
+              },
+              "0x39b44"
+            ]
+          },
+          "httpStatus": 200,
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "result": "0x000000000000000000000000000000000000000000000000d02ab486cedc0000"
+          }
+        },
+        {
+          "startedAt": "2026-10-29T09:20:54.987Z",
+          "attempt": 0,
+          "request": {
+            "jsonrpc": "2.0",
+            "id": 5,
+            "method": "eth_call",
+            "params": [
+              {
+                "to": "0x0000000200000000000000000000000000010000",
+                "data": "0x70a082310000000000000000000000000000000000000000000000000000000000000001"
+              },
+              "0x39b44"
+            ]
+          },
+          "httpStatus": 200,
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 5,
+            "result": "0x0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        },
+        {
+          "startedAt": "2026-10-29T09:20:55.700Z",
+          "attempt": 0,
+          "request": {
+            "jsonrpc": "2.0",
+            "id": 6,
+            "method": "eth_call",
+            "params": [
+              {
+                "to": "0x0000000200000000000000000000000000010000",
+                "data": "0x06fdde03"
+              },
+              "0x39b44"
+            ]
+          },
+          "httpStatus": 200,
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 6,
+            "result": "0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000a7465737420617373657400000000000000000000000000000000000000000000"
+          }
+        },
+        {
+          "startedAt": "2026-10-29T09:20:56.109Z",
+          "attempt": 0,
+          "request": {
+            "jsonrpc": "2.0",
+            "id": 7,
+            "method": "eth_call",
+            "params": [
+              {
+                "to": "0x0000000200000000000000000000000000010000",
+                "data": "0x95d89b41"
+              },
+              "0x39b44"
+            ]
+          },
+          "httpStatus": 200,
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 7,
+            "result": "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000045445535400000000000000000000000000000000000000000000000000000000"
+          }
+        },
+        {
+          "startedAt": "2026-10-29T09:20:56.558Z",
+          "attempt": 0,
+          "request": {
+            "jsonrpc": "2.0",
+            "id": 8,
+            "method": "eth_call",
+            "params": [
+              {
+                "to": "0x0000000200000000000000000000000000010000",
+                "data": "0x313ce567"
+              },
+              "0x39b44"
+            ]
+          },
+          "httpStatus": 200,
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 8,
+            "result": "0x0000000000000000000000000000000000000000000000000000000000000012"
+          }
+        }
+      ],
+      "precompileAddress": "0x0000000200000000000000000000000000010000"
+    }
+  },
+  "limitations": [
+    "This report proves only the listed reads at the pinned block; it does not prove write, event, permit, or fee behavior.",
+    "The asset-precompile address rule is supported only for the verified Portaldot V3 runtime envelope.",
+    "An unavailable endpoint, unsupported runtime, missing mapping, timeout, or unavailable historical block is UNKNOWN—not FAIL."
+  ]
+}

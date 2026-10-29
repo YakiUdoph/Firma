@@ -1,5 +1,8 @@
+import { isDeepStrictEqual } from "node:util";
 import { assertValidFirmaReport, InvalidReportError } from "../experimental/onchain-proof/src/report-commitment.mjs";
-import { READ_ONLY_EVM_METHODS } from "./constants.mjs";
+import { assetPrecompileAddress, decodeAbiString, decodeUint256, encodeBalanceOf, numberToHex } from "./codec.mjs";
+import { EVM_ASSET_SELECTORS, READ_ONLY_EVM_METHODS } from "./constants.mjs";
+import { evaluateSnapshot } from "./evaluate.mjs";
 import { parseAccount, parseAssetId, parseExpectedChainId } from "./validation.mjs";
 
 export const MAX_REPORT_BYTES = 262_144;
@@ -21,6 +24,25 @@ const REQUIRED_CHECKS = Object.freeze([
   "account.mapping",
   "asset.balance",
   "asset.metadata",
+]);
+
+export const NOT_HISTORICALLY_REPRODUCIBLE_FIELDS = Object.freeze([
+  "report.startedAt",
+  "report.completedAt",
+  "report.tool.version",
+  "report.evidence.input.substrateEndpoint",
+  "report.evidence.input.evmEndpoint",
+  "report.evidence.input.timeoutMs",
+  "report.evidence.input.retries",
+  "report.evidence.substrate.endpoint",
+  "report.evidence.substrate.identity.nodeName",
+  "report.evidence.substrate.identity.nodeVersion",
+  "report.evidence.evm.endpoint",
+  "report.evidence.evm.identity.clientVersion",
+  "report.evidence.evm.requests[*].startedAt",
+  "report.evidence.evm.requests[*].attempt",
+  "report.evidence.evm.requests[*].httpStatus",
+  "report.limitations",
 ]);
 
 function invalid(message) {
@@ -46,6 +68,211 @@ function stringAt(value, path, pattern = null) {
 function booleanAt(value, path) {
   if (typeof value !== "boolean") invalid(`${path} must be true or false.`);
   return value;
+}
+
+function integerAt(value, path, { minimum = 0, maximum = Number.MAX_SAFE_INTEGER } = {}) {
+  if (!Number.isSafeInteger(value) || value < minimum || value > maximum) invalid(`${path} is invalid.`);
+  return value;
+}
+
+function assertDeepEqual(actual, expected, message) {
+  if (!isDeepStrictEqual(actual, expected)) invalid(message);
+}
+
+function validateCompactError(value, path) {
+  const error = objectAt(value, path);
+  assertAllowedKeys(error, path, ["name", "message", "code"]);
+  stringAt(error.name, `${path}.name`);
+  stringAt(error.message, `${path}.message`);
+  if (error.code !== undefined && typeof error.code !== "string" && !Number.isSafeInteger(error.code)) {
+    invalid(`${path}.code is invalid.`);
+  }
+  return error;
+}
+
+function validateJsonRpcResponse(value, path, requestId) {
+  const response = objectAt(value, path);
+  assertAllowedKeys(response, path, ["jsonrpc", "id", "result", "error"]);
+  if (response.jsonrpc !== "2.0") invalid(`${path}.jsonrpc must be 2.0.`);
+  if (response.id !== requestId) invalid(`${path}.id does not match the recorded request ID.`);
+  const hasResult = Object.hasOwn(response, "result");
+  const hasError = Object.hasOwn(response, "error");
+  if (hasResult === hasError) invalid(`${path} must contain exactly one of result or error.`);
+  if (hasError) {
+    const error = objectAt(response.error, `${path}.error`);
+    assertAllowedKeys(error, `${path}.error`, ["code", "message", "data"]);
+    integerAt(error.code, `${path}.error.code`, { minimum: Number.MIN_SAFE_INTEGER });
+    stringAt(error.message, `${path}.error.message`);
+  }
+  return response;
+}
+
+function validateRpcErrorDetail(value, path) {
+  const error = objectAt(value, path);
+  assertAllowedKeys(error, path, ["code", "message", "data"]);
+  integerAt(error.code, `${path}.code`, { minimum: Number.MIN_SAFE_INTEGER });
+  stringAt(error.message, `${path}.message`);
+  return error;
+}
+
+function expectedRequestSpecs(report) {
+  const tag = report.evidence.evm.block.requestedTag;
+  const to = report.evidence.evm.precompileAddress;
+  return new Map([
+    [1, { method: "eth_chainId", params: [], evidence: "identity.chainIdHex" }],
+    [2, { method: "web3_clientVersion", params: [], evidence: "identity.clientVersion" }],
+    [3, { method: "eth_getBlockByNumber", params: [tag, false], evidence: "block" }],
+    [4, { method: "eth_call", params: [{ to, data: EVM_ASSET_SELECTORS.totalSupply }, tag], call: "totalSupply" }],
+    [5, { method: "eth_call", params: [{ to, data: encodeBalanceOf(report.input.account) }, tag], call: "balanceOf" }],
+    [6, { method: "eth_call", params: [{ to, data: EVM_ASSET_SELECTORS.name }, tag], call: "name" }],
+    [7, { method: "eth_call", params: [{ to, data: EVM_ASSET_SELECTORS.symbol }, tag], call: "symbol" }],
+    [8, { method: "eth_call", params: [{ to, data: EVM_ASSET_SELECTORS.decimals }, tag], call: "decimals" }],
+  ]);
+}
+
+function validateFinalRequestObservation(report, id, spec, finalRecord) {
+  const response = finalRecord.response;
+  const successfulResult = response && finalRecord.httpStatus >= 200 && finalRecord.httpStatus < 300
+    && Object.hasOwn(response, "result");
+  if (id === 1 || id === 2) {
+    if (!successfulResult) invalid(`The final ${spec.method} request must contain a successful result.`);
+    const expected = id === 1 ? report.evidence.evm.identity.chainIdHex : report.evidence.evm.identity.clientVersion;
+    assertDeepEqual(response.result, expected, `The recorded ${spec.method} response contradicts EVM identity evidence.`);
+    return;
+  }
+  if (id === 3) {
+    if (!successfulResult) invalid("The final eth_getBlockByNumber request must contain a successful result.");
+    const result = objectAt(response.result, "report.evidence.evm.requests final block result");
+    if (result.number !== report.evidence.evm.block.requestedTag || result.hash !== report.evidence.evm.block.hash) {
+      invalid("The recorded eth_getBlockByNumber response contradicts EVM block evidence.");
+    }
+    return;
+  }
+
+  const call = report.evidence.evm.calls[spec.call];
+  if (call.ok) {
+    if (!successfulResult || response.result !== call.raw) {
+      invalid(`The recorded ${spec.call} response contradicts decoded EVM call evidence.`);
+    }
+    return;
+  }
+  if (response && !(finalRecord.httpStatus >= 200 && finalRecord.httpStatus < 300)) {
+    assertDeepEqual(call.error, {
+      name: "Error",
+      message: `eth_call: HTTP ${finalRecord.httpStatus}`,
+    }, `The recorded ${spec.call} HTTP error contradicts call evidence.`);
+    if (call.rpcError !== undefined || call.kind !== "rpc-error") {
+      invalid(`The recorded ${spec.call} HTTP error fields are inconsistent.`);
+    }
+    return;
+  }
+  if (response?.error) {
+    assertDeepEqual(call.rpcError, response.error, `The recorded ${spec.call} RPC error contradicts call evidence.`);
+    assertDeepEqual(call.error, {
+      name: "RpcError",
+      message: `eth_call: ${response.error.message}`,
+      code: response.error.code,
+    }, `The recorded ${spec.call} compact RPC error contradicts its response.`);
+    const expectedKind = /metadata not found/i.test(JSON.stringify(response.error)) ? "metadata-missing" : "rpc-error";
+    if (call.kind !== expectedKind) invalid(`The recorded ${spec.call} error kind is inconsistent.`);
+    return;
+  }
+  if (finalRecord.error) {
+    assertDeepEqual(call.error, finalRecord.error, `The recorded ${spec.call} transport error contradicts call evidence.`);
+    if (call.kind !== "rpc-error") invalid(`The recorded ${spec.call} transport error kind is inconsistent.`);
+    return;
+  }
+  invalid(`The unsuccessful ${spec.call} evidence has no matching final request observation.`);
+}
+
+function validateRequestHistory(report, evidenceInput) {
+  const requests = report.evidence.evm.requests;
+  if (!Array.isArray(requests)) invalid("report.evidence.evm.requests must be an array.");
+  const specs = expectedRequestSpecs(report);
+  const groups = new Map();
+  for (const [index, recordValue] of requests.entries()) {
+    const path = `report.evidence.evm.requests[${index}]`;
+    const record = objectAt(recordValue, path);
+    assertAllowedKeys(record, path, ["startedAt", "attempt", "request", "httpStatus", "response", "error"]);
+    stringAt(record.startedAt, `${path}.startedAt`, ISO_DATE);
+    const startedAt = Date.parse(record.startedAt);
+    if (Number.isNaN(startedAt) || startedAt < Date.parse(report.startedAt) || startedAt > Date.parse(report.completedAt)) {
+      invalid(`${path}.startedAt is outside the report interval.`);
+    }
+    integerAt(record.attempt, `${path}.attempt`, { maximum: evidenceInput.retries });
+    const request = objectAt(record.request, `${path}.request`);
+    assertAllowedKeys(request, `${path}.request`, ["jsonrpc", "id", "method", "params"]);
+    if (request.jsonrpc !== "2.0") invalid(`${path}.request.jsonrpc must be 2.0.`);
+    integerAt(request.id, `${path}.request.id`, { minimum: 1 });
+    stringAt(request.method, `${path}.request.method`);
+    if (!READ_ONLY_EVM_METHODS.includes(request.method)) invalid(`${path} contains a method outside FIRMA's read-only allowlist.`);
+    if (!Array.isArray(request.params)) invalid(`${path}.request.params must be an array.`);
+    const spec = specs.get(request.id);
+    if (!spec) invalid(`${path} contains an unsupported request ID for firma.report.v1.`);
+    if (request.method !== spec.method || !isDeepStrictEqual(request.params, spec.params)) {
+      invalid(`${path} method or parameters contradict the reported verification workflow.`);
+    }
+    const hasResponse = Object.hasOwn(record, "response");
+    const hasError = Object.hasOwn(record, "error");
+    if (hasResponse === hasError) invalid(`${path} must contain exactly one of response or error.`);
+    if (hasResponse) {
+      integerAt(record.httpStatus, `${path}.httpStatus`, { minimum: 100, maximum: 599 });
+      validateJsonRpcResponse(record.response, `${path}.response`, request.id);
+    } else {
+      if (record.httpStatus !== undefined) invalid(`${path}.httpStatus requires a recorded response.`);
+      validateCompactError(record.error, `${path}.error`);
+    }
+    const group = groups.get(request.id) ?? [];
+    group.push(record);
+    groups.set(request.id, group);
+  }
+
+  for (const [id, spec] of specs) {
+    const group = groups.get(id);
+    if (!group?.length) invalid(`Report request history is missing ${spec.method} request ID ${id}.`);
+    group.sort((left, right) => left.attempt - right.attempt);
+    group.forEach((record, attempt) => {
+      if (record.attempt !== attempt) invalid(`Request ID ${id} has duplicated or missing retry attempts.`);
+      if (!isDeepStrictEqual(record.request, group[0].request)) invalid(`Request ID ${id} changed across retries.`);
+      if (attempt < group.length - 1 && record.response?.error) invalid(`Request ID ${id} retried after a terminal JSON-RPC error.`);
+      if (attempt < group.length - 1 && record.response && record.httpStatus >= 200 && record.httpStatus < 300) {
+        invalid(`Request ID ${id} retried after a successful JSON-RPC response.`);
+      }
+    });
+    validateFinalRequestObservation(report, id, spec, group.at(-1));
+  }
+}
+
+function validateEvidenceConsistency(report) {
+  const evidence = report.evidence;
+  const input = evidence.input;
+  if (evidence.substrate.endpoint !== input.substrateEndpoint || evidence.evm.endpoint !== input.evmEndpoint) {
+    invalid("Recorded endpoint evidence does not match the report evidence input.");
+  }
+  if (input.timeoutMs < 1_000 || input.timeoutMs > 60_000) invalid("Evidence timeout is outside FIRMA's supported range.");
+  integerAt(input.retries, "report.evidence.input.retries", { maximum: 2 });
+  if (evidence.evm.identity.chainId !== BigInt(evidence.evm.identity.chainIdHex).toString()) {
+    invalid("EVM chain ID decimal and hexadecimal evidence disagree.");
+  }
+  if (evidence.evm.block.requestedTag !== numberToHex(evidence.evm.block.number)) {
+    invalid("The requested EVM block tag does not match the reported block number.");
+  }
+  if (evidence.evm.precompileAddress !== assetPrecompileAddress(report.input.assetId)) {
+    invalid("The EVM precompile address does not match the report asset ID.");
+  }
+  const decoders = { totalSupply: decodeUint256, balanceOf: decodeUint256, name: decodeAbiString, symbol: decodeAbiString, decimals: decodeUint256 };
+  for (const [name, decode] of Object.entries(decoders)) {
+    const call = evidence.evm.calls[name];
+    if (!call.ok) continue;
+    let decoded;
+    try { decoded = decode(call.raw); } catch { invalid(`report.evidence.evm.calls.${name}.raw cannot be decoded.`); }
+    if (decoded !== call.value) invalid(`report.evidence.evm.calls.${name}.value contradicts its raw response.`);
+  }
+  validateRequestHistory(report, input);
+  const recomputedVerdict = evaluateSnapshot(evidence);
+  if (!isDeepStrictEqual(report.verdict, recomputedVerdict)) {
+    invalid("The duplicated verdict, checks, summaries, or check evidence contradict the report evidence.");
+  }
 }
 
 function inspectStructure(value, path = "report", depth = 0, state = { nodes: 0 }) {
@@ -272,12 +499,20 @@ function validateClaimShape(report) {
     assertAllowedKeys(call, `report.evidence.evm.calls.${field}`, ["ok", "value", "raw", "kind", "error", "rpcError"]);
     booleanAt(call.ok, `report.evidence.evm.calls.${field}.ok`);
     if (call.ok) {
+      if (call.kind !== undefined || call.error !== undefined || call.rpcError !== undefined) {
+        invalid(`Successful ${field} evidence cannot contain failure fields.`);
+      }
       stringAt(call.value, `report.evidence.evm.calls.${field}.value`);
       stringAt(call.raw, `report.evidence.evm.calls.${field}.raw`, HEX);
+    } else {
+      if (call.value !== undefined || call.raw !== undefined) invalid(`Failed ${field} evidence cannot contain value or raw fields.`);
+      const kind = stringAt(call.kind, `report.evidence.evm.calls.${field}.kind`);
+      if (!["metadata-missing", "rpc-error"].includes(kind)) invalid(`report.evidence.evm.calls.${field}.kind is unsupported.`);
+      if (call.error !== undefined) validateCompactError(call.error, `report.evidence.evm.calls.${field}.error`);
+      if (call.rpcError !== undefined) validateRpcErrorDetail(call.rpcError, `report.evidence.evm.calls.${field}.rpcError`);
+      if (call.error === undefined && call.rpcError === undefined) invalid(`Failed ${field} evidence must contain an error observation.`);
     }
-    else stringAt(call.kind, `report.evidence.evm.calls.${field}.kind`);
   }
-  if (!Array.isArray(evm.requests)) invalid("report.evidence.evm.requests must be an array.");
   if (block.number !== finalized.number) invalid("Imported native and EVM block numbers differ.");
   if (fingerprint.collectedAtBlockHash !== finalized.hash) invalid("Runtime fingerprint is not tied to the imported finalized block.");
 
@@ -292,6 +527,7 @@ function validateClaimShape(report) {
   if (!Array.isArray(report.limitations) || report.limitations.some((item) => typeof item !== "string")) {
     invalid("report.limitations must be an array of strings.");
   }
+  validateEvidenceConsistency(report);
 }
 
 export function parseImportedReport(value) {

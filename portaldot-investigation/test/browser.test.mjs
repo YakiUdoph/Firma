@@ -48,9 +48,13 @@ test("report upload works in Chrome and has no serious accessibility violations"
   const initialVerificationGate = new Promise((resolve) => { releaseInitialVerification = resolve; });
   let gateInitialVerification = true;
   const hostileText = `</p><script data-injected>globalThis.__firmaInjected=true</script>`;
+  const hostileBytes = Buffer.from(hostileText, "utf8").toString("hex");
+  const hostileRaw = `0x${BigInt(32).toString(16).padStart(64, "0")}${BigInt(hostileBytes.length / 2).toString(16).padStart(64, "0")}${hostileBytes.padEnd(Math.ceil(hostileBytes.length / 64) * 64, "0")}`;
   const hostileReport = structuredClone(report);
   hostileReport.evidence.substrate.asset.metadata.name = hostileText;
   hostileReport.evidence.evm.calls.name.value = hostileText;
+  hostileReport.evidence.evm.calls.name.raw = hostileRaw;
+  hostileReport.evidence.evm.requests.find((entry) => entry.request.id === 6).response.result = hostileRaw;
   hostileReport.verdict = evaluateSnapshot(hostileReport.evidence);
   let verificationReport = hostileReport;
   await page.route("**/api/verify", async (route) => {
@@ -155,10 +159,13 @@ test("report upload works in Chrome and has no serious accessibility violations"
   await assert.doesNotReject(() => page.getByRole("heading", { name: "Check a report" }).waitFor());
   await page.getByLabel("Upload report").setInputFiles({ name: "firma-report.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(report)) });
   await page.getByRole("button", { name: "Check evidence" }).click();
-  await page.getByRole("heading", { name: "Verified", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Reproduced", exact: true }).waitFor();
   assert.equal(await page.locator("#imported-verdict").textContent(), "PASS");
-  assert.equal(await page.locator("#report-result").getAttribute("data-status"), "VERIFIED");
-  assert.match(await page.locator("#independent-summary").textContent(), /independently reproduced/i);
+  assert.equal(await page.locator("#report-result").getAttribute("data-status"), "REPRODUCED");
+  assert.equal(await page.locator("#evidence-consistency").textContent(), "VALID");
+  assert.equal(await page.locator("#historical-outcome").textContent(), "VERIFIED");
+  assert.equal(await page.locator("#authentication-outcome").textContent(), "UNANCHORED");
+  assert.match(await page.locator("#independent-summary").textContent(), /authenticity is unanchored/i);
   assert.equal(pageErrors.length, 0);
 
   await page.getByLabel("Upload report").focus();
@@ -202,9 +209,10 @@ test("report upload works in Chrome and has no serious accessibility violations"
   routedResponse = structuredClone(response);
   routedResponse.independent.overall = "MISMATCH";
   routedResponse.independent.summary = "A saved claim disagrees with independently retrieved evidence.";
-  routedResponse.independent.checks[0].status = "MISMATCH";
-  routedResponse.independent.checks[0].summary = "The independently retrieved network identity disagrees with the imported claim.";
-  routedResponse.independent.counts = { VERIFIED: 25, MISMATCH: 1, UNAVAILABLE: 0 };
+  routedResponse.historical.overall = "MISMATCH";
+  routedResponse.historical.checks[0].status = "MISMATCH";
+  routedResponse.historical.checks[0].summary = "The independently retrieved network identity disagrees with the imported claim.";
+  routedResponse.historical.counts = { VERIFIED: response.historical.counts.VERIFIED - 1, MISMATCH: 1, UNAVAILABLE: 0 };
   await page.getByRole("button", { name: "Check evidence" }).click();
   await page.getByRole("heading", { name: "Mismatch", exact: true }).waitFor();
   assert.equal(await page.locator("#report-result").getAttribute("data-status"), "MISMATCH");
@@ -214,9 +222,10 @@ test("report upload works in Chrome and has no serious accessibility violations"
   routedResponse = structuredClone(response);
   routedResponse.independent.overall = "UNAVAILABLE";
   routedResponse.independent.summary = "The exact historical evidence could not be retrieved or checked safely.";
-  routedResponse.independent.checks[0].status = "UNAVAILABLE";
-  routedResponse.independent.checks[0].summary = "The exact historical network identity could not be retrieved safely.";
-  routedResponse.independent.counts = { VERIFIED: 25, MISMATCH: 0, UNAVAILABLE: 1 };
+  routedResponse.historical.overall = "UNAVAILABLE";
+  routedResponse.historical.checks[0].status = "UNAVAILABLE";
+  routedResponse.historical.checks[0].summary = "The exact historical network identity could not be retrieved safely.";
+  routedResponse.historical.counts = { VERIFIED: response.historical.counts.VERIFIED - 1, MISMATCH: 0, UNAVAILABLE: 1 };
   await page.getByRole("button", { name: "Check evidence" }).click();
   await page.getByRole("heading", { name: "Unavailable", exact: true }).waitFor();
   assert.equal(await page.locator("#report-result").getAttribute("data-status"), "UNAVAILABLE");

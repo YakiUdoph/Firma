@@ -19,6 +19,13 @@ export const READ_ONLY_EVM_METHODS = Object.freeze([
   "eth_call",
 ]);
 
+export const EVM_ASSET_SELECTORS = Object.freeze({
+  name: "0x06fdde03",
+  symbol: "0x95d89b41",
+  decimals: "0x313ce567",
+  totalSupply: "0x18160ddd",
+});
+
 export const REQUIRED_PALLETS = Object.freeze(["assets", "revive"]);
 
 export const REQUIRED_QUERY_SURFACES = Object.freeze([

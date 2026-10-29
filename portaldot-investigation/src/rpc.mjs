@@ -1,6 +1,64 @@
 import { setTimeout as delay } from "node:timers/promises";
 import { compactError } from "./codec.mjs";
 
+export const MAX_RPC_RESPONSE_BYTES = 524_288;
+
+export class ResponseTooLargeError extends Error {
+  constructor(limit) {
+    super(`JSON-RPC response exceeded the ${limit}-byte limit.`);
+    this.name = "ResponseTooLargeError";
+  }
+}
+
+async function readBoundedJson(response, limit) {
+  const declared = Number(response.headers?.get?.("content-length") ?? 0);
+  if (Number.isFinite(declared) && declared > limit) {
+    await response.body?.cancel?.("JSON-RPC response exceeded the configured limit.").catch(() => {});
+    throw new ResponseTooLargeError(limit);
+  }
+
+  if (!response.body?.getReader) {
+    const value = await response.json();
+    if (Buffer.byteLength(JSON.stringify(value), "utf8") > limit) throw new ResponseTooLargeError(limit);
+    return value;
+  }
+
+  const reader = response.body.getReader();
+  const chunks = [];
+  let size = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > limit) {
+        await reader.cancel("JSON-RPC response exceeded the configured limit.").catch(() => {});
+        throw new ResponseTooLargeError(limit);
+      }
+      chunks.push(Buffer.from(value));
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  let text;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks, size));
+  } catch {
+    throw new SyntaxError("JSON-RPC response is not valid UTF-8.");
+  }
+  return JSON.parse(text);
+}
+
+function validateJsonRpcEnvelope(body, request) {
+  const object = body && typeof body === "object" && !Array.isArray(body);
+  const hasResult = object && Object.hasOwn(body, "result");
+  const hasError = object && Object.hasOwn(body, "error");
+  if (!object || body.jsonrpc !== "2.0" || body.id !== request.id || hasResult === hasError) {
+    throw new SyntaxError("Malformed JSON-RPC response envelope.");
+  }
+}
+
 export class RpcError extends Error {
   constructor(method, detail) {
     super(`${method}: ${detail?.message ?? "JSON-RPC error"}`);
@@ -41,7 +99,7 @@ export async function withTimeout(promise, timeoutMs, label, { signal = null } =
 }
 
 export class EvmRpcClient {
-  constructor(endpoint, { timeoutMs, retries, fetchFn = fetch, delayFn = delay, signal = null, deadlineAt = null }) {
+  constructor(endpoint, { timeoutMs, retries, fetchFn = fetch, delayFn = delay, signal = null, deadlineAt = null, maxResponseBytes = MAX_RPC_RESPONSE_BYTES }) {
     this.endpoint = endpoint;
     this.timeoutMs = timeoutMs;
     this.retries = retries;
@@ -49,6 +107,7 @@ export class EvmRpcClient {
     this.delayFn = delayFn;
     this.signal = signal;
     this.deadlineAt = deadlineAt;
+    this.maxResponseBytes = maxResponseBytes;
     this.nextId = 1;
     this.history = [];
   }
@@ -70,10 +129,11 @@ export class EvmRpcClient {
           body: JSON.stringify(request),
           signal,
         });
-        const body = await response.json();
+        const body = await readBoundedJson(response, this.maxResponseBytes);
         this.history.push({ startedAt, attempt, request, httpStatus: response.status, response: body });
         recorded = true;
         if (!response.ok) throw new Error(`${method}: HTTP ${response.status}`);
+        validateJsonRpcEnvelope(body, request);
         if (body.error) throw new RpcError(method, body.error);
         return body.result;
       } catch (error) {
@@ -81,7 +141,7 @@ export class EvmRpcClient {
         if (!recorded) {
           this.history.push({ startedAt, attempt, request, error: compactError(error) });
         }
-        if (error instanceof RpcError || attempt === this.retries) break;
+        if (error instanceof RpcError || error instanceof ResponseTooLargeError || attempt === this.retries) break;
         await this.delayFn(250 * (attempt + 1), undefined, this.signal ? { signal: this.signal } : undefined);
       }
     }

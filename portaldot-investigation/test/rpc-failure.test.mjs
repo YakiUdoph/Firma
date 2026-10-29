@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { classifyDiagnosticError } from "../src/diagnostics.mjs";
-import { EvmRpcClient, RpcError } from "../src/rpc.mjs";
+import { EvmRpcClient, ResponseTooLargeError, RpcError } from "../src/rpc.mjs";
 
 function response(body, status = 200) {
   return new Response(typeof body === "string" ? body : JSON.stringify(body), {
@@ -131,4 +131,35 @@ test("retry exhaustion records every attempt and simultaneous requests retain se
   assert.ok(failures.every((result) => result.status === "rejected"));
   assert.equal(concurrentFailures.history.length, 3);
   assert.deepEqual(new Set(concurrentFailures.history.map((entry) => entry.request.id)), new Set([1, 2, 3]));
+});
+
+test("JSON-RPC response bodies and envelopes are bounded before evidence is accepted", async () => {
+  let oversizedCalls = 0;
+  const oversized = new EvmRpcClient("https://approved.example.invalid", {
+    timeoutMs: 100,
+    retries: 2,
+    maxResponseBytes: 64,
+    delayFn: async () => {},
+    fetchFn: async () => {
+      oversizedCalls += 1;
+      return response({ jsonrpc: "2.0", id: 1, result: "x".repeat(128) });
+    },
+  });
+  await assert.rejects(oversized.call("eth_chainId"), ResponseTooLargeError);
+  assert.equal(oversizedCalls, 1);
+  assert.equal(oversized.history.length, 1);
+  assert.equal(Object.hasOwn(oversized.history[0], "response"), false);
+  assert.equal(classifyDiagnosticError(oversized.history[0].error), "response_too_large");
+
+  for (const body of [
+    { jsonrpc: "2.0", id: 99, result: "0x1" },
+    { jsonrpc: "1.0", id: 1, result: "0x1" },
+    { jsonrpc: "2.0", id: 1 },
+    { jsonrpc: "2.0", id: 1, result: "0x1", error: { code: -1, message: "both" } },
+    [],
+  ]) {
+    const malformed = client(async () => response(body));
+    await assert.rejects(malformed.call("eth_chainId"), SyntaxError);
+    assert.equal(Object.hasOwn(malformed.history.at(-1), "response"), true);
+  }
 });

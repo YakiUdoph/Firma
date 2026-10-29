@@ -48,7 +48,11 @@ async function startHttpServer(routes) {
 
 function snapshotFor(overall) {
   const snapshot = clone(validImportedReport().evidence);
-  if (overall === "FAIL") snapshot.evm.calls.totalSupply.value = "1";
+  if (overall === "FAIL") {
+    const raw = `0x${"1".padStart(64, "0")}`;
+    snapshot.evm.calls.totalSupply = { ok: true, value: "1", raw };
+    snapshot.evm.requests.find((record) => record.request.id === 4).response.result = raw;
+  }
   if (overall === "UNKNOWN") snapshot.substrate.runtime.specName = "unreviewed-runtime";
   return snapshot;
 }
@@ -67,12 +71,14 @@ test("real HTTP verification exports canonical PASS, FAIL, and UNKNOWN reports t
   const defaults = snapshots[0].input;
   const verifyHandler = createVerifyHandler({
     defaultsFn: () => defaults,
-    verifyFn: (input, options) => {
+    verifyFn: async (input, options) => {
       const snapshot = snapshots[verificationIndex++];
-      return verify(input, {
+      const report = await verify(input, {
         ...options,
         collectSnapshotFn: async () => ({ options: snapshot.input, snapshot: clone(snapshot) }),
       });
+      for (const record of report.evidence.evm.requests) record.startedAt = report.startedAt;
+      return report;
     },
     diagnosticsFn: () => ({ emit() {} }),
   });
@@ -118,7 +124,9 @@ test("real HTTP verification exports canonical PASS, FAIL, and UNKNOWN reports t
     });
     assert.equal(checkedResponse.status, 200);
     const checked = await checkedResponse.json();
-    assert.equal(checked.independent.overall, "VERIFIED");
+    assert.equal(checked.independent.overall, "AUTHENTICATED");
+    assert.equal(checked.historical.overall, "VERIFIED");
+    assert.equal(checked.authentication.status, "AUTHENTICATED");
     assert.equal(checked.commitment.computed, beforeExport);
     assert.deepEqual(checked.importedReport, report);
     assert.equal(Object.hasOwn(checked.importedReport, "requestId"), false);

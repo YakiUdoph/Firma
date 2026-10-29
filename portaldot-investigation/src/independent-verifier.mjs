@@ -2,15 +2,25 @@ import { isDeepStrictEqual } from "node:util";
 import { computeReportCommitment } from "../experimental/onchain-proof/src/report-commitment.mjs";
 import { DEFAULTS } from "./constants.mjs";
 import { evaluateSnapshot } from "./evaluate.mjs";
-import { parseExpectedCommitment, parseImportedReport } from "./report-import.mjs";
+import { NOT_HISTORICALLY_REPRODUCIBLE_FIELDS, parseExpectedCommitment, parseImportedReport } from "./report-import.mjs";
 import { collectSnapshot } from "./verifier.mjs";
 
-export const INDEPENDENT_SCHEMA = "firma.independent-verification.v1";
+export const INDEPENDENT_SCHEMA = "firma.independent-verification.v2";
 export const INDEPENDENT_STATUS = Object.freeze({ VERIFIED: "VERIFIED", MISMATCH: "MISMATCH", UNAVAILABLE: "UNAVAILABLE" });
+export const REPORT_OUTCOME = Object.freeze({ AUTHENTICATED: "AUTHENTICATED", REPRODUCED: "REPRODUCED", MISMATCH: "MISMATCH", UNAVAILABLE: "UNAVAILABLE" });
+export const AUTHENTICATION_STATUS = Object.freeze({ AUTHENTICATED: "AUTHENTICATED", MISMATCH: "MISMATCH", UNANCHORED: "UNANCHORED" });
 
 function semanticCall(call) {
   if (!call || typeof call.ok !== "boolean") return undefined;
-  return call.ok ? { ok: true, value: call.value, raw: call.raw } : { ok: false, kind: call.kind ?? "rpc-error" };
+  return call.ok
+    ? { ok: true, value: call.value, raw: call.raw }
+    : { ok: false, kind: call.kind ?? "rpc-error", rpcError: call.rpcError ?? null };
+}
+
+function finalRequestResponse(evm, id) {
+  const records = (evm?.requests ?? []).filter((entry) => entry?.request?.id === id);
+  if (!records.length) return undefined;
+  return records.reduce((latest, entry) => entry.attempt > latest.attempt ? entry : latest).response;
 }
 
 function hasHistoricalSubstrate(snapshot) {
@@ -66,8 +76,15 @@ function claimSpecs(report, snapshot) {
     {
       id: "block.evm", title: "EVM historical block reference", available: evmAvailable,
       reason: reproducedEvm?.error?.message ?? `EVM block ${importedEvm.block.number} was not returned.`,
-      imported: { number: importedEvm.block.number, hash: importedEvm.block.hash, available: importedEvm.block.available },
-      reproduced: reproducedEvm?.block ? { number: reproducedEvm.block.number, hash: reproducedEvm.block.hash, available: reproducedEvm.block.available } : undefined,
+      imported: { number: importedEvm.block.number, hash: importedEvm.block.hash, requestedTag: importedEvm.block.requestedTag, available: importedEvm.block.available },
+      reproduced: reproducedEvm?.block ? { number: reproducedEvm.block.number, hash: reproducedEvm.block.hash, requestedTag: reproducedEvm.block.requestedTag, available: reproducedEvm.block.available } : undefined,
+    },
+    {
+      id: "block.evm.response", title: "Complete EVM historical block response",
+      available: evmAvailable && Boolean(finalRequestResponse(reproducedEvm, 3)?.result),
+      reason: "The complete historical eth_getBlockByNumber response could not be retrieved.",
+      imported: finalRequestResponse(importedEvm, 3)?.result,
+      reproduced: finalRequestResponse(reproducedEvm, 3)?.result,
     },
     {
       id: "runtime.version", title: "Runtime version and metadata", available: runtimeAvailable,
@@ -222,43 +239,76 @@ export async function independentlyVerifyReport({
   checks.push(...verdictComparisons(report, reproducedVerdict, snapshot));
 
   const computed = computeReportCommitment(report);
-  const commitmentMatches = normalizedCommitment === null || normalizedCommitment === computed.commitment;
-  const commitmentCheck = {
-    id: "report.commitment", title: "Deterministic report commitment",
-    status: commitmentMatches ? INDEPENDENT_STATUS.VERIFIED : INDEPENDENT_STATUS.MISMATCH,
-    summary: normalizedCommitment === null
-      ? "FIRMA independently recomputed the deterministic commitment for the preserved report."
-      : commitmentMatches ? "The supplied commitment matches the preserved imported report." : "The supplied commitment does not match the preserved imported report.",
-    evidence: { algorithm: computed.algorithm, domain: computed.domain, expected: normalizedCommitment, computed: computed.commitment },
-  };
-  checks.push(commitmentCheck);
-
   const hasMismatch = checks.some((check) => check.status === INDEPENDENT_STATUS.MISMATCH);
   const hasUnavailable = checks.some((check) => check.status === INDEPENDENT_STATUS.UNAVAILABLE);
-  const overall = hasMismatch ? INDEPENDENT_STATUS.MISMATCH : hasUnavailable ? INDEPENDENT_STATUS.UNAVAILABLE : INDEPENDENT_STATUS.VERIFIED;
+  const historicalOverall = hasMismatch ? INDEPENDENT_STATUS.MISMATCH : hasUnavailable ? INDEPENDENT_STATUS.UNAVAILABLE : INDEPENDENT_STATUS.VERIFIED;
+  const authenticationStatus = normalizedCommitment === null
+    ? AUTHENTICATION_STATUS.UNANCHORED
+    : normalizedCommitment === computed.commitment ? AUTHENTICATION_STATUS.AUTHENTICATED : AUTHENTICATION_STATUS.MISMATCH;
+  const overall = historicalOverall === INDEPENDENT_STATUS.MISMATCH || authenticationStatus === AUTHENTICATION_STATUS.MISMATCH
+    ? REPORT_OUTCOME.MISMATCH
+    : historicalOverall === INDEPENDENT_STATUS.UNAVAILABLE
+      ? REPORT_OUTCOME.UNAVAILABLE
+      : authenticationStatus === AUTHENTICATION_STATUS.AUTHENTICATED ? REPORT_OUTCOME.AUTHENTICATED : REPORT_OUTCOME.REPRODUCED;
   if (JSON.stringify(report) !== originalBefore) throw new Error("Imported report changed during independent verification.");
   const unavailable = checks.filter((check) => check.status === INDEPENDENT_STATUS.UNAVAILABLE)
     .map((check) => ({ check: check.id, reason: check.evidence.reason ?? check.summary }));
 
   return {
     schema: INDEPENDENT_SCHEMA, startedAt, completedAt: new Date().toISOString(),
-    importedReport: report, importedVerdict: report.verdict, commitment: commitmentCheck.evidence,
+    importedReport: report,
+    importedVerdict: report.verdict,
+    reportValidation: {
+      structure: "VALID",
+      evidenceConsistency: "VALID",
+      reportSchema: report.schema,
+      notHistoricallyReproducible: NOT_HISTORICALLY_REPRODUCIBLE_FIELDS,
+    },
+    authentication: {
+      status: authenticationStatus,
+      summary: authenticationStatus === AUTHENTICATION_STATUS.UNANCHORED
+        ? "No independently supplied trusted commitment was provided; the computed hash is not proof of authenticity."
+        : authenticationStatus === AUTHENTICATION_STATUS.AUTHENTICATED
+          ? "The independently supplied trusted commitment matches the complete imported report."
+          : "The independently supplied trusted commitment does not match the imported report.",
+      algorithm: computed.algorithm,
+      domain: computed.domain,
+      expected: normalizedCommitment,
+      computed: computed.commitment,
+    },
+    commitment: { algorithm: computed.algorithm, domain: computed.domain, expected: normalizedCommitment, computed: computed.commitment },
     independent: {
       overall,
-      summary: overall === INDEPENDENT_STATUS.VERIFIED
-        ? "The report's supported claims were independently reproduced at its exact finalized block."
-        : overall === INDEPENDENT_STATUS.MISMATCH
-          ? "At least one imported claim disagrees with independently reproduced evidence."
+      summary: overall === REPORT_OUTCOME.AUTHENTICATED
+        ? "The report is internally consistent, its supported historical claims reproduced, and its trusted commitment matched."
+        : overall === REPORT_OUTCOME.REPRODUCED
+          ? "The report is internally consistent and its supported historical claims reproduced, but its authenticity is unanchored."
+          : overall === REPORT_OUTCOME.MISMATCH
+            ? authenticationStatus === AUTHENTICATION_STATUS.MISMATCH && historicalOverall !== INDEPENDENT_STATUS.MISMATCH
+              ? "The supplied trusted commitment does not match the complete imported report."
+              : "At least one imported claim disagrees with independently reproduced evidence."
           : "The exact historical evidence could not be retrieved or checked safely.",
       requestedBlock: { number: targetBlock, substrateHash: report.evidence.substrate.finalized.hash, evmHash: report.evidence.evm.block.hash },
+      historicalClaims: historicalOverall,
+    },
+    historical: {
+      overall: historicalOverall,
+      summary: historicalOverall === INDEPENDENT_STATUS.VERIFIED
+        ? "The report's supported claims were independently reproduced at its exact finalized block."
+        : historicalOverall === INDEPENDENT_STATUS.MISMATCH
+          ? "At least one imported historical claim disagrees with independently reproduced evidence."
+          : "The exact historical evidence could not be retrieved or checked safely.",
       unavailable,
       counts: Object.fromEntries(Object.values(INDEPENDENT_STATUS).map((status) => [status, checks.filter((check) => check.status === status).length])),
-      checks, reproducedVerdict, reproducedEvidence: snapshot,
+      checks,
+      reproducedVerdict,
+      reproducedEvidence: snapshot,
     },
     limitations: [
       "Independent verification uses the configured Portaldot V3 endpoints and never trusts endpoint URLs embedded in the imported report.",
       "Current state is never substituted when the exact historical block is unavailable.",
-      "A verified commitment proves the deterministic hash of the imported JSON report; it does not prove that the commitment was recorded on-chain.",
+      "A computed commitment is unauthenticated unless it matches an independently supplied trusted commitment.",
+      "Fields listed in reportValidation.notHistoricallyReproducible are structurally and semantically checked where possible but are not historical blockchain claims.",
       "No wallet, signing, transaction submission, or contract functionality is enabled.",
     ],
   };

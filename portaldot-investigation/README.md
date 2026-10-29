@@ -26,7 +26,7 @@ The account address is the account whose balance and Revive mapping FIRMA checks
 
 ## Quick start
 
-Requirements: Node.js 22 or newer and internet access to the organizer-provided test endpoints.
+Requirements: Node.js 22 or 24 and internet access to the organizer-provided test endpoints. CI exercises both supported Node.js majors; the Vercel project uses Node.js 24.
 
 ```powershell
 npm ci --ignore-scripts
@@ -62,7 +62,7 @@ npm run build
 
 The production target is a static frontend plus two stateless Node.js functions: one creates reports and one independently checks imported reports. Vercel is the recommended host because this request/response architecture fits Vercel Functions; FIRMA does not require an always-on WebSocket server. Each function opens bounded outbound RPC connections only while processing a request.
 
-Set the Vercel project Root Directory to `portaldot-investigation`. No secret is required. Optional environment overrides are documented in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Platform-level rate limiting must be staged and reviewed before making the URL public.
+Set the Vercel project Root Directory to `portaldot-investigation`. No secret is required. Optional environment overrides are documented in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). The existing project has a live fixed-window firewall rule for `/api/` at 10 requests per minute per IP; retain and re-inspect it before every production release.
 
 ## CI use
 
@@ -93,6 +93,8 @@ The complete, raw request/response evidence is in [evidence](evidence/). These a
 
 Fresh deployed acceptance checks on 2026-10-21 also returned 9/9 PASS for asset `2` at block `130112` and asset `806707` at block `130114`, both on runtime `portaldot-v3/3002` and chain ID `420420777`. See the [October 24 check-in](docs/OCTOBER_24_CHECKIN.md) for durations, validation results, and current deployment limitations.
 
+Fresh local live acceptance on 2026-10-29 returned 9/9 PASS for asset `2` at block `236334` and asset `806707` at block `236338`. The missing asset `4294967295` returned 5 PASS / 4 UNKNOWN; an unmapped account returned UNKNOWN for mapping and balance. A mapped zero-balance candidate also remained UNKNOWN because native account storage was absent, so FIRMA did not invent a native zero. The exported block `236334` report reproduced 26/26 historical claims but remained correctly `UNANCHORED` without an external commitment.
+
 ## Repository map
 
 ```text
@@ -118,10 +120,18 @@ raw/                   Original investigation evidence
 - The precompile address convention is scoped to the runtime evidence documented in this repository.
 - Public-search results cannot establish that no private or unpublished competitor exists.
 - Public endpoints can rate-limit requests or prune historical state. FIRMA reports those observations as `UNKNOWN` or an unavailable independent check; it does not substitute current state.
+- EVM JSON-RPC bodies are streamed with a 512 KiB ceiling, validated as matching JSON-RPC envelopes, and never accepted after truncation, invalid UTF-8, or a mismatched request ID.
+- ABI dynamic strings require the canonical single-string offset, exact 32-byte alignment and padding, bounded lengths, and strict UTF-8. Malformed metadata becomes unavailable evidence and therefore `UNKNOWN`, never `PASS`.
 
 ## Why check an exported report?
 
-An exported report preserves the block, evidence, and original verdict. The **Check a report** interface re-reads the saved finalized block and compares the new historical observations with the imported claims while leaving the original report unchanged. A verified reproduction increases confidence that the evidence can be retrieved again; a mismatch or unavailable historical read is shown separately and never rewrites the original verdict. Reproduction still depends on the configured endpoints and is not independent provider consensus or a cryptographic state proof.
+An exported report preserves the block, evidence, original verdict, and complete EVM request transcript. The **Check a report** interface reports three distinct results while leaving the original report unchanged:
+
+1. **Evidence consistency** validates the complete `firma.report.v1` structure, request methods, IDs, parameters, responses, decoded values, block tags, duplicated verdict evidence, and counts.
+2. **Historical reproduction** re-reads the saved finalized block and compares supported blockchain claims. `VERIFIED`, `MISMATCH`, and `UNAVAILABLE` apply only to these historical claims.
+3. **Authentication** compares the complete report's deterministic commitment with an independently supplied trusted commitment. Without that external trust anchor, the report is `UNANCHORED` and the aggregate result is **Reproduced**, never **Authenticated**.
+
+The checker response is `firma.independent-verification.v2`; the exported report remains `firma.report.v1`. Reproduction still depends on the configured endpoints and is not independent provider consensus or a cryptographic state proof. Recomputing a commitment from an uploaded file identifies that file but does not authenticate it.
 
 Read [docs/SECURITY.md](docs/SECURITY.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before extending the verifier.
 

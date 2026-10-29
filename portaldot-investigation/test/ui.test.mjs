@@ -96,7 +96,14 @@ test("the workspace provides keyboard and responsive accessibility affordances",
   assert.match(css, /@media \(max-width: 700px\)/);
   assert.match(css, /@media \(max-width: 470px\)/);
   assert.match(css, /@media \(forced-colors: active\)/);
-  assert.match(html, /rel="icon" href="\/favicon\.svg"/);
+  assert.match(html, /rel="icon" href="\/favicon\.ico"/);
+  assert.match(html, /rel="icon" href="\/favicon-32\.png" type="image\/png" sizes="32x32"/);
+  assert.match(html, /rel="apple-touch-icon" href="\/apple-touch-icon\.png"/);
+  assert.match(html, /rel="manifest" href="\/site\.webmanifest"/);
+  assert.match(html, /class="brand-logo" src="\/firma-logo-header\.png"[^>]*alt=""/);
+  assert.match(localServer, /"\.png": "image\/png"/);
+  assert.match(localServer, /"\.ico": "image\/x-icon"/);
+  assert.match(localServer, /"\.webmanifest": "application\/manifest\+json; charset=utf-8"/);
 });
 
 test("the noise texture is same-origin and compatible with deployed and local CSP", () => {
@@ -113,10 +120,13 @@ test("independent report verification keeps original and reproduced results sepa
   assert.match(html, /id="check-report"/);
   assert.match(html, /<label for="report-file">Upload report<\/label>/);
   assert.match(html, /<span class="button-label">Check evidence<\/span>/);
-  assert.match(html, /Verified<\/strong><span>Historical evidence was reproduced/);
-  assert.match(html, /Mismatch<\/strong><span>A saved claim disagrees/);
+  assert.match(html, /Authenticated<\/strong><span>Evidence is consistent, history reproduced/);
+  assert.match(html, /Reproduced<\/strong><span>Evidence is consistent and history reproduced, but no independent trust anchor/);
+  assert.match(html, /Mismatch<\/strong><span>A historical claim or supplied commitment disagrees/);
   assert.match(html, /Unavailable<\/strong><span>The exact history could not be checked safely/);
-  assert.match(html, /The original report is preserved/);
+  assert.match(html, /Internal consistency, historical reproduction, and commitment authentication are reported separately/);
+  assert.match(client, /response\.authentication\.status/);
+  assert.match(client, /response\.reportValidation\.evidenceConsistency/);
   assert.match(client, /reportText: text/);
   assert.doesNotMatch(client, /eval\(|new Function/);
   assert.match(css, /\.check\[data-status="MISMATCH"\]/);

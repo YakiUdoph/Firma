@@ -26,7 +26,8 @@ const COUNT_LABEL = Object.freeze({
   MISMATCH: "Claims differ",
   UNAVAILABLE: "Not available",
 });
-const INDEPENDENT_LABEL = Object.freeze({ VERIFIED: "Verified", MISMATCH: "Mismatch", UNAVAILABLE: "Unavailable" });
+const INDEPENDENT_LABEL = Object.freeze({ AUTHENTICATED: "Authenticated", REPRODUCED: "Reproduced", MISMATCH: "Mismatch", UNAVAILABLE: "Unavailable" });
+const HISTORICAL_LABEL = Object.freeze({ VERIFIED: "Reproduced", MISMATCH: "Mismatch", UNAVAILABLE: "Unavailable" });
 const MAX_REPORT_BYTES = 262_144;
 const VALID_VERDICT_STATUS = new Set(["PASS", "FAIL", "UNKNOWN"]);
 let latestReport = null;
@@ -249,24 +250,28 @@ function showReportError(message) {
 
 function renderIndependent(response) {
   const independent = response.independent;
+  const historical = response.historical;
   const status = independent.overall;
   const panel = document.querySelector("#report-result");
   panel.hidden = false;
   panel.dataset.status = status;
   const title = document.querySelector("#independent-title");
   title.textContent = INDEPENDENT_LABEL[status];
-  document.querySelector("#independent-symbol").textContent = status === "VERIFIED" ? "\u2713" : status === "MISMATCH" ? "\u00d7" : "?";
+  document.querySelector("#independent-symbol").textContent = ["AUTHENTICATED", "REPRODUCED"].includes(status) ? "\u2713" : status === "MISMATCH" ? "\u00d7" : "?";
   document.querySelector("#independent-summary").textContent = independent.summary;
   document.querySelector("#imported-verdict").textContent = response.importedVerdict.overall;
   document.querySelector("#imported-block").textContent = independent.requestedBlock.number;
+  document.querySelector("#evidence-consistency").textContent = response.reportValidation.evidenceConsistency;
+  document.querySelector("#historical-outcome").textContent = historical.overall;
+  document.querySelector("#authentication-outcome").textContent = response.authentication.status;
   const commitment = document.querySelector("#report-commitment");
   commitment.textContent = response.commitment.computed;
   commitment.title = response.commitment.computed;
   document.querySelector("#independent-counts").replaceChildren(
-    ...["VERIFIED", "MISMATCH", "UNAVAILABLE"].map((item) => countItem(item, independent.counts?.[item])),
+    ...["VERIFIED", "MISMATCH", "UNAVAILABLE"].map((item) => countItem(item, historical.counts?.[item])),
   );
   document.querySelector("#independent-checks").replaceChildren(
-    ...independent.checks.map((item, index) => checkRow(item, index, INDEPENDENT_LABEL)),
+    ...historical.checks.map((item, index) => checkRow(item, index, HISTORICAL_LABEL)),
   );
   document.querySelector("#independent-json").textContent = JSON.stringify(response, null, 2);
   panel.scrollIntoView({ behavior: "smooth", block: "start" });

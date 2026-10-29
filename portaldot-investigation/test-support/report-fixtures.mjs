@@ -1,4 +1,6 @@
 import { evaluateSnapshot } from "../src/evaluate.mjs";
+import { EVM_ASSET_SELECTORS } from "../src/constants.mjs";
+import { encodeBalanceOf } from "../src/codec.mjs";
 
 export const BLOCK_NUMBER = "121096";
 export const SUBSTRATE_HASH = "0xa84e7a52830c9c469c2e01f8c029ebe2ff5818d8ab9bda13412fc6d47601fab8";
@@ -10,8 +12,31 @@ export const ACCOUNT_ID = "5Grj5uKAoduL2EDfgizp2MMbURJKa4rL6Q5pGUnVhhhjhwjk";
 export const PRECOMPILE = "0x0000000200000000000000000000000000010000";
 export const SUPPLY = "15000000000000000000";
 
-export function validHistoricalSnapshot() {
+const word = (value) => BigInt(value).toString(16).padStart(64, "0");
+const uint256 = (value) => `0x${word(value)}`;
+const abiString = (value) => {
+  const bytes = Buffer.from(value, "utf8").toString("hex");
+  const padded = bytes.padEnd(Math.ceil(bytes.length / 64) * 64, "0");
+  return `0x${word(32)}${word(bytes.length / 2)}${padded}`;
+};
+
+function requestRecord(id, method, params, result) {
   return {
+    startedAt: "2026-10-20T18:53:10.000Z",
+    attempt: 0,
+    request: { jsonrpc: "2.0", id, method, params },
+    httpStatus: 200,
+    response: { jsonrpc: "2.0", id, result },
+  };
+}
+
+export function validHistoricalSnapshot() {
+  const tag = "0x1d908";
+  const supplyRaw = uint256(SUPPLY);
+  const nameRaw = abiString("test asset");
+  const symbolRaw = abiString("TEST");
+  const decimalsRaw = uint256(18);
+  return JSON.parse(JSON.stringify({
     input: {
       substrateEndpoint: "wss://trusted.example",
       evmEndpoint: "https://trusted.example",
@@ -63,25 +88,34 @@ export function validHistoricalSnapshot() {
       reachable: true,
       endpoint: "https://trusted.example",
       identity: { chainId: "420420777", chainIdHex: "0x190f1ca9", clientVersion: "fixture" },
-      block: { number: BLOCK_NUMBER, hash: EVM_HASH, requestedTag: "0x1d908", available: true },
+      block: { number: BLOCK_NUMBER, hash: EVM_HASH, requestedTag: tag, available: true },
       calls: {
-        totalSupply: { ok: true, value: SUPPLY, raw: "0x01" },
-        balanceOf: { ok: true, value: SUPPLY, raw: "0x01" },
-        name: { ok: true, value: "test asset", raw: "0x01" },
-        symbol: { ok: true, value: "TEST", raw: "0x01" },
-        decimals: { ok: true, value: "18", raw: "0x01" },
+        totalSupply: { ok: true, value: SUPPLY, raw: supplyRaw },
+        balanceOf: { ok: true, value: SUPPLY, raw: supplyRaw },
+        name: { ok: true, value: "test asset", raw: nameRaw },
+        symbol: { ok: true, value: "TEST", raw: symbolRaw },
+        decimals: { ok: true, value: "18", raw: decimalsRaw },
       },
-      requests: [],
+      requests: [
+        requestRecord(1, "eth_chainId", [], "0x190f1ca9"),
+        requestRecord(2, "web3_clientVersion", [], "fixture"),
+        requestRecord(3, "eth_getBlockByNumber", [tag, false], { number: tag, hash: EVM_HASH }),
+        requestRecord(4, "eth_call", [{ to: PRECOMPILE, data: EVM_ASSET_SELECTORS.totalSupply }, tag], supplyRaw),
+        requestRecord(5, "eth_call", [{ to: PRECOMPILE, data: encodeBalanceOf(ACCOUNT) }, tag], supplyRaw),
+        requestRecord(6, "eth_call", [{ to: PRECOMPILE, data: EVM_ASSET_SELECTORS.name }, tag], nameRaw),
+        requestRecord(7, "eth_call", [{ to: PRECOMPILE, data: EVM_ASSET_SELECTORS.symbol }, tag], symbolRaw),
+        requestRecord(8, "eth_call", [{ to: PRECOMPILE, data: EVM_ASSET_SELECTORS.decimals }, tag], decimalsRaw),
+      ],
       precompileAddress: PRECOMPILE,
     },
-  };
+  }));
 }
 
 export function validImportedReport() {
   const evidence = validHistoricalSnapshot();
   evidence.substrate.latestFinalized = { ...evidence.substrate.finalized };
   delete evidence.substrate.historical;
-  return {
+  return JSON.parse(JSON.stringify({
     schema: "firma.report.v1",
     tool: {
       name: "FIRMA",
@@ -95,7 +129,7 @@ export function validImportedReport() {
     verdict: evaluateSnapshot(evidence),
     evidence,
     limitations: ["Fixture report for deterministic tests."],
-  };
+  }));
 }
 
 export function clone(value) {

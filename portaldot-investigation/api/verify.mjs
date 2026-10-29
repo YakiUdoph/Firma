@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { configuredDefaults } from "../src/config.mjs";
 import { createVerificationDiagnostics } from "../src/diagnostics.mjs";
+import { readRequestText, RequestTooLargeError } from "../src/http-body.mjs";
 import { BoundedRateLimiter } from "../src/limiter.mjs";
 import { verify } from "../src/verifier.mjs";
 import { InputError, parseRequestBody } from "../src/validation.mjs";
@@ -39,11 +40,6 @@ export function createVerifyHandler({
       let diagnostics = null;
       if (request.method !== "POST") return json(405, { error: "Method not allowed.", requestId }, { allow: "POST" });
 
-      const declaredLength = Number(request.headers.get("content-length") ?? 0);
-      if (Number.isFinite(declaredLength) && declaredLength > MAX_BODY_BYTES) {
-        return json(413, { error: "Request body exceeds 8 KiB.", requestId });
-      }
-
       const rate = limiter.consume(clientKey(request));
       if (!rate.allowed) {
         return json(429, { error: "Too many verification requests. Please wait and try again.", requestId }, { "retry-after": String(rate.retryAfterSeconds) });
@@ -52,8 +48,7 @@ export function createVerifyHandler({
 
       active += 1;
       try {
-        const text = await request.text();
-        if (Buffer.byteLength(text, "utf8") > MAX_BODY_BYTES) return json(413, { error: "Request body exceeds 8 KiB.", requestId });
+        const text = await readRequestText(request, MAX_BODY_BYTES);
         const body = parseRequestBody(JSON.parse(text || "{}"));
         const defaults = defaultsFn();
         diagnostics = diagnosticsFn({ requestId });
@@ -66,6 +61,7 @@ export function createVerifyHandler({
         return json(200, { ...report, requestId });
       } catch (error) {
         diagnostics?.emit(null, error);
+        if (error instanceof RequestTooLargeError) return json(413, { error: "Request body exceeds 8 KiB.", requestId });
         const expected = error instanceof InputError || error instanceof SyntaxError;
         if (!expected) console.error("FIRMA verification failed", { requestId, category: "unexpected_error" });
         return json(expected ? 400 : 500, { error: expected ? error.message : "Verification failed unexpectedly.", requestId });
