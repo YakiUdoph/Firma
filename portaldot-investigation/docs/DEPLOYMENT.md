@@ -66,6 +66,8 @@ Also verify HTTP 405 for GET on the API, HTTP 400 for malformed input, HTTP 413 
 
 Verify the report workflow separately: export the exact browser-generated JSON, upload that same file, confirm structural and evidence consistency, reproduce its historical claims, and require an independently obtained commitment before calling it authenticated. A self-computed commitment is only an identifier for the uploaded contents.
 
+If a default project alias was manually restored to an earlier deployment, Vercel may mark that alias as pinned so later production deployments do not move it automatically. Treat that warning as release state: inspect the alias target before and after preview work, and do not unpin, reassign, or promote it without explicit production authorization.
+
 ## Monitoring and maintenance
 
 - Review bounded `firma.verification.timing.v1` logs after preview validation and after release. Logs contain request IDs, stage durations, retry counts, verdict counts, and sanitized categories—not endpoint credentials or raw error strings.

@@ -150,3 +150,60 @@ test("real HTTP verification exports canonical PASS, FAIL, and UNKNOWN reports t
   const missingResponse = await jsonPost(`${server.url}/api/check-invalid`, { reportText: serializeFirmaReport(missing) });
   assert.equal(missingResponse.status, 400);
 });
+
+test("the report API accepts an actual exported provider-failure report as UNAVAILABLE", async (t) => {
+  const successful = clone(validImportedReport().evidence);
+  const snapshot = {
+    input: successful.input,
+    substrate: {
+      reachable: false,
+      endpoint: successful.input.substrateEndpoint,
+      error: { name: "TimeoutError", message: "Substrate connection timed out." },
+    },
+    evm: {
+      reachable: true,
+      endpoint: successful.input.evmEndpoint,
+      identity: successful.evm.identity,
+      block: null,
+      calls: {},
+      requests: successful.evm.requests.filter((record) => record.request.id <= 2),
+    },
+  };
+  const verifyHandler = createVerifyHandler({
+    defaultsFn: () => snapshot.input,
+    verifyFn: async (input, options) => {
+      const report = await verify(input, {
+        ...options,
+        collectSnapshotFn: async () => ({ options: snapshot.input, snapshot: clone(snapshot) }),
+      });
+      for (const record of report.evidence.evm.requests) record.startedAt = report.startedAt;
+      return report;
+    },
+    diagnosticsFn: () => ({ emit() {} }),
+  });
+  const checkHandler = createCheckReportHandler({
+    defaultsFn: () => snapshot.input,
+    verifyFn: (input) => independentlyVerifyReport({
+      ...input,
+      collectSnapshotFn: async () => { throw new Error("No finalized block should skip historical RPC."); },
+    }),
+  });
+  const server = await startHttpServer(new Map([
+    ["/api/verify", verifyHandler],
+    ["/api/check-report", checkHandler],
+  ]));
+  t.after(() => server.close());
+
+  const verification = await jsonPost(`${server.url}/api/verify`, { assetId: snapshot.input.assetId, account: snapshot.input.account });
+  assert.equal(verification.status, 200);
+  const { report } = splitVerificationResponse(await verification.json());
+  const exported = serializeFirmaReport(report);
+  assert.deepEqual(parseImportedReportText(exported), report);
+
+  const checkedResponse = await jsonPost(`${server.url}/api/check-report`, { reportText: exported });
+  assert.equal(checkedResponse.status, 200);
+  const checked = await checkedResponse.json();
+  assert.equal(checked.authentication.status, "UNANCHORED");
+  assert.equal(checked.historical.overall, "UNAVAILABLE");
+  assert.equal(checked.independent.overall, "UNAVAILABLE");
+});

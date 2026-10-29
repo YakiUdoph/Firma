@@ -116,18 +116,29 @@ function validateRpcErrorDetail(value, path) {
 }
 
 function expectedRequestSpecs(report) {
-  const tag = report.evidence.evm.block.requestedTag;
-  const to = report.evidence.evm.precompileAddress;
-  return new Map([
+  const evm = report.evidence.evm;
+  const specs = new Map([
     [1, { method: "eth_chainId", params: [], evidence: "identity.chainIdHex" }],
     [2, { method: "web3_clientVersion", params: [], evidence: "identity.clientVersion" }],
-    [3, { method: "eth_getBlockByNumber", params: [tag, false], evidence: "block" }],
-    [4, { method: "eth_call", params: [{ to, data: EVM_ASSET_SELECTORS.totalSupply }, tag], call: "totalSupply" }],
-    [5, { method: "eth_call", params: [{ to, data: encodeBalanceOf(report.input.account) }, tag], call: "balanceOf" }],
-    [6, { method: "eth_call", params: [{ to, data: EVM_ASSET_SELECTORS.name }, tag], call: "name" }],
-    [7, { method: "eth_call", params: [{ to, data: EVM_ASSET_SELECTORS.symbol }, tag], call: "symbol" }],
-    [8, { method: "eth_call", params: [{ to, data: EVM_ASSET_SELECTORS.decimals }, tag], call: "decimals" }],
   ]);
+  if (!evm.identity) {
+    const observedIds = new Set(evm.requests.map((record) => record?.request?.id));
+    for (const id of [1, 2]) if (!observedIds.has(id)) specs.delete(id);
+  }
+  if (evm.block) {
+    const tag = evm.block.requestedTag ?? numberToHex(evm.block.requestedNumber);
+    specs.set(3, { method: "eth_getBlockByNumber", params: [tag, false], evidence: "block" });
+  }
+  if (Object.keys(evm.calls).length) {
+    const tag = evm.block.requestedTag;
+    const to = evm.precompileAddress;
+    specs.set(4, { method: "eth_call", params: [{ to, data: EVM_ASSET_SELECTORS.totalSupply }, tag], call: "totalSupply" });
+    specs.set(5, { method: "eth_call", params: [{ to, data: encodeBalanceOf(report.input.account) }, tag], call: "balanceOf" });
+    specs.set(6, { method: "eth_call", params: [{ to, data: EVM_ASSET_SELECTORS.name }, tag], call: "name" });
+    specs.set(7, { method: "eth_call", params: [{ to, data: EVM_ASSET_SELECTORS.symbol }, tag], call: "symbol" });
+    specs.set(8, { method: "eth_call", params: [{ to, data: EVM_ASSET_SELECTORS.decimals }, tag], call: "decimals" });
+  }
+  return specs;
 }
 
 function validateFinalRequestObservation(report, id, spec, finalRecord) {
@@ -135,6 +146,7 @@ function validateFinalRequestObservation(report, id, spec, finalRecord) {
   const successfulResult = response && finalRecord.httpStatus >= 200 && finalRecord.httpStatus < 300
     && Object.hasOwn(response, "result");
   if (id === 1 || id === 2) {
+    if (!report.evidence.evm.identity) return;
     if (!successfulResult) invalid(`The final ${spec.method} request must contain a successful result.`);
     const expected = id === 1 ? report.evidence.evm.identity.chainIdHex : report.evidence.evm.identity.clientVersion;
     assertDeepEqual(response.result, expected, `The recorded ${spec.method} response contradicts EVM identity evidence.`);
@@ -142,6 +154,10 @@ function validateFinalRequestObservation(report, id, spec, finalRecord) {
   }
   if (id === 3) {
     if (!successfulResult) invalid("The final eth_getBlockByNumber request must contain a successful result.");
+    if (report.evidence.evm.block.available === false) {
+      if (response.result !== null) invalid("An unavailable EVM block must have a null final RPC result.");
+      return;
+    }
     const result = objectAt(response.result, "report.evidence.evm.requests final block result");
     if (result.number !== report.evidence.evm.block.requestedTag || result.hash !== report.evidence.evm.block.hash) {
       invalid("The recorded eth_getBlockByNumber response contradicts EVM block evidence.");
@@ -189,6 +205,7 @@ function validateRequestHistory(report, evidenceInput) {
   const requests = report.evidence.evm.requests;
   if (!Array.isArray(requests)) invalid("report.evidence.evm.requests must be an array.");
   const specs = expectedRequestSpecs(report);
+  if (!specs.size) invalid("Report request history contains no supported EVM observation.");
   const groups = new Map();
   for (const [index, recordValue] of requests.entries()) {
     const path = `report.evidence.evm.requests[${index}]`;
@@ -241,6 +258,14 @@ function validateRequestHistory(report, evidenceInput) {
     });
     validateFinalRequestObservation(report, id, spec, group.at(-1));
   }
+  if (!report.evidence.evm.identity) {
+    const hasFailedIdentityObservation = [...groups.entries()].some(([id, group]) => {
+      if (id !== 1 && id !== 2) return false;
+      const record = group.at(-1);
+      return Boolean(record.error || record.response?.error || !(record.httpStatus >= 200 && record.httpStatus < 300));
+    });
+    if (!hasFailedIdentityObservation) invalid("Missing EVM identity requires a matching failed identity request.");
+  }
 }
 
 function validateEvidenceConsistency(report) {
@@ -251,18 +276,19 @@ function validateEvidenceConsistency(report) {
   }
   if (input.timeoutMs < 1_000 || input.timeoutMs > 60_000) invalid("Evidence timeout is outside FIRMA's supported range.");
   integerAt(input.retries, "report.evidence.input.retries", { maximum: 2 });
-  if (evidence.evm.identity.chainId !== BigInt(evidence.evm.identity.chainIdHex).toString()) {
+  if (evidence.evm.identity && evidence.evm.identity.chainId !== BigInt(evidence.evm.identity.chainIdHex).toString()) {
     invalid("EVM chain ID decimal and hexadecimal evidence disagree.");
   }
-  if (evidence.evm.block.requestedTag !== numberToHex(evidence.evm.block.number)) {
+  if (evidence.evm.block?.available === true && evidence.evm.block.requestedTag !== numberToHex(evidence.evm.block.number)) {
     invalid("The requested EVM block tag does not match the reported block number.");
   }
-  if (evidence.evm.precompileAddress !== assetPrecompileAddress(report.input.assetId)) {
+  if (evidence.evm.precompileAddress !== undefined && evidence.evm.precompileAddress !== assetPrecompileAddress(report.input.assetId)) {
     invalid("The EVM precompile address does not match the report asset ID.");
   }
   const decoders = { totalSupply: decodeUint256, balanceOf: decodeUint256, name: decodeAbiString, symbol: decodeAbiString, decimals: decodeUint256 };
   for (const [name, decode] of Object.entries(decoders)) {
     const call = evidence.evm.calls[name];
+    if (!call) continue;
     if (!call.ok) continue;
     let decoded;
     try { decoded = decode(call.raw); } catch { invalid(`report.evidence.evm.calls.${name}.raw cannot be decoded.`); }
@@ -367,6 +393,61 @@ function assertNoDuplicateObjectKeys(text) {
   if (index !== text.length) invalid("Uploaded report is not valid JSON.");
 }
 
+function validateIncompleteEvmEvidence(report) {
+  const evm = objectAt(report.evidence.evm, "report.evidence.evm");
+  assertAllowedKeys(evm, "report.evidence.evm", ["reachable", "endpoint", "identity", "block", "calls", "requests", "precompileAddress", "error"]);
+  booleanAt(evm.reachable, "report.evidence.evm.reachable");
+  stringAt(evm.endpoint, "report.evidence.evm.endpoint");
+  if (evm.error !== undefined) validateCompactError(evm.error, "report.evidence.evm.error");
+  if (evm.reachable === false && evm.error === undefined) invalid("Unreachable EVM evidence must preserve its error observation.");
+  if (evm.identity !== null) {
+    const identity = objectAt(evm.identity, "report.evidence.evm.identity");
+    assertAllowedKeys(identity, "report.evidence.evm.identity", ["chainId", "chainIdHex", "clientVersion"]);
+    stringAt(identity.chainId, "report.evidence.evm.identity.chainId", DECIMAL);
+    stringAt(identity.chainIdHex, "report.evidence.evm.identity.chainIdHex", HEX_QUANTITY);
+    stringAt(identity.clientVersion, "report.evidence.evm.identity.clientVersion");
+  } else if (evm.reachable) invalid("Reachable EVM evidence must preserve its identity.");
+  if (evm.block !== null) {
+    const block = objectAt(evm.block, "report.evidence.evm.block");
+    assertAllowedKeys(block, "report.evidence.evm.block", ["requestedNumber", "available"]);
+    stringAt(block.requestedNumber, "report.evidence.evm.block.requestedNumber", DECIMAL);
+    if (block.available !== false) invalid("Incomplete EVM evidence cannot claim an available block.");
+  }
+  const calls = objectAt(evm.calls, "report.evidence.evm.calls");
+  if (Object.keys(calls).length) invalid("EVM calls cannot be present without an available historical block.");
+  if (evm.precompileAddress !== undefined) invalid("A precompile address cannot be claimed without EVM call evidence.");
+  validateRequestHistory(report, report.evidence.input);
+}
+
+function validateUnavailableEvidenceShape(report) {
+  const substrate = objectAt(report.evidence.substrate, "report.evidence.substrate");
+  assertAllowedKeys(substrate, "report.evidence.substrate", ["reachable", "endpoint", "identity", "finalized", "latestFinalized", "historical", "runtime", "asset", "accountMapping", "balance", "error"]);
+  booleanAt(substrate.reachable, "report.evidence.substrate.reachable");
+  stringAt(substrate.endpoint, "report.evidence.substrate.endpoint");
+  if (substrate.error === undefined) invalid("Unavailable Substrate evidence must preserve its error observation.");
+  validateCompactError(substrate.error, "report.evidence.substrate.error");
+  if (substrate.reachable === false) {
+    for (const field of ["identity", "finalized", "latestFinalized", "historical", "runtime", "asset", "accountMapping", "balance"]) {
+      if (substrate[field] !== undefined && substrate[field] !== null) invalid(`Unreachable Substrate evidence cannot contain ${field}.`);
+    }
+  } else {
+    if (substrate.finalized !== null) invalid("Unavailable historical Substrate evidence must have a null selected block.");
+    const latest = objectAt(substrate.latestFinalized, "report.evidence.substrate.latestFinalized");
+    assertAllowedKeys(latest, "report.evidence.substrate.latestFinalized", ["number", "hash"]);
+    stringAt(latest.number, "report.evidence.substrate.latestFinalized.number", DECIMAL);
+    stringAt(latest.hash, "report.evidence.substrate.latestFinalized.hash", HASH_32);
+    const historical = objectAt(substrate.historical, "report.evidence.substrate.historical");
+    assertAllowedKeys(historical, "report.evidence.substrate.historical", ["requestedNumber", "available", "finalized"]);
+    stringAt(historical.requestedNumber, "report.evidence.substrate.historical.requestedNumber", DECIMAL);
+    if (historical.available !== false) invalid("Unavailable historical Substrate evidence cannot claim availability.");
+    booleanAt(historical.finalized, "report.evidence.substrate.historical.finalized");
+    for (const field of ["identity", "runtime", "asset", "accountMapping", "balance"]) {
+      if (substrate[field] !== undefined && substrate[field] !== null) invalid(`Unavailable historical Substrate evidence cannot contain ${field}.`);
+    }
+  }
+  validateIncompleteEvmEvidence(report);
+}
+
 function validateClaimShape(report) {
   assertAllowedKeys(report, "report", ["schema", "tool", "startedAt", "completedAt", "input", "verdict", "evidence", "limitations"]);
   assertAllowedKeys(report.tool, "report.tool", ["name", "version", "mode", "allowedEvmMethods"]);
@@ -409,6 +490,23 @@ function validateClaimShape(report) {
   const expectedOverall = counts.FAIL > 0 ? "FAIL" : counts.UNKNOWN > 0 ? "UNKNOWN" : "PASS";
   if (report.verdict.overall !== expectedOverall) invalid("report.verdict.overall does not match the check statuses.");
 
+  const substrateCandidate = objectAt(report.evidence.substrate, "report.evidence.substrate");
+  const unavailableEvidence = substrateCandidate.reachable !== true || !substrateCandidate.finalized;
+  if (unavailableEvidence) {
+    validateUnavailableEvidenceShape(report);
+    const evidenceInput = objectAt(report.evidence.input, "report.evidence.input");
+    assertAllowedKeys(evidenceInput, "report.evidence.input", ["substrateEndpoint", "evmEndpoint", "expectedChainId", "assetId", "account", "timeoutMs", "retries"]);
+    stringAt(evidenceInput.substrateEndpoint, "report.evidence.input.substrateEndpoint");
+    stringAt(evidenceInput.evmEndpoint, "report.evidence.input.evmEndpoint");
+    if (!Number.isSafeInteger(evidenceInput.timeoutMs) || !Number.isSafeInteger(evidenceInput.retries)) invalid("Evidence timeout or retry configuration is invalid.");
+    for (const field of ["expectedChainId", "assetId", "account"]) {
+      if (evidenceInput[field] !== report.input[field]) invalid(`Evidence input ${field} does not match report input.`);
+    }
+    if (!Array.isArray(report.limitations) || report.limitations.some((item) => typeof item !== "string")) invalid("report.limitations must be an array of strings.");
+    validateEvidenceConsistency(report);
+    return;
+  }
+
   const substrate = objectAt(report.evidence.substrate, "report.evidence.substrate");
   assertAllowedKeys(substrate, "report.evidence.substrate", ["reachable", "endpoint", "identity", "finalized", "latestFinalized", "runtime", "asset", "accountMapping", "balance"]);
   if (substrate.reachable !== true) invalid("Imported report must contain reachable Substrate evidence.");
@@ -438,14 +536,35 @@ function validateClaimShape(report) {
   assertAllowedKeys(querySurfaces, "report.evidence.substrate.runtime.querySurfaces", ["assets.asset", "assets.metadata", "assets.account", "revive.originalAccount"]);
   for (const available of Object.values(querySurfaces)) booleanAt(available, "report.evidence.substrate.runtime.querySurfaces entry");
   const fingerprint = objectAt(runtime.fingerprint, "report.evidence.substrate.runtime.fingerprint");
-  assertAllowedKeys(fingerprint, "report.evidence.substrate.runtime.fingerprint", ["genesisHash", "runtimeCodeHash", "runtimeCodeHashAlgorithm", "runtimeCodeStorageKey", "collectedAtBlockHash"]);
-  stringAt(fingerprint.genesisHash, "report.evidence.substrate.runtime.fingerprint.genesisHash", HASH_32);
-  stringAt(fingerprint.runtimeCodeHash, "report.evidence.substrate.runtime.fingerprint.runtimeCodeHash", HASH_32);
+  assertAllowedKeys(fingerprint, "report.evidence.substrate.runtime.fingerprint", ["genesisHash", "runtimeCodeHash", "runtimeCodeHashAlgorithm", "runtimeCodeStorageKey", "collectedAtBlockHash", "errors"]);
+  if (fingerprint.genesisHash !== null) stringAt(fingerprint.genesisHash, "report.evidence.substrate.runtime.fingerprint.genesisHash", HASH_32);
+  if (fingerprint.runtimeCodeHash !== null) stringAt(fingerprint.runtimeCodeHash, "report.evidence.substrate.runtime.fingerprint.runtimeCodeHash", HASH_32);
   stringAt(fingerprint.runtimeCodeHashAlgorithm, "report.evidence.substrate.runtime.fingerprint.runtimeCodeHashAlgorithm");
   stringAt(fingerprint.runtimeCodeStorageKey, "report.evidence.substrate.runtime.fingerprint.runtimeCodeStorageKey", HEX);
   stringAt(fingerprint.collectedAtBlockHash, "report.evidence.substrate.runtime.fingerprint.collectedAtBlockHash", HASH_32);
+  if (fingerprint.errors !== undefined) {
+    const errors = objectAt(fingerprint.errors, "report.evidence.substrate.runtime.fingerprint.errors");
+    assertAllowedKeys(errors, "report.evidence.substrate.runtime.fingerprint.errors", ["genesisHash", "runtimeCodeHash"]);
+    if (!Object.keys(errors).length) invalid("Runtime fingerprint errors cannot be empty.");
+    for (const field of Object.keys(errors)) validateCompactError(errors[field], `report.evidence.substrate.runtime.fingerprint.errors.${field}`);
+  }
+  for (const field of ["genesisHash", "runtimeCodeHash"]) {
+    if ((fingerprint[field] === null) !== Boolean(fingerprint.errors?.[field])) {
+      invalid(`Runtime fingerprint ${field} and its error observation are inconsistent.`);
+    }
+  }
 
   const asset = objectAt(substrate.asset, "report.evidence.substrate.asset");
+  if (asset.unsupportedRuntime === true) {
+    assertAllowedKeys(asset, "report.evidence.substrate.asset", ["exists", "unsupportedRuntime"]);
+    if (asset.exists !== false) invalid("Unsupported-runtime asset evidence cannot claim existence.");
+    const mapping = objectAt(substrate.accountMapping, "report.evidence.substrate.accountMapping");
+    assertAllowedKeys(mapping, "report.evidence.substrate.accountMapping", ["exists", "unsupportedRuntime"]);
+    if (mapping.exists !== false || mapping.unsupportedRuntime !== true) invalid("Unsupported-runtime mapping evidence is inconsistent.");
+    const balance = objectAt(substrate.balance, "report.evidence.substrate.balance");
+    assertAllowedKeys(balance, "report.evidence.substrate.balance", ["exists", "value"]);
+    if (balance.exists !== false || balance.value !== null) invalid("Unsupported-runtime balance evidence is inconsistent.");
+  } else {
   assertAllowedKeys(asset, "report.evidence.substrate.asset", ["exists", "id", "storageKey", "supply", "metadata"]);
   booleanAt(asset.exists, "report.evidence.substrate.asset.exists");
   if (String(asset.id) !== report.input.assetId) invalid("Native asset ID does not match report input.");
@@ -474,8 +593,23 @@ function validateClaimShape(report) {
   if (balance.storageKey !== null) stringAt(balance.storageKey, "report.evidence.substrate.balance.storageKey", HEX);
   if (balance.exists) stringAt(balance.value, "report.evidence.substrate.balance.value", DECIMAL);
   else if (balance.value !== null && balance.value !== "0") invalid("A missing balance must be null or zero.");
+  }
 
   const evm = objectAt(report.evidence.evm, "report.evidence.evm");
+  if (evm.reachable !== true || !evm.identity || evm.block?.available !== true) {
+    validateIncompleteEvmEvidence(report);
+    const evidenceInput = objectAt(report.evidence.input, "report.evidence.input");
+    assertAllowedKeys(evidenceInput, "report.evidence.input", ["substrateEndpoint", "evmEndpoint", "expectedChainId", "assetId", "account", "timeoutMs", "retries"]);
+    stringAt(evidenceInput.substrateEndpoint, "report.evidence.input.substrateEndpoint");
+    stringAt(evidenceInput.evmEndpoint, "report.evidence.input.evmEndpoint");
+    if (!Number.isSafeInteger(evidenceInput.timeoutMs) || !Number.isSafeInteger(evidenceInput.retries)) invalid("Evidence timeout or retry configuration is invalid.");
+    for (const field of ["expectedChainId", "assetId", "account"]) {
+      if (evidenceInput[field] !== report.input[field]) invalid(`Evidence input ${field} does not match report input.`);
+    }
+    if (!Array.isArray(report.limitations) || report.limitations.some((item) => typeof item !== "string")) invalid("report.limitations must be an array of strings.");
+    validateEvidenceConsistency(report);
+    return;
+  }
   assertAllowedKeys(evm, "report.evidence.evm", ["reachable", "endpoint", "identity", "block", "calls", "requests", "precompileAddress"]);
   if (evm.reachable !== true) invalid("Imported report must contain reachable EVM evidence.");
   stringAt(evm.endpoint, "report.evidence.evm.endpoint");
