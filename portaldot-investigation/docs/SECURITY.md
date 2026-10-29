@@ -18,7 +18,8 @@
 - The CLI refuses to overwrite an existing evidence file.
 - Balances and supplies remain decimal strings backed by `BigInt`; JavaScript floating-point numbers are never used for asset arithmetic.
 - The browser renders response text with DOM `textContent`, not HTML injection.
-- Imported reports must contain the complete expected read-only EVM transcript. FIRMA validates JSON-RPC methods, IDs, retry attempts, parameters, block tags, responses, decoded values, and duplicated verdict evidence before any historical reproduction.
+- Imported successful reports must contain the complete expected read-only EVM transcript. Exported failure reports must contain the exact stage-appropriate partial transcript and bounded error shape. FIRMA validates JSON-RPC methods, IDs, retry attempts, parameters, block tags, responses, decoded values, unavailable-evidence structure, and duplicated verdict evidence before any historical reproduction.
+- An internally valid failure report without a finalized block is importable but not historically reproducible. Its original error remains evidence, authentication remains `UNANCHORED` without an independent commitment, and the checker returns `UNAVAILABLE` without substituting current state.
 - A recomputed report commitment is not authentication. Authentication requires an independently supplied trusted commitment; absent that anchor, the checker reports `UNANCHORED` and the aggregate result can be `REPRODUCED` but never `AUTHENTICATED`.
 
 ## What FIRMA does not establish

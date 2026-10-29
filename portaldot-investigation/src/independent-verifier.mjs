@@ -223,7 +223,70 @@ export async function independentlyVerifyReport({
   parseImportedReport(report);
   const normalizedCommitment = parseExpectedCommitment(expectedCommitment);
   const originalBefore = JSON.stringify(report);
-  const targetBlock = report.evidence.substrate.finalized.number;
+  const targetBlock = report.evidence.substrate.finalized?.number ?? null;
+  if (targetBlock === null) {
+    const startedAt = new Date().toISOString();
+    const computed = computeReportCommitment(report);
+    const authenticationStatus = normalizedCommitment === null
+      ? AUTHENTICATION_STATUS.UNANCHORED
+      : normalizedCommitment === computed.commitment ? AUTHENTICATION_STATUS.AUTHENTICATED : AUTHENTICATION_STATUS.MISMATCH;
+    const checks = report.verdict.checks.map((check) => ({
+      id: `verdict.${check.id}`,
+      title: `${check.title} verdict`,
+      status: INDEPENDENT_STATUS.UNAVAILABLE,
+      summary: "This original verdict cannot be recomputed because the report contains no finalized block.",
+      evidence: { imported: check.status, reproduced: null, reason: report.evidence.substrate.error?.message ?? "No finalized Substrate block was recorded." },
+    }));
+    const overall = authenticationStatus === AUTHENTICATION_STATUS.MISMATCH ? REPORT_OUTCOME.MISMATCH : REPORT_OUTCOME.UNAVAILABLE;
+    if (JSON.stringify(report) !== originalBefore) throw new Error("Imported report changed during independent verification.");
+    return {
+      schema: INDEPENDENT_SCHEMA, startedAt, completedAt: new Date().toISOString(),
+      importedReport: report,
+      importedVerdict: report.verdict,
+      reportValidation: {
+        structure: "VALID",
+        evidenceConsistency: "VALID",
+        reportSchema: report.schema,
+        notHistoricallyReproducible: NOT_HISTORICALLY_REPRODUCIBLE_FIELDS,
+      },
+      authentication: {
+        status: authenticationStatus,
+        summary: authenticationStatus === AUTHENTICATION_STATUS.UNANCHORED
+          ? "No independently supplied trusted commitment was provided; the computed hash is not proof of authenticity."
+          : authenticationStatus === AUTHENTICATION_STATUS.AUTHENTICATED
+            ? "The independently supplied trusted commitment matches the complete imported report."
+            : "The independently supplied trusted commitment does not match the imported report.",
+        algorithm: computed.algorithm,
+        domain: computed.domain,
+        expected: normalizedCommitment,
+        computed: computed.commitment,
+      },
+      commitment: { algorithm: computed.algorithm, domain: computed.domain, expected: normalizedCommitment, computed: computed.commitment },
+      independent: {
+        overall,
+        summary: overall === REPORT_OUTCOME.MISMATCH
+          ? "The supplied trusted commitment does not match the complete imported report."
+          : "The report is internally consistent, but it contains no finalized block to reproduce historically.",
+        requestedBlock: { number: null, substrateHash: null, evmHash: report.evidence.evm.block?.hash ?? null },
+        historicalClaims: INDEPENDENT_STATUS.UNAVAILABLE,
+      },
+      historical: {
+        overall: INDEPENDENT_STATUS.UNAVAILABLE,
+        summary: "Historical reproduction is unavailable because the original verification did not obtain a finalized block.",
+        unavailable: checks.map((check) => ({ check: check.id, reason: check.evidence.reason })),
+        counts: { VERIFIED: 0, MISMATCH: 0, UNAVAILABLE: checks.length },
+        checks,
+        reproducedVerdict: null,
+        reproducedEvidence: null,
+      },
+      limitations: [
+        "Independent verification uses the configured Portaldot V3 endpoints and never trusts endpoint URLs embedded in the imported report.",
+        "Current state is never substituted when the exact historical block is unavailable.",
+        "A computed commitment is unauthenticated unless it matches an independently supplied trusted commitment.",
+        "No wallet, signing, transaction submission, or contract functionality is enabled.",
+      ],
+    };
+  }
   const input = { ...DEFAULTS, ...network, expectedChainId: report.input.expectedChainId, assetId: report.input.assetId, account: report.input.account };
   const startedAt = new Date().toISOString();
   const collected = await collectSnapshotFn(input, targetBlock, diagnostics, {

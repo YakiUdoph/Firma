@@ -28,6 +28,7 @@ export function classifyDiagnosticError(error) {
   if (/syntax/i.test(name)) return "malformed_response";
   if (/input/i.test(name)) return "input_error";
   if (/HTTP\s+\d{3}/i.test(message)) return "http_error";
+  if (/websocket|abnormal closure|disconnected|\b1006\b/i.test(message)) return "transport_error";
   if (/type/i.test(name)) return "transport_error";
   return "internal_error";
 }

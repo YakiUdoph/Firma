@@ -131,6 +131,7 @@ test("diagnostic error categories are bounded labels without sensitive error con
     [Object.assign(new Error("secret malformed detail"), { name: "SyntaxError" }), "malformed_response"],
     [Object.assign(new Error("eth_call: HTTP 503 secret"), { name: "Error" }), "http_error"],
     [Object.assign(new Error("getaddrinfo ENOTFOUND secret.example"), { name: "TypeError" }), "transport_error"],
+    [new Error("API-WS disconnected: 1006 Abnormal Closure"), "transport_error"],
   ];
   for (const [error, expected] of cases) assert.equal(classifyDiagnosticError(error), expected);
 
