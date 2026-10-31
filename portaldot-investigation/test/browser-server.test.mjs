@@ -10,7 +10,9 @@ test("browser server readiness waits for a delayed successful HTTP response", as
         .listen(Number(process.env.PORT), "127.0.0.1", () => console.log("delayed server ready"));
     }, 400);
   `;
-  const server = await startManagedHttpServer({ args: ["-e", script], timeoutMs: 2_000 });
+  // The complete suite starts several Node and browser processes in parallel on
+  // Windows. Allow scheduling headroom while retaining the helper's 15 s cap.
+  const server = await startManagedHttpServer({ args: ["-e", script], timeoutMs: 10_000 });
   try {
     const response = await fetch(server.url);
     assert.equal(response.status, 200);

@@ -15,15 +15,25 @@ test("the page leads with the real verification task and primary action", () => 
   assert.match(html, /<span class="button-label">Check asset<\/span>/);
   assert.match(html, /<label for="asset-id">Asset ID<\/label>/);
   assert.match(html, /<label for="account">Wallet address<\/label>/);
+  assert.match(html, /href="#verify">Check an asset/);
+  assert.match(html, /href="#check-report">Check a report/);
+  assert.match(html, /href="#onchain-proof">Save proof/);
   assert.doesNotMatch(html, /READ-ONLY MODE|Run read-only verification/i);
 });
 
-test("scope is transparent without adding wallet or transaction capabilities", () => {
-  assert.match(html, /cannot connect a wallet, sign, transfer, or submit a transaction/i);
+test("scope separates read-only verification from optional wallet-authorized anchoring", () => {
+  assert.match(html, /separate optional testnet anchoring flow/i);
   assert.match(html, /Verification, not custody/i);
-  assert.doesNotMatch(html, /Connect wallet|Sign transaction|Transfer POT/i);
+  assert.match(html, /Save proof on Portaldot/);
+  assert.match(html, /Find SubWallet accounts/);
+  assert.match(html, /system\.remarkWithEvent/);
+  assert.match(html, /Connect EVM wallet &amp; estimate/);
+  assert.match(html, /I reviewed the exact chain, account, destination, commitment, zero value, and maximum fee/);
+  assert.doesNotMatch(html, /Transfer POT/i);
   assert.match(client, /method: "POST"/);
   assert.match(client, /fetch\("\/api\/verify"/);
+  assert.match(client, /fetch\("\/api\/onchain-proof"/);
+  assert.match(client, /prepare-native/);
 });
 
 test("loading, error, result, and evidence interactions are wired", () => {
@@ -102,4 +112,35 @@ test("independent report verification keeps original and reproduced results sepa
   assert.doesNotMatch(client, /eval\(|new Function/);
   assert.match(css, /\.check\[data-status="MISMATCH"\]/);
   assert.match(css, /\.check\[data-status="UNAVAILABLE"\]/);
+});
+
+test("on-chain proof verification exposes VERIFIED MISMATCH and UNAVAILABLE without changing report semantics", () => {
+  assert.match(html, /id="onchain-proof-form"/);
+  assert.match(html, /Save or check proof/);
+  assert.match(html, /Check saved proof/);
+  assert.match(html, /Original FIRMA report/);
+  assert.match(html, /EVM transaction hash/);
+  assert.match(html, /Native proof file/);
+  assert.match(html, /Check an experimental EVM proof instead/);
+  assert.match(html, /does not prove every report claim/i);
+  assert.match(client, /renderOnchainProof/);
+  assert.match(client, /latestAnchorEvidence/);
+});
+
+test("investigation guidance is progressive, evidence-backed, and rendered as text", () => {
+  assert.match(html, /id="investigation-summary"/);
+  assert.match(html, /What matters next/);
+  assert.match(client, /WHAT FIRMA OBSERVED/);
+  assert.match(client, /WHAT THIS PROVES/);
+  assert.match(client, /WHAT IT DOES NOT PROVE/);
+  assert.match(client, /WHAT TO INVESTIGATE NEXT/);
+  assert.match(client, /details\.open = item\.status !== "PASS"/);
+  assert.match(client, /value\.textContent = entry\.value/);
+  assert.doesNotMatch(client, /innerHTML|insertAdjacentHTML|document\.write/);
+  assert.match(css, /\.investigation-guidance/);
+  assert.match(css, /\.guidance-grid/);
+  assert.match(html, /class="checks-disclosure"/);
+  assert.match(client, /independent-check-count/);
+  assert.match(client, /onchain-check-count/);
+  assert.match(client, /asset-check-count/);
 });

@@ -66,6 +66,18 @@ test("receipt validation requires success, audited registry, matching event, and
   }
 });
 
+test("receipt validation accepts ethers v6 hash and gasPrice fields", () => {
+  const candidate = receipt({
+    hash: `0x${"33".repeat(32)}`,
+    transactionHash: undefined,
+    gasPrice: 67n,
+    effectiveGasPrice: undefined,
+  });
+  const proof = validateCommitReceipt(candidate, { registryAddress, commitment });
+  assert.equal(proof.transactionHash, candidate.hash);
+  assert.equal(proof.effectiveGasPrice, "67");
+});
+
 test("transaction failures are typed and never mutate the original report", async () => {
   const report = validReport();
   const before = JSON.stringify(report);

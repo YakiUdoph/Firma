@@ -1,5 +1,7 @@
 # Opportunity assessment
 
+> Historical pre-implementation assessment. Current scope and acceptance criteria are maintained in [`../PRD.md`](../PRD.md).
+
 Only three candidates are included because the evidence supports these three. Candidate 1 is the only immediate build recommendation.
 
 ## Candidate 1 — Portaldot Interop Assurance Kit

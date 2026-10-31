@@ -1,0 +1,64 @@
+{
+  "schema": "firma.native-anchor-recheck.v1",
+  "createdAt": "2026-10-31T14:38:30.473Z",
+  "subject": {
+    "reportPath": "evidence/final-live-2026-10-31-02.json",
+    "sidecarPath": "evidence/native-anchor-sidecar-2026-10-31-3b2f4eac7f1e.json",
+    "transactionHash": "0x3b2f4eac7f1e2b2cd87493ff9d60e5326584840d8572570c5f21c06ee1750702"
+  },
+  "observations": {
+    "endpoint": "wss://test-node-v3.portaldot.dev",
+    "attempts": [
+      {
+        "checkedAt": "2026-10-31T14:38:02.333Z",
+        "overall": "UNAVAILABLE",
+        "counts": { "VERIFIED": 2, "MISMATCH": 0, "UNAVAILABLE": 8 },
+        "error": { "name": "ConnectionError", "message": "Substrate WebSocket disconnected during initialization." }
+      },
+      {
+        "checkedAt": "2026-10-31T14:38:30.473Z",
+        "durationMs": 406,
+        "overall": "UNAVAILABLE",
+        "counts": { "VERIFIED": 2, "MISMATCH": 0, "UNAVAILABLE": 8 },
+        "error": { "name": "ConnectionError", "message": "Substrate WebSocket disconnected during initialization." }
+      }
+    ],
+    "localRecomputation": {
+      "algorithm": "RFC8785-JCS+SHA-256",
+      "commitment": "0x8f9117121abb546b289a38f1d8afe73b379e41beb3d73895ecc2d7b5ebfabc6d",
+      "payload": "0x4649524d4100028f9117121abb546b289a38f1d8afe73b379e41beb3d73895ecc2d7b5ebfabc6d",
+      "commitmentMatchesSidecar": true,
+      "payloadMatchesSidecar": true
+    },
+    "unavailableEvidence": [
+      "Current network genesis and runtime identity",
+      "Current retrieval of canonical block 263713",
+      "Current retrieval of extrinsic index 1 and execution events",
+      "Current finalized-head observation"
+    ]
+  },
+  "priorIndependentObservation": {
+    "artifact": "evidence/native-anchor-investigation-2026-10-31-072856Z.json",
+    "verdict": "VERIFIED",
+    "blockNumber": "263713",
+    "blockHash": "0x645b9184955d4d3d02626b29a12f7522f8b631dc13a0046f0319fe6bd1b06ab6",
+    "extrinsicIndex": "1",
+    "observedTransactionHash": "0x3b2f4eac7f1e2b2cd87493ff9d60e5326584840d8572570c5f21c06ee1750702",
+    "observedSigner": "5En7dwvXVjsHA8AEjWwdLNFf1TnxiiRSE3VUXiX7S9Pr4QUz",
+    "observedCall": "system.remarkWithEvent",
+    "observedCallIndex": "0x0007",
+    "observedPayload": "0x4649524d4100028f9117121abb546b289a38f1d8afe73b379e41beb3d73895ecc2d7b5ebfabc6d",
+    "observedExecution": "system.ExtrinsicSuccess",
+    "latestObservedFinalizedNumber": "263883"
+  },
+  "conclusion": {
+    "currentRecheck": "UNAVAILABLE",
+    "reason": "Both bounded rechecks disconnected during Substrate API initialization before any current chain evidence was available.",
+    "effectOnPriorEvidence": "No contradiction was observed. The recheck does not replace or strengthen the earlier successful independent live observation."
+  },
+  "limitations": [
+    "The current attempts did not reach historical block or finality queries.",
+    "RPC responses are observable evidence, not cryptographic state proofs.",
+    "No transaction was signed or submitted during this recheck."
+  ]
+}

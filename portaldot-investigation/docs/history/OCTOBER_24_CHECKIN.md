@@ -1,5 +1,7 @@
 # October 24 prototype check-in
 
+> Historical check-in. It describes the read-only prototype as of 2026-10-21 and predates the optional native anchoring workflow. See [`../PROGRESS.md`](../PROGRESS.md) for current status.
+
 Verified on 2026-10-21 (Atlantic/Cape Verde).
 
 ## Product and links

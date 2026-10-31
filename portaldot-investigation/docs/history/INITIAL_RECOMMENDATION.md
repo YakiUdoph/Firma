@@ -1,4 +1,6 @@
-# Final recommendation
+# Initial product recommendation
+
+> Historical decision record from the original investigation. It does not supersede the current [`PRD`](../PRD.md) or [`PROGRESS`](../PROGRESS.md).
 
 ## Decision
 

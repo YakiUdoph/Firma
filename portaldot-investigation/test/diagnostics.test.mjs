@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createVerificationDiagnostics, VERIFICATION_DIAGNOSTIC_STAGES } from "../src/diagnostics.mjs";
+import { classifyDiagnosticError, createVerificationDiagnostics, VERIFICATION_DIAGNOSTIC_STAGES } from "../src/diagnostics.mjs";
 import { parseImportedReport } from "../src/report-import.mjs";
 import { verify } from "../src/verifier.mjs";
 import { matchingSnapshot } from "../test-support/fixtures.mjs";
@@ -121,4 +121,46 @@ test("diagnostics do not change the report schema and logging failures are fail-
   assert.equal(Object.hasOwn(report, "diagnostics"), false);
   const existingReport = validImportedReport();
   assert.equal(parseImportedReport(existingReport), existingReport);
+});
+
+test("diagnostic error categories are bounded labels without sensitive error content", () => {
+  const cases = [
+    [Object.assign(new Error("secret timeout detail"), { name: "TimeoutError" }), "timeout"],
+    [Object.assign(new Error("secret abort detail"), { name: "AbortError" }), "cancelled"],
+    [Object.assign(new Error("secret RPC detail"), { name: "RpcError" }), "rpc_error"],
+    [Object.assign(new Error("secret historical detail"), { name: "HistoricalStateUnavailable" }), "historical_unavailable"],
+    [Object.assign(new Error("secret malformed detail"), { name: "SyntaxError" }), "malformed_response"],
+    [Object.assign(new Error("eth_call: HTTP 503 secret"), { name: "Error" }), "http_error"],
+    [Object.assign(new Error("getaddrinfo ENOTFOUND secret.example"), { name: "TypeError" }), "transport_error"],
+  ];
+  for (const [error, expected] of cases) assert.equal(classifyDiagnosticError(error), expected);
+
+  const entries = [];
+  const diagnostics = createVerificationDiagnostics({ requestId: "sensitive-error", logger: (entry) => entries.push(entry), now: clock() });
+  diagnostics.start("evm.identity");
+  diagnostics.fail(Object.assign(new Error("https://user:token@example.invalid/rpc?key=secret"), { name: "TypeError" }));
+  diagnostics.emit();
+  assert.equal(entries[0].failure.category, "transport_error");
+  assert.doesNotMatch(JSON.stringify(entries[0]), /user|token|example\.invalid|secret/i);
+});
+
+test("disabled diagnostics and unavailable stages cannot affect verifier output", async () => {
+  const snapshot = matchingSnapshot();
+  snapshot.evm.block = { requestedNumber: "120900", available: false };
+  snapshot.evm.calls = {};
+  const report = await verify(input, {
+    collectSnapshotFn: async () => ({ options: options(), snapshot }),
+  });
+  assert.equal(report.verdict.overall, "UNKNOWN");
+  assert.equal(report.verdict.counts.FAIL, 0);
+  assert.equal(Object.hasOwn(report, "diagnostics"), false);
+
+  const entries = [];
+  const diagnostics = createVerificationDiagnostics({ requestId: "historical-unavailable", logger: (entry) => entries.push(entry), now: clock() });
+  diagnostics.start("evm.block");
+  diagnostics.end("unavailable", "block_unavailable");
+  diagnostics.emit(report.verdict);
+  assert.equal(entries[0].stages["evm.block"].outcome, "unavailable");
+  assert.equal(entries[0].stages["evm.block"].category, "block_unavailable");
+  assert.equal(report.verdict.overall, "UNKNOWN");
 });

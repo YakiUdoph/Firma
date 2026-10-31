@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const endpoint = process.argv[2] ?? "https://test-evm-rpc-v3.portaldot.dev";
 const here = dirname(fileURLToPath(import.meta.url));
+const root = dirname(dirname(here));
 
 function assetAddress(index, prefix) {
   return `0x${index.toString(16).padStart(8, "0")}${"0".repeat(24)}${prefix.toString(16).padStart(4, "0")}0000`;
@@ -91,6 +92,6 @@ const evidence = {
   results,
 };
 
-await mkdir(join(here, "raw"), { recursive: true });
-await writeFile(join(here, "raw", "evm-asset-probe.json"), `${JSON.stringify(evidence, null, 2)}\n`);
+await mkdir(join(root, "raw"), { recursive: true });
+await writeFile(join(root, "raw", "evm-asset-probe.json"), `${JSON.stringify(evidence, null, 2)}\n`);
 console.log(JSON.stringify(evidence, null, 2));

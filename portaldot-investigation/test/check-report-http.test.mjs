@@ -81,8 +81,15 @@ test("report API classifies deadlines, endpoint unavailability, and unexpected e
   assert.equal(unavailableResponse.status, 200);
   assert.equal((await unavailableResponse.json()).independent.overall, "UNAVAILABLE");
 
-  const failed = createCheckReportHandler({ verifyFn: async () => { throw new Error("RPC implementation fault"); } });
+  const logs = [];
+  const failed = createCheckReportHandler({
+    verifyFn: async () => { throw new Error("RPC implementation fault at https://user:secret@example.invalid"); },
+    logger: (...entry) => logs.push(entry),
+  });
   const failedResponse = await failed.fetch(request(body));
   assert.equal(failedResponse.status, 500);
   assert.equal((await failedResponse.json()).error, "Independent verification failed unexpectedly.");
+  assert.equal(logs.length, 1);
+  assert.deepEqual(logs[0][1].category, "unexpected_error");
+  assert.doesNotMatch(JSON.stringify(logs), /implementation fault|user|secret|example\.invalid/i);
 });

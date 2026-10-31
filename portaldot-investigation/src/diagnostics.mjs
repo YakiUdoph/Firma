@@ -17,12 +17,16 @@ function durationMs(startedAt, completedAt) {
   return Math.max(0, Math.round(completedAt - startedAt));
 }
 
-function errorCategory(error) {
+export function classifyDiagnosticError(error) {
   const name = typeof error?.name === "string" ? error.name : "";
+  const message = typeof error?.message === "string" ? error.message : "";
   if (/timeout/i.test(name)) return "timeout";
   if (/abort/i.test(name)) return "cancelled";
   if (/rpc/i.test(name)) return "rpc_error";
-  if (/syntax|input/i.test(name)) return "input_error";
+  if (/historical(state|finality)unavailable/i.test(name)) return "historical_unavailable";
+  if (/syntax/i.test(name)) return "malformed_response";
+  if (/input/i.test(name)) return "input_error";
+  if (/HTTP\s+\d{3}/i.test(message)) return "http_error";
   if (/type/i.test(name)) return "transport_error";
   return "internal_error";
 }
@@ -59,7 +63,7 @@ export function createVerificationDiagnostics({ requestId, logger = defaultLogge
   }
 
   function recordFailure(error) {
-    const category = errorCategory(error);
+    const category = classifyDiagnosticError(error);
     if (active) closeActive("error", category);
     else if (!failure) failure = { stage: "verification", category };
   }

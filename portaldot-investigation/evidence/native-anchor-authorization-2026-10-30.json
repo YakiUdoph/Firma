@@ -1,0 +1,49 @@
+{
+  "schema": "firma.anchor-authorization.native.v1",
+  "status": "PREPARED_NOT_SUBMITTED",
+  "report": {
+    "path": "evidence/final-live-2026-10-30-01.json",
+    "startedAt": "2026-10-30T22:59:59.838Z",
+    "completedAt": "2026-10-30T23:00:11.816Z",
+    "verdict": "PASS",
+    "counts": { "PASS": 9, "FAIL": 0, "UNKNOWN": 0 },
+    "finalizedBlock": {
+      "number": "258823",
+      "hash": "0xf71ec7a1994f7cdf2530a3334d831c3df7e4bb24a27dcf75a76fd7bdea8b6564"
+    }
+  },
+  "authorization": {
+    "protocol": "FIRMA_NATIVE_REMARK_V1",
+    "chain": "PortaldotV3 Test",
+    "genesisHash": "0xd4f9acbcf7f52388d8b095abe3c198d19fc510e0343e643e87cfbccb155283bd",
+    "runtimeProfile": "portaldot-v3-3002-edc03c9d",
+    "runtimeCodeHash": "0xedc03c9dc81d39fea5c02893cc34cf2ec898d55d7ee8f8e89eb27597a724c7c2",
+    "specName": "portaldot-v3",
+    "specVersion": "3002",
+    "transactionVersion": "2",
+    "account": "5En7dwvXVjsHA8AEjWwdLNFf1TnxiiRSE3VUXiX7S9Pr4QUz",
+    "call": "system.remarkWithEvent",
+    "callIndex": "0x0007",
+    "commitment": "0x2a6b5fba6e58a351b51d6dea1c954ec286afb72a1316c6f062a7854afd1cc283",
+    "algorithm": "RFC8785-JCS+SHA-256",
+    "domain": "FIRMA_REPORT_COMMITMENT_V1\n",
+    "payload": "0x4649524d4100022a6b5fba6e58a351b51d6dea1c954ec286afb72a1316c6f062a7854afd1cc283",
+    "valueBaseUnits": "0",
+    "maximumFeeBaseUnits": "1490368684627",
+    "maximumFeeTPOT": "0.01490368684627",
+    "balanceBaseUnits": "50000000000000000",
+    "usableBalanceBaseUnits": "50000000000000000",
+    "weight": { "refTime": "497602054", "proofSize": "12184" },
+    "observedAtFinalizedBlock": {
+      "number": "258847",
+      "hash": "0xc8d0d13890095abac8c686e621253bd76a72cb5a3552ba2275acb713af08d9a8"
+    }
+  },
+  "submission": {
+    "authorized": false,
+    "signed": false,
+    "broadcast": false,
+    "transactionHash": null
+  },
+  "nextRequiredAction": "The owner must review these exact fields and separately authorize the matching SubWallet request. Any changed field or fee requires a fresh preparation."
+}

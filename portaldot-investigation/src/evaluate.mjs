@@ -112,8 +112,27 @@ export function evaluateSnapshot(snapshot) {
       : unavailable("account.mapping", "Runtime account mapping", "No runtime-backed EVM-to-native account mapping was found.", mapping ?? {}));
 
     const balance = evm?.calls?.balanceOf;
+    const unavailableReasons = [];
+    if (!sameBlock) unavailableReasons.push("shared-block-unavailable");
+    if (!mapping?.exists) unavailableReasons.push("account-mapping-unavailable");
+    if (mapping?.exists && substrate.balance?.exists === false) unavailableReasons.push("native-balance-record-absent");
+    else if (mapping?.exists && !substrate.balance?.exists) unavailableReasons.push("native-balance-observation-unavailable");
+    if (!balance?.ok) unavailableReasons.push("evm-balance-observation-unavailable");
+    const balanceEvidence = {
+      sameBlock,
+      mapping: mapping ?? null,
+      native: substrate.balance ?? null,
+      evm: balance ?? null,
+      unavailableReasons,
+    };
     if (!sameBlock || !mapping?.exists || !substrate.balance?.exists || !balance?.ok) {
-      checks.push(unavailable("asset.balance", "Account balance parity", "A mapped, same-block balance pair was unavailable.", balance?.error));
+      let summary = "A mapped, same-block balance pair was unavailable.";
+      if (sameBlock && mapping?.exists && substrate.balance?.exists === false && balance?.ok) {
+        summary = callValue(balance) === "0"
+          ? "The EVM balance is zero, but no native balance record was found. FIRMA cannot confirm whether both balances agree."
+          : `The EVM balance is ${callValue(balance)} base units, but no native balance record was found. FIRMA cannot confirm whether both balances agree.`;
+      }
+      checks.push(unavailable("asset.balance", "Account balance parity", summary, balanceEvidence));
     } else {
       const matches = substrate.balance.value === callValue(balance);
       checks.push(check("asset.balance", "Account balance parity", matches ? STATUS.PASS : STATUS.FAIL,

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { setTimeout as delay } from "node:timers/promises";
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import { DEFAULTS, READ_ONLY_EVM_METHODS, RUNTIME_CODE_STORAGE_KEY, SCHEMA_VERSION, VERSION } from "./constants.mjs";
 import { assetPrecompileAddress, compactError, decodeAbiString, decodeUint256, encodeBalanceOf, numberToHex } from "./codec.mjs";
@@ -97,12 +98,43 @@ export async function collectRuntimeFingerprint(api, finalizedHash, timeoutMs) {
   };
 }
 
+export async function connectSubstrateApi(options, {
+  providerFactory = (endpoint, timeoutMs) => new WsProvider(endpoint, false, {}, timeoutMs),
+  apiCreate = (provider) => ApiPromise.create({ provider, throwOnConnect: true, noInitWarn: true }),
+  delayFn = delay,
+} = {}) {
+  let lastError;
+  for (let attempt = 0; attempt <= options.retries; attempt += 1) {
+    const provider = providerFactory(options.substrateEndpoint, options.timeoutMs);
+    let disconnected = false;
+    let providerError = null;
+    const offDisconnected = provider.on?.("disconnected", () => { disconnected = true; });
+    const offError = provider.on?.("error", (error) => { providerError = error; });
+    try {
+      await withTimeout(provider.connect(), options.timeoutMs, `Substrate connection attempt ${attempt + 1}`);
+      const api = await withTimeout(apiCreate(provider), options.timeoutMs, `Substrate initialization attempt ${attempt + 1}`);
+      return { api, provider };
+    } catch (error) {
+      lastError = providerError ?? error;
+      if (!String(lastError?.message ?? "").trim() && disconnected) {
+        lastError = Object.assign(new Error("Substrate WebSocket disconnected during initialization."), { name: "ConnectionError" });
+      }
+      await withTimeout(provider.disconnect(), 2_000, "Substrate failed-attempt disconnect").catch(() => {});
+      if (attempt < options.retries) await delayFn(250 * (attempt + 1));
+    } finally {
+      offDisconnected?.();
+      offError?.();
+    }
+  }
+  throw lastError;
+}
+
 export async function collectSubstrate(options, targetBlockNumber = null, diagnostics = null) {
-  const provider = new WsProvider(options.substrateEndpoint, 2_500);
+  let provider;
   let api;
   try {
     diagnostics?.start("substrate.connection");
-    api = await withTimeout(ApiPromise.create({ provider, throwOnConnect: true, noInitWarn: true }), options.timeoutMs, "Substrate connection");
+    ({ api, provider } = await connectSubstrateApi(options));
     diagnostics?.end("ok");
     diagnostics?.start("substrate.finalized_head");
     const latestFinalizedHash = await withTimeout(api.rpc.chain.getFinalizedHead(), options.timeoutMs, "Finalized-head query");
@@ -221,7 +253,7 @@ export async function collectSubstrate(options, targetBlockNumber = null, diagno
     return { reachable: false, endpoint: options.substrateEndpoint, error: compactError(error) };
   } finally {
     if (api) await withTimeout(api.disconnect(), 2_000, "Substrate disconnect").catch(() => {});
-    else await withTimeout(provider.disconnect(), 2_000, "Substrate provider disconnect").catch(() => {});
+    else if (provider) await withTimeout(provider.disconnect(), 2_000, "Substrate provider disconnect").catch(() => {});
   }
 }
 

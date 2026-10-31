@@ -1,0 +1,56 @@
+{
+  "schema": "firma.anchor-authorization.native.v1",
+  "status": "PREPARED_NOT_SUBMITTED",
+  "report": {
+    "path": "evidence/final-live-2026-10-31-02.json",
+    "startedAt": "2026-10-31T06:09:01.537Z",
+    "completedAt": "2026-10-31T06:09:17.468Z",
+    "verdict": "PASS",
+    "counts": {
+      "PASS": 9,
+      "FAIL": 0,
+      "UNKNOWN": 0
+    },
+    "finalizedBlock": {
+      "number": "263091",
+      "hash": "0x4e341a47fca5555c5ca81010544655a40e0954af5143acf08a34af51c65c0f14"
+    }
+  },
+  "authorization": {
+    "protocol": "FIRMA_NATIVE_REMARK_V1",
+    "chain": "PortaldotV3 Test",
+    "genesisHash": "0xd4f9acbcf7f52388d8b095abe3c198d19fc510e0343e643e87cfbccb155283bd",
+    "runtimeProfile": "portaldot-v3-3002-edc03c9d",
+    "runtimeCodeHash": "0xedc03c9dc81d39fea5c02893cc34cf2ec898d55d7ee8f8e89eb27597a724c7c2",
+    "specName": "portaldot-v3",
+    "specVersion": "3002",
+    "transactionVersion": "2",
+    "account": "5En7dwvXVjsHA8AEjWwdLNFf1TnxiiRSE3VUXiX7S9Pr4QUz",
+    "call": "system.remarkWithEvent",
+    "callIndex": "0x0007",
+    "commitment": "0x8f9117121abb546b289a38f1d8afe73b379e41beb3d73895ecc2d7b5ebfabc6d",
+    "algorithm": "RFC8785-JCS+SHA-256",
+    "domain": "FIRMA_REPORT_COMMITMENT_V1\n",
+    "payload": "0x4649524d4100028f9117121abb546b289a38f1d8afe73b379e41beb3d73895ecc2d7b5ebfabc6d",
+    "valueBaseUnits": "0",
+    "maximumFeeBaseUnits": "1490365921150",
+    "maximumFeeTPOT": "0.0149036592115",
+    "balanceBaseUnits": "50000000000000000",
+    "usableBalanceBaseUnits": "50000000000000000",
+    "weight": {
+      "refTime": 497602054,
+      "proofSize": 12184
+    },
+    "observedAtFinalizedBlock": {
+      "number": "263114",
+      "hash": "0xca98c37b1d1e92639a03c664b78ebc66fabc183a39dcadafd8fa948dcf66077d"
+    }
+  },
+  "submission": {
+    "authorized": false,
+    "signed": false,
+    "broadcast": false,
+    "transactionHash": null
+  },
+  "nextRequiredAction": "The owner must review these exact fields and separately authorize the matching SubWallet request. Any changed field or fee requires a fresh preparation."
+}

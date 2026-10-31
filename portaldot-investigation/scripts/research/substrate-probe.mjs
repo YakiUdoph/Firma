@@ -6,7 +6,8 @@ import { dirname, join } from "node:path";
 
 const endpoint = process.argv[2] ?? "wss://test-node-v3.portaldot.dev";
 const here = dirname(fileURLToPath(import.meta.url));
-const rawDir = join(here, "raw");
+const root = dirname(dirname(here));
+const rawDir = join(root, "raw");
 const timeoutMs = 20_000;
 
 const requests = [
