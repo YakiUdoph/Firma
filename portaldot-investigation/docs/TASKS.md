@@ -15,6 +15,7 @@ Created on 2026-10-31 for the current release review. Earlier work is preserved 
 - [x] Add the requested governance documents without replacing canonical technical records.
 - [x] Add an executable judge walkthrough for the complete local candidate and label the older public deployment accurately.
 - [x] Adapt PR #7's useful privacy provisions to the implemented optional browser-only wallet authorization and native anchoring flow.
+- [x] Reproduce PR #8's Linux RPC-test cancellation and keep the pending mock request alive until the real `AbortSignal.timeout()` abort, without changing production timeout behavior.
 
 ## Validation completed in this review
 
@@ -29,6 +30,7 @@ Created on 2026-10-31 for the current release review. Earlier work is preserved 
 - [x] Remove the unreferenced generated logo and exclude regenerated historical screenshots from the release diff.
 - [x] Audit all local/remote branches without deleting or rewriting history.
 - [x] Complete post-cleanup full regression validation and final inventory.
+- [x] Repeat the repaired RPC failure test 25 times on Linux Node 22, then pass the complete tests, syntax checks, browser/accessibility coverage, build, and full-tree and production-only audits in an isolated Ubuntu Node 22 environment.
 
 ## Owner-authorized work still required
 

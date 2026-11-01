@@ -19,6 +19,25 @@ function client(fetchFn, { timeoutMs = 100, retries = 0 } = {}) {
   });
 }
 
+function rejectWhenAborted(signal) {
+  return new Promise((_, reject) => {
+    const abortGuard = setTimeout(() => {
+      reject(new Error("Expected the RPC timeout signal to abort the pending request"));
+    }, 1_000);
+
+    const onAbort = () => {
+      clearTimeout(abortGuard);
+      reject(signal.reason);
+    };
+
+    if (signal.aborted) {
+      onAbort();
+      return;
+    }
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
 test("successful and slow RPC responses are recorded as real observations", async () => {
   const immediate = client(async (_url, init) => {
     const request = JSON.parse(init.body);
@@ -38,9 +57,7 @@ test("successful and slow RPC responses are recorded as real observations", asyn
 });
 
 test("timeouts and aborted requests remain failures and never invent responses", async () => {
-  const timeoutClient = client((_url, init) => new Promise((resolve, reject) => {
-    init.signal.addEventListener("abort", () => reject(init.signal.reason), { once: true });
-  }), { timeoutMs: 20 });
+  const timeoutClient = client((_url, init) => rejectWhenAborted(init.signal), { timeoutMs: 20 });
   await assert.rejects(timeoutClient.call("eth_chainId"), (error) => {
     assert.equal(classifyDiagnosticError(error), "timeout");
     return true;
