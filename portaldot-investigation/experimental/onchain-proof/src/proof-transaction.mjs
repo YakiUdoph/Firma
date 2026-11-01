@@ -47,7 +47,8 @@ export function validateCommitReceipt(receipt, { registryAddress, commitment }) 
   if (!receipt.to || getAddress(receipt.to) !== registry) {
     throw new ProofTransactionError("WRONG_REGISTRY", "Receipt target does not match the audited registry.");
   }
-  if (!receipt.transactionHash || !receipt.blockHash || receipt.blockNumber === undefined) {
+  const transactionHash = receipt.hash ?? receipt.transactionHash;
+  if (!transactionHash || !receipt.blockHash || receipt.blockNumber === undefined) {
     throw new ProofTransactionError("INVALID_RECEIPT", "Receipt lacks transaction or block identity.");
   }
 
@@ -76,14 +77,14 @@ export function validateCommitReceipt(receipt, { registryAddress, commitment }) 
     commitment,
     registryAddress: registry,
     submitter: getAddress(matched.args.submitter),
-    transactionHash: receipt.transactionHash,
+    transactionHash,
     blockHash: receipt.blockHash,
     blockNumber: BigInt(receipt.blockNumber).toString(),
     recordedAt: BigInt(matched.args.recordedAt).toString(),
     gasUsed: receipt.gasUsed === undefined ? null : BigInt(receipt.gasUsed).toString(),
-    effectiveGasPrice: receipt.effectiveGasPrice === undefined
+    effectiveGasPrice: (receipt.gasPrice ?? receipt.effectiveGasPrice) === undefined
       ? null
-      : BigInt(receipt.effectiveGasPrice).toString(),
+      : BigInt(receipt.gasPrice ?? receipt.effectiveGasPrice).toString(),
   });
 }
 

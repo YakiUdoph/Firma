@@ -5,6 +5,7 @@ const { mkdirSync, writeFileSync } = require("node:fs");
 const { join } = require("node:path");
 
 const endpoint = process.argv[2] || "wss://test-node-v3.portaldot.dev";
+const root = join(__dirname, "..", "..");
 
 function human(value) {
   return value?.toHuman?.() ?? value?.toJSON?.() ?? String(value);
@@ -84,8 +85,8 @@ async function entries(query, limit = 20) {
         assetHolderMappings,
       },
     };
-    mkdirSync(join(__dirname, "raw"), { recursive: true });
-    writeFileSync(join(__dirname, "raw", "state-snapshot.json"), `${JSON.stringify(result, null, 2)}\n`);
+    mkdirSync(join(root, "raw"), { recursive: true });
+    writeFileSync(join(root, "raw", "state-snapshot.json"), `${JSON.stringify(result, null, 2)}\n`);
     console.log(JSON.stringify(result, null, 2));
   } finally {
     await api.disconnect();

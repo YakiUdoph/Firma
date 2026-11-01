@@ -87,7 +87,7 @@ The complete decoded pallet index/name list was:
 96:RegistrarRelay
 ```
 
-The full call, event, error, constant-name, and storage-item inventory is in [`raw/decoded-metadata.json`](raw/decoded-metadata.json). Important storage interfaces include:
+The full call, event, error, constant-name, and storage-item inventory is in [`raw/decoded-metadata.json`](../../raw/decoded-metadata.json). Important storage interfaces include:
 
 - `System.Account`, blocks, hashes, events, topics, and runtime-upgrade state.
 - `Balances` issuance, accounts, locks, reserves, holds, and freezes.
@@ -122,10 +122,10 @@ Three native `Assets` IDs existed: `1`, `2`, and `806707`. There were five asset
 
 ## Evidence files
 
-- [`raw/evm-probe.json`](raw/evm-probe.json): complete final EVM batch request/response and HTTP headers.
-- [`raw/substrate-probe.json`](raw/substrate-probe.json): Substrate identity, runtime, header, and RPC method list.
-- [`raw/substrate-metadata.hex`](raw/substrate-metadata.hex): exact returned SCALE metadata.
-- [`raw/decoded-metadata.json`](raw/decoded-metadata.json): locally decoded pallet/call/storage inventory.
-- [`raw/state-snapshot.json`](raw/state-snapshot.json): constants, live assets, account mappings, and selected call metadata.
-- [`raw/evm-asset-probe.json`](raw/evm-asset-probe.json): actual ERC-20/precompile responses and native/EVM balance comparisons.
+- [`raw/evm-probe.json`](../../raw/evm-probe.json): complete final EVM batch request/response and HTTP headers.
+- [`raw/substrate-probe.json`](../../raw/substrate-probe.json): Substrate identity, runtime, header, and RPC method list.
+- [`raw/substrate-metadata.hex`](../../raw/substrate-metadata.hex): exact returned SCALE metadata.
+- [`raw/decoded-metadata.json`](../../raw/decoded-metadata.json): locally decoded pallet/call/storage inventory.
+- [`raw/state-snapshot.json`](../../raw/state-snapshot.json): constants, live assets, account mappings, and selected call metadata.
+- [`raw/evm-asset-probe.json`](../../raw/evm-asset-probe.json): actual ERC-20/precompile responses and native/EVM balance comparisons.
 

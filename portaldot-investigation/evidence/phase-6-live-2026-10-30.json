@@ -1,0 +1,176 @@
+{
+  "schema": "firma.report.v1",
+  "tool": {
+    "name": "FIRMA",
+    "version": "0.1.0",
+    "mode": "read-only",
+    "allowedEvmMethods": [
+      "eth_chainId",
+      "web3_clientVersion",
+      "eth_getBlockByNumber",
+      "eth_call"
+    ]
+  },
+  "startedAt": "2026-10-30T12:40:34.734Z",
+  "completedAt": "2026-10-30T12:40:38.898Z",
+  "input": {
+    "expectedChainId": "420420777",
+    "assetId": "2",
+    "account": "0x578f0a6155551b3b7c7ff255ea7dc2b08968e380"
+  },
+  "verdict": {
+    "overall": "UNKNOWN",
+    "counts": {
+      "PASS": 2,
+      "FAIL": 0,
+      "UNKNOWN": 7
+    },
+    "checks": [
+      {
+        "id": "network.substrate",
+        "title": "Substrate endpoint",
+        "status": "UNKNOWN",
+        "summary": "The Substrate endpoint did not provide usable evidence.",
+        "evidence": {
+          "name": "Error",
+          "message": ""
+        }
+      },
+      {
+        "id": "network.evm",
+        "title": "EVM endpoint",
+        "status": "PASS",
+        "summary": "The EVM endpoint answered standard read-only JSON-RPC methods.",
+        "evidence": {
+          "chainId": "420420777",
+          "chainIdHex": "0x190f1ca9",
+          "clientVersion": "eth-rpc/main-fddd431/x86_64-unknown-linux-gnu/rustc1.98.0"
+        }
+      },
+      {
+        "id": "identity.chainId",
+        "title": "Expected EVM chain ID",
+        "status": "PASS",
+        "summary": "Chain ID is 420420777.",
+        "evidence": {
+          "expected": "420420777",
+          "actual": "420420777"
+        }
+      },
+      {
+        "id": "runtime.support",
+        "title": "Runtime support",
+        "status": "UNKNOWN",
+        "summary": "Runtime metadata was unavailable.",
+        "evidence": {}
+      },
+      {
+        "id": "context.block",
+        "title": "Shared block context",
+        "status": "UNKNOWN",
+        "summary": "The EVM endpoint could not serve the finalized Substrate block; parity was not evaluated across different blocks.",
+        "evidence": {
+          "substrate": null,
+          "evm": null
+        }
+      },
+      {
+        "id": "asset.supply",
+        "title": "Total supply parity",
+        "status": "UNKNOWN",
+        "summary": "Parity is suppressed because this runtime is outside FIRMA's verified support envelope.",
+        "evidence": {}
+      },
+      {
+        "id": "account.mapping",
+        "title": "Runtime account mapping",
+        "status": "UNKNOWN",
+        "summary": "Mapping interpretation is suppressed for an unsupported runtime.",
+        "evidence": {}
+      },
+      {
+        "id": "asset.balance",
+        "title": "Account balance parity",
+        "status": "UNKNOWN",
+        "summary": "Balance parity is suppressed for an unsupported runtime.",
+        "evidence": {}
+      },
+      {
+        "id": "asset.metadata",
+        "title": "Metadata parity",
+        "status": "UNKNOWN",
+        "summary": "Metadata parity is suppressed for an unsupported runtime.",
+        "evidence": {}
+      }
+    ]
+  },
+  "evidence": {
+    "input": {
+      "substrateEndpoint": "wss://test-node-v3.portaldot.dev",
+      "evmEndpoint": "https://test-evm-rpc-v3.portaldot.dev",
+      "expectedChainId": "420420777",
+      "assetId": "2",
+      "account": "0x578f0a6155551b3b7c7ff255ea7dc2b08968e380",
+      "timeoutMs": 15000,
+      "retries": 1
+    },
+    "substrate": {
+      "reachable": false,
+      "endpoint": "wss://test-node-v3.portaldot.dev",
+      "error": {
+        "name": "Error",
+        "message": ""
+      }
+    },
+    "evm": {
+      "reachable": true,
+      "endpoint": "https://test-evm-rpc-v3.portaldot.dev",
+      "identity": {
+        "chainId": "420420777",
+        "chainIdHex": "0x190f1ca9",
+        "clientVersion": "eth-rpc/main-fddd431/x86_64-unknown-linux-gnu/rustc1.98.0"
+      },
+      "block": null,
+      "calls": {},
+      "requests": [
+        {
+          "startedAt": "2026-10-30T12:40:36.893Z",
+          "attempt": 0,
+          "request": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "eth_chainId",
+            "params": []
+          },
+          "httpStatus": 200,
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "result": "0x190f1ca9"
+          }
+        },
+        {
+          "startedAt": "2026-10-30T12:40:36.913Z",
+          "attempt": 0,
+          "request": {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "web3_clientVersion",
+            "params": []
+          },
+          "httpStatus": 200,
+          "response": {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "result": "eth-rpc/main-fddd431/x86_64-unknown-linux-gnu/rustc1.98.0"
+          }
+        }
+      ]
+    }
+  },
+  "limitations": [
+    "This report proves only the listed reads at the pinned block; it does not prove write, event, permit, or fee behavior.",
+    "The asset-precompile address rule is supported only for the verified Portaldot V3 runtime envelope.",
+    "An unavailable endpoint, unsupported runtime, missing mapping, timeout, or unavailable historical block is UNKNOWN—not FAIL."
+  ]
+}

@@ -6,7 +6,8 @@ import { fileURLToPath } from "node:url";
 
 const endpoint = process.argv[2] ?? "https://test-evm-rpc-v3.portaldot.dev";
 const here = dirname(fileURLToPath(import.meta.url));
-const requestFile = join(here, "requests", "evm-readonly-batch.json");
+const root = dirname(dirname(here));
+const requestFile = join(root, "requests", "evm-readonly-batch.json");
 const payload = JSON.parse(await readFile(requestFile, "utf8"));
 const observedAt = new Date().toISOString();
 const response = await fetch(endpoint, {
@@ -24,6 +25,6 @@ const evidence = {
   request: payload,
   response: body,
 };
-await mkdir(join(here, "raw"), { recursive: true });
-await writeFile(join(here, "raw", "evm-probe.json"), `${JSON.stringify(evidence, null, 2)}\n`);
+await mkdir(join(root, "raw"), { recursive: true });
+await writeFile(join(root, "raw", "evm-probe.json"), `${JSON.stringify(evidence, null, 2)}\n`);
 console.log(JSON.stringify(evidence, null, 2));

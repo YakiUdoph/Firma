@@ -18,9 +18,9 @@
       <span class="brand-name">FIRMA</span>
     </a>
     <nav aria-label="Primary navigation">
+      <a href="#verify">Check an asset</a>
       <a href="#check-report">Check a report</a>
-      <a href="#method">Method</a>
-      <a href="#boundaries">About</a>
+      <a href="#onchain-proof">Save proof</a>
     </nav>
   </header>
 
@@ -95,10 +95,22 @@
         <div class="result-actions" aria-label="Evidence actions">
           <button id="copy-button" class="secondary-button" type="button">Copy JSON</button>
           <button id="download-button" class="secondary-button" type="button">Export evidence</button>
+          <button id="anchor-button" class="secondary-button" type="button">Save proof on Portaldot</button>
         </div>
       </div>
 
       <div id="verdict-counts" class="verdict-counts" aria-label="Verdict totals"></div>
+
+      <section class="investigation-overview" aria-labelledby="investigation-title">
+        <div class="section-heading compact">
+          <div>
+            <p class="section-index">Investigation summary</p>
+            <h3 id="investigation-title">What matters next</h3>
+          </div>
+          <p>FIRMA derives this guidance from the report shown below. It does not change the technical verdict or add evidence.</p>
+        </div>
+        <dl id="investigation-summary" class="investigation-summary"></dl>
+      </section>
 
       <section class="context-panel" aria-labelledby="context-title">
         <div class="section-heading compact">
@@ -119,7 +131,10 @@
           </div>
           <p>Open any row to see the technical evidence. The original <code>PASS</code>, <code>FAIL</code>, or <code>UNKNOWN</code> result is always preserved.</p>
         </div>
-        <div id="checks" class="checks"></div>
+        <details class="checks-disclosure">
+          <summary><span>View verification checks</span><span id="asset-check-count" class="disclosure-count"></span></summary>
+          <div id="checks" class="checks"></div>
+        </details>
       </section>
 
       <section class="evidence-panel" aria-labelledby="evidence-title">
@@ -134,6 +149,74 @@
           <summary><span>Show complete JSON</span><span aria-hidden="true">+</span></summary>
           <pre id="evidence-json" tabindex="0"></pre>
         </details>
+      </section>
+
+      <section id="anchor-panel" class="anchor-panel" aria-labelledby="anchor-title" hidden>
+        <div class="section-heading compact">
+          <div>
+            <p class="section-index">04 / Optional anchor</p>
+            <h3 id="anchor-title">Save proof on Portaldot</h3>
+          </div>
+          <p>This separate Portaldot V3 testnet transaction records only the report's deterministic hash. It never changes the report or its verdict.</p>
+        </div>
+        <p class="separation-note"><strong>Native SubWallet is the recommended route.</strong> FIRMA records a 39-byte versioned commitment with <code>system.remarkWithEvent</code>. Your report stays unchanged.</p>
+        <div class="anchor-controls native-anchor-controls">
+          <button id="connect-subwallet-button" class="primary-button" type="button"><span class="button-label">Find SubWallet accounts</span><span class="button-icon" aria-hidden="true">&#8599;</span></button>
+          <p id="native-wallet-state" class="wallet-state" role="status" aria-live="polite">SubWallet is not connected.</p>
+          <div class="field">
+            <label for="native-account">Native account</label>
+            <select id="native-account" disabled aria-describedby="native-account-help"><option>Select an account</option></select>
+            <small id="native-account-help">Choose the exact SS58 account that will pay the fee and sign in SubWallet.</small>
+          </div>
+          <button id="estimate-native-button" class="secondary-button" type="button" disabled>Verify network &amp; estimate fee</button>
+        </div>
+        <div id="native-confirmation" class="anchor-confirmation" hidden>
+          <h4>Confirm the exact SubWallet request</h4>
+          <dl class="anchor-details">
+            <div><dt>Chain / genesis</dt><dd id="native-chain"></dd></div>
+            <div><dt>Account</dt><dd id="native-account-confirm"></dd></div>
+            <div><dt>Call</dt><dd id="native-destination"></dd></div>
+            <div><dt>Commitment</dt><dd id="native-commitment"></dd></div>
+            <div><dt>Versioned payload</dt><dd id="native-payload"></dd></div>
+            <div><dt>Value</dt><dd id="native-value"></dd></div>
+            <div><dt>Maximum fee</dt><dd id="native-fee"></dd></div>
+          </dl>
+          <label class="confirmation-check"><input id="native-consent" type="checkbox"> I reviewed the exact chain, account, call, commitment, payload, zero value, and maximum fee above.</label>
+          <button id="submit-native-button" class="primary-button" type="button" disabled><span class="button-label">Open SubWallet request</span><span class="button-icon" aria-hidden="true">&#8599;</span></button>
+        </div>
+        <details class="technical-details evm-anchor-option">
+          <summary>Use an EVM wallet instead</summary>
+          <p>The EVM route remains available for a separately funded 0x account. A native SS58 balance is not assumed to fund it.</p>
+        <div class="anchor-controls">
+          <button id="connect-wallet-button" class="primary-button" type="button"><span class="button-label">Connect EVM wallet &amp; estimate</span><span class="button-icon" aria-hidden="true">&#8599;</span></button>
+          <p id="wallet-state" class="wallet-state" role="status" aria-live="polite">No wallet connected.</p>
+        </div>
+        <div id="anchor-confirmation" class="anchor-confirmation" hidden>
+          <h4>Confirm the exact wallet request</h4>
+          <dl class="anchor-details">
+            <div><dt>Chain</dt><dd id="anchor-chain"></dd></div>
+            <div><dt>Account</dt><dd id="anchor-account"></dd></div>
+            <div><dt>Destination</dt><dd id="anchor-destination"></dd></div>
+            <div><dt>Commitment</dt><dd id="anchor-commitment"></dd></div>
+            <div><dt>Value</dt><dd id="anchor-value"></dd></div>
+            <div><dt>Maximum fee</dt><dd id="anchor-fee"></dd></div>
+          </dl>
+          <label class="confirmation-check"><input id="anchor-consent" type="checkbox"> I reviewed the exact chain, account, destination, commitment, zero value, and maximum fee above.</label>
+          <button id="submit-anchor-button" class="primary-button" type="button" disabled><span class="button-label">Open wallet request</span><span class="button-icon" aria-hidden="true">&#8599;</span></button>
+        </div>
+        </details>
+        <div id="anchor-progress" class="progress-panel" role="status" aria-live="polite" hidden>
+          <div class="progress-heading"><span class="progress-spinner" aria-hidden="true"></span><div><strong>Checking transaction evidence</strong><p>FIRMA is retrieving the transaction, receipt, canonical block, and native finality evidence.</p></div></div>
+        </div>
+        <p id="anchor-error" class="form-error" role="alert" tabindex="-1" hidden></p>
+        <div id="anchor-result" class="anchor-result" hidden>
+          <p><strong>Transaction hash</strong><code id="anchor-transaction-hash"></code></p>
+          <p id="anchor-result-summary" role="status" aria-live="polite"></p>
+          <div class="result-actions">
+            <button id="retry-anchor-proof-button" class="secondary-button" type="button">Check proof again</button>
+            <button id="download-anchor-button" class="secondary-button" type="button" disabled>Download anchoring evidence</button>
+          </div>
+        </div>
       </section>
     </section>
 
@@ -193,11 +276,66 @@
       </div>
       <p class="separation-note"><strong>The original report is preserved.</strong> Its asset verdict and this independent result answer different questions.</p>
       <div id="independent-counts" class="verdict-counts" aria-label="Independent verification totals"></div>
-      <div id="independent-checks" class="checks"></div>
+      <details class="checks-disclosure">
+        <summary><span>View verification checks</span><span id="independent-check-count" class="disclosure-count"></span></summary>
+        <div id="independent-checks" class="checks"></div>
+      </details>
+      <div class="result-actions">
+        <button id="use-imported-report-button" class="secondary-button" type="button" hidden>Use verified report for anchoring</button>
+      </div>
       <details class="raw-evidence">
         <summary><span>Show complete independent verification JSON</span><span aria-hidden="true">+</span></summary>
         <pre id="independent-json" tabindex="0"></pre>
       </details>
+    </section>
+
+    <section id="onchain-proof" class="report-workspace onchain-workspace" aria-labelledby="onchain-proof-title">
+      <div class="report-intro">
+        <p class="eyebrow"><span aria-hidden="true"></span> Optional Portaldot proof</p>
+        <h2 id="onchain-proof-title">Save or check proof</h2>
+        <p>To save a new proof, first verify a report above and choose <strong>Save proof on Portaldot</strong>. Already have a native proof file? Check it here against the original report.</p>
+        <ul class="report-status-guide" aria-label="On-chain proof result meanings">
+          <li><strong>Verified</strong><span>The finalized transaction matches the exact report.</span></li>
+          <li><strong>Mismatch</strong><span>Available blockchain evidence contradicts the claim.</span></li>
+          <li><strong>Unavailable</strong><span>Required evidence cannot currently be confirmed.</span></li>
+        </ul>
+      </div>
+      <div class="report-card">
+        <form id="onchain-proof-form">
+          <div class="field">
+            <label for="onchain-report-file">Original FIRMA report</label>
+            <input id="onchain-report-file" type="file" accept="application/json,.json" required>
+          </div>
+          <details class="technical-details evm-proof-option">
+            <summary>Check an experimental EVM proof instead</summary>
+          <div class="field">
+            <label for="onchain-transaction-hash">EVM transaction hash</label>
+            <input id="onchain-transaction-hash" spellcheck="false" autocomplete="off" pattern="0x[0-9a-fA-F]{64}" maxlength="66" placeholder="0xâ€¦">
+          </div>
+          </details>
+          <div class="field">
+            <label for="anchor-evidence-file">Native proof file</label>
+            <input id="anchor-evidence-file" type="file" accept="application/json,.json">
+          </div>
+          <button id="onchain-proof-button" class="primary-button" type="submit"><span class="button-label">Check saved proof</span><span class="button-icon" aria-hidden="true">&#8599;</span></button>
+        </form>
+        <div id="onchain-proof-progress" class="progress-panel" role="status" aria-live="polite" hidden><div class="progress-heading"><span class="progress-spinner" aria-hidden="true"></span><div><strong>Checking on-chain evidence</strong><p>Retrieving the transaction without changing blockchain state.</p></div></div></div>
+        <p id="onchain-proof-error" class="form-error" role="alert" tabindex="-1" hidden></p>
+      </div>
+    </section>
+
+    <section id="onchain-proof-result" class="report-result" aria-labelledby="onchain-proof-result-title" hidden>
+      <div class="report-result-heading">
+        <div><p class="eyebrow result-eyebrow">On-chain proof result</p><div class="verdict-line" role="status" aria-live="polite" aria-atomic="true"><span id="onchain-proof-symbol" class="verdict-symbol" aria-hidden="true"></span><h2 id="onchain-proof-result-title">Waiting</h2></div><p id="onchain-proof-summary" class="verdict-summary"></p></div>
+        <dl class="report-summary-list"><div><dt>Original verdict</dt><dd id="onchain-original-verdict"></dd></div><div><dt>Commitment</dt><dd id="onchain-commitment"></dd></div><div><dt>Transaction</dt><dd id="onchain-hash"></dd></div></dl>
+      </div>
+      <p class="separation-note">A matching commitment proves that the transaction contains the hash of this exact report. It does not prove every report claim, report authorship, or wallet ownership beyond control used for that transaction.</p>
+      <div id="onchain-counts" class="verdict-counts"></div>
+      <details class="checks-disclosure">
+        <summary><span>View transaction checks</span><span id="onchain-check-count" class="disclosure-count"></span></summary>
+        <div id="onchain-checks" class="checks"></div>
+      </details>
+      <details class="raw-evidence"><summary><span>Show complete anchoring verification JSON</span><span aria-hidden="true">+</span></summary><pre id="onchain-json" tabindex="0"></pre></details>
     </section>
 
     <section id="method" class="method" aria-labelledby="method-title">
@@ -220,7 +358,7 @@
         <h2 id="boundaries-title">Verification, not custody.</h2>
       </div>
       <div class="boundary-copy">
-        <p>FIRMA reads public network state. It has no authentication, wallet connection, signing flow, transaction submission, transfer capability, or private-key handling.</p>
+        <p>FIRMA's verifier reads public network state. Its separate optional testnet anchoring flow may ask SubWallet to sign one exact zero-value commitment transaction only after an explicit review and confirmation. FIRMA never handles private keys or recovery phrases.</p>
         <details class="technical-details">
           <summary>Technical scope</summary>
           <p>The verifier fingerprints the runtime, reads Assets and Revive storage, maps the EVM address to its native account, and performs ERC-20-compatible <code>eth_call</code> reads at the same finalized height. Exact base-unit values remain arbitrary-precision integers. Results describe only the listed observations at that block and are not an audit of write behavior.</p>
@@ -231,7 +369,7 @@
 
   <footer>
     <a class="brand footer-brand" href="/" aria-label="FIRMA home"><span class="brand-mark" aria-hidden="true"><span>F</span></span><span class="brand-name">FIRMA</span></a>
-    <p>Portaldot V3 cross-interface evidence<br><span>Read-only verification. No transaction behavior is claimed.</span></p>
+    <p>Portaldot V3 cross-interface evidence<br><span>Read-only verification with separately authorized testnet anchoring.</span></p>
     <p class="version">Version 0.1.0</p>
   </footer>
 

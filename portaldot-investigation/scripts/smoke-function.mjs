@@ -9,5 +9,5 @@ const request = new Request("https://firma.example/api/verify", {
 const response = await handler.fetch(request);
 const body = await response.json();
 
-console.log(JSON.stringify({ httpStatus: response.status, verdict: body.verdict?.overall, block: body.evidence?.substrate?.finalized?.number, requestId: body.requestId }, null, 2));
+console.log(JSON.stringify({ httpStatus: response.status, verdict: body.verdict?.overall, block: body.evidence?.substrate?.finalized?.number, requestId: response.headers.get("x-request-id") ?? body.requestId }, null, 2));
 if (response.status !== 200 || body.verdict?.overall !== "PASS") process.exitCode = 1;

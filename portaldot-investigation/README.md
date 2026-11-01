@@ -1,125 +1,136 @@
-# FIRMA
+# FIRMA application guide
 
-FIRMA is a read-only interoperability verifier for Portaldot V3. It answers a narrow but consequential question: **does one native asset have the same observable state through the Substrate and EVM interfaces at the same finalized block?**
+The repository-level [README](../README.md) is the public product overview. This document is the concise developer and operator guide for the application rooted in this directory.
 
-- Source: https://github.com/YakiUdoph/Firma
-- Live deployment: https://firma-lemon.vercel.app/
+FIRMA provides three workflows:
 
-It is not an explorer, wallet, token checker, deployment tool, or audit. It never creates, signs, simulates, or submits a transaction.
+1. **Check an asset** at one finalized Portaldot V3 block through the native and EVM-compatible interfaces.
+2. **Check a report** by validating and independently reproducing supported historical claims.
+3. **Save or check proof** by optionally anchoring a verified report through the user's SubWallet or by independently checking existing native evidence.
 
-## What the MVP proves
+Verification uses `PASS`, `FAIL`, and `UNKNOWN`; historical and proof reproduction uses `VERIFIED`, `MISMATCH`, and `UNAVAILABLE`. Missing or inconclusive evidence never becomes success.
 
-For a native asset ID and EVM account, FIRMA:
+## Requirements
 
-1. reads a finalized block from the Substrate endpoint;
-2. identifies the runtime from the chain genesis and the finalized block's runtime `:code` hash, and records the raw metadata hash as evidence;
-3. requests the exact same block number from the EVM endpoint;
-4. verifies the expected EVM chain ID;
-5. reads native supply, metadata, Revive account mapping, and account balance;
-6. reads ERC-20 `totalSupply`, `balanceOf`, `name`, `symbol`, and `decimals` through `eth_call` at the pinned height;
-7. compares base-unit values as arbitrary-precision integers; and
-8. emits a machine-readable report with `PASS`, `FAIL`, or `UNKNOWN` for every check.
+- Node.js 22 or newer
+- npm
+- Network access only when running live verification or proof checks
+- SubWallet only for the optional, explicitly confirmed native anchoring flow
 
-`FAIL` means FIRMA proved a contradiction. A timeout, missing historical block, unsupported runtime, unavailable endpoint, or undecodable response is `UNKNOWN` (“Couldn't verify”), not a failure.
+No secret, private key, recovery phrase, or server-side signer is required or accepted.
 
-## Quick start
+The default configuration needs no environment variables. Operators may override `FIRMA_SUBSTRATE_ENDPOINT`, `FIRMA_EVM_ENDPOINT`, `FIRMA_EXPECTED_CHAIN_ID`, `FIRMA_TIMEOUT_MS`, and `FIRMA_RETRIES`; defaults and validation requirements are listed in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Never place wallet secrets or signing credentials in environment variables.
 
-Requirements: Node.js 22 or newer and internet access to the organizer-provided test endpoints.
+## Install and validate
+
+Run all commands from this directory:
 
 ```powershell
 npm ci --ignore-scripts
 npm test
-node bin/firma.mjs --help
-node bin/firma.mjs --output evidence\my-run.json
+npm run check
+npm run build
+npm audit --omit=dev
 ```
 
-The output file is created with no-overwrite semantics. Choose a new filename for every run.
+`npm run check` includes syntax validation and the complete test suite. `npm run build` copies the static application to `dist/` and bundles the browser-only native wallet adapter.
 
-Known missing-metadata edge case:
-
-```powershell
-node bin/firma.mjs --asset 806707 --account 0x81ed1dfbec067703fdca3daa7efcbeff4ba101ec --output evidence\asset-806707.json
-```
-
-## Local web interface
+## Local application
 
 ```powershell
 npm start
 ```
 
-Open `http://127.0.0.1:4173`. The browser talks only to the local FIRMA server. The server fixes the chain endpoints in configuration, validates inputs, allows one active run per client, and limits clients to five runs per minute.
+Open `http://127.0.0.1:4173`. The local server binds only to loopback, fixes RPC endpoints in operator configuration, validates input, bounds request bodies and concurrency, and serves the same three API shapes used in production.
 
-## Production build and deployment
-
-```powershell
-npm run check
-npm run build
-```
-
-The production target is a static frontend plus one stateless Node.js function. Vercel is the recommended host because this request/response architecture fits Vercel Functions; FIRMA does not require an always-on WebSocket server. The function opens a bounded outbound Substrate WebSocket only while processing a verification.
-
-Set the Vercel project Root Directory to `portaldot-investigation`. No secret is required. Optional environment overrides are documented in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Platform-level rate limiting must be staged and reviewed before making the URL public.
-
-## CI use
+## CLI verification
 
 ```powershell
-node bin/firma.mjs --json --output evidence\ci-report.json
+node bin/firma.mjs --help
+node bin/firma.mjs --output evidence\my-run.json
 ```
 
-Exit codes:
+Evidence output has no-overwrite semantics. Always choose a new filename. `npm run verify` is a live read-only operation; do not describe a historical or fixture result as fresh.
+
+CLI exit codes:
 
 | Code | Meaning |
 |---:|---|
 | `0` | All required checks passed |
-| `1` | At least one mismatch was proven (`FAIL`) |
-| `2` | No mismatch was proven, but evidence was incomplete (`UNKNOWN`) |
-| `64` | Invalid input or an evidence file would be overwritten |
-| `70` | Unexpected internal error |
+| `1` | At least one contradiction was demonstrated (`FAIL`) |
+| `2` | No contradiction was demonstrated, but evidence was incomplete (`UNKNOWN`) |
+| `64` | Invalid input or existing output path |
+| `70` | Unexpected internal failure |
 
-See [the repository workflow](../.github/workflows/firma.yml) for a runnable GitHub Actions example.
+## Native proof workflow
 
-## Verified live results
+The preferred optional write is a zero-value `system.remarkWithEvent` transaction containing the versioned FIRMA report commitment. Preparation is restricted to an independently verified `PASS` report and the reviewed Portaldot V3 runtime.
 
-Historical evidence committed on 2026-10-20 includes:
+Before the wallet request, the browser displays and rechecks:
 
-- `PASS` for asset `2` at finalized block `121096`, including exact supply (`15000000000000000000`), mapped-account balance, and metadata parity.
-- `PASS` for asset `806707` at finalized block `121099`, including exact supply/balance parity and consistent absence of metadata.
+- chain and genesis;
+- selected SS58 account;
+- runtime profile and call index;
+- deterministic commitment and complete payload;
+- zero transferred value; and
+- account-specific maximum fee.
 
-The complete, raw request/response evidence is in [evidence](evidence/). These are historical observations, not promises about future runtime state.
+Submission is browser-only, one-shot, and never retried automatically. The resulting `firma.anchor.native.v1` sidecar is separate from the original report. Independent checking retrieves canonical block, extrinsic, event, execution, and finality evidence instead of trusting the sidecar.
 
-Fresh deployed acceptance checks on 2026-10-21 also returned 9/9 PASS for asset `2` at block `130112` and asset `806707` at block `130114`, both on runtime `portaldot-v3/3002` and chain ID `420420777`. See the [October 24 check-in](docs/OCTOBER_24_CHECKIN.md) for durations, validation results, and current deployment limitations.
+The demonstrated transaction and final evidence are indexed in [evidence/README.md](evidence/README.md). No registry contract was deployed. The EVM proof route and registry package remain secondary experimental compatibility material.
 
-## Repository map
+## Project layout
 
 ```text
-bin/firma.mjs          CLI and CI exit-code contract
-src/verifier.mjs       Pinned read-only evidence collection
-src/evaluate.mjs       Pure PASS / FAIL / UNKNOWN policy
-public/                Beginner-friendly report UI
-test/                  Offline fixtures and edge-case tests
-api/verify.mjs         Production serverless API entrypoint
-scripts/               Production build and function smoke check
-evidence/              Successful live JSON evidence
-docs/                  Architecture, security, and progress notes
-raw/                   Original investigation evidence
-*.md                   Original feasibility/originality investigation
+api/                         Stateless production HTTP handlers
+bin/firma.mjs                CLI and exit-code contract
+browser/native-wallet.mjs    Browser-only SubWallet integration
+docs/                        Current product, release, history, and research records
+evidence/                    Preserved reports and anchor evidence
+experimental/onchain-proof/  Undeployed EVM/registry compatibility experiment
+public/                      Static user interface
+raw/ and requests/           Dated investigation inputs and observations
+scripts/                     Build, smoke, and authorization utilities
+src/                         Verification and proof logic
+test/ and test-support/      Offline, browser, security, and protocol coverage
+server.mjs                   Loopback development adapter
+vercel.json                  Production function and security-header configuration
 ```
 
-## Boundaries
+The nested application root is intentional. GitHub Actions and the existing Vercel project both use `portaldot-investigation/`. Moving it requires a coordinated infrastructure change and deployment acceptance; it is not a cosmetic file move.
 
-- Portaldot V3 runtime support is deliberately fail-closed. The chain genesis, finalized runtime-code hash, version tuple, EVM chain ID, required pallets, and required query surfaces must match the reviewed support profile. Missing or different identity evidence is `UNKNOWN`.
-- The raw metadata SHA-256 remains in every report for inspection, but it is not an approval key because a Revive storage fallback makes the raw metadata bytes vary across blocks without changing the runtime code.
-- The product verifies reads only. It makes no claim about transfers, approvals, permits, events, gas, fees, dust, or signed origins.
-- The precompile address convention is scoped to the runtime evidence documented in this repository.
-- Public-search results cannot establish that no private or unpublished competitor exists.
+## Deployment
 
-Read [docs/SECURITY.md](docs/SECURITY.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before extending the verifier.
+Vercel should keep this directory as the project Root Directory. The build command is `npm run build`, output is `dist`, and production APIs are:
 
-Hackathon materials:
+- `api/verify.mjs`
+- `api/check-report.mjs`
+- `api/onchain-proof.mjs`
 
-- [Production readiness report](docs/PRODUCTION_READINESS.md)
-- [Deployment instructions](docs/DEPLOYMENT.md)
-- [October 24 check-in](docs/OCTOBER_24_CHECKIN.md)
-- [Three-minute demo script](docs/DEMO_SCRIPT.md)
-- [Development history](docs/DEVELOPMENT_HISTORY.md)
+No secret is required. Optional operator-controlled RPC overrides and the protected-preview/promote/rollback procedure are defined in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Platform firewall review remains a publication gate.
 
+## Evidence and limitations
+
+- Reads are pinned to one finalized height and runtime support is fail-closed.
+- Exact supplies and balances remain decimal strings backed by `BigInt`.
+- RPC responses are inspectable observations, not cryptographic state proofs.
+- A matching anchored commitment proves inclusion of the report hash, not authorship or the truth of every report claim.
+- Endpoint history, availability, and runtime compatibility can be incomplete; those cases remain `UNKNOWN` or `UNAVAILABLE`.
+
+## Documentation ownership
+
+- [PRD](docs/PRD.md): product scope and acceptance criteria
+- [DESIGN](docs/DESIGN.md): user experience and accessibility
+- [ARCHITECTURE](docs/ARCHITECTURE.md): current system and trust boundaries
+- [RULES](docs/RULES.md): engineering and evidence constraints
+- [PRIVACY](docs/PRIVACY.md): request, browser, wallet, and third-party data handling
+- [SECURITY](docs/SECURITY.md): controls and limitations
+- [TASKS](docs/TASKS.md): current actionable work
+- [PROGRESS](docs/PROGRESS.md): current implementation state
+- [DEPLOYMENT](docs/DEPLOYMENT.md): release and rollback procedure
+- [SUBMISSION](docs/SUBMISSION.md): competition package and owner checklist
+- [REPOSITORY_AUDIT](docs/REPOSITORY_AUDIT.md): cleanup inventory and before/after evidence
+- [history](docs/history/): dated records that no longer define current behavior
+- [research](docs/research/): original Portaldot investigation and reproducibility material
+
+Read [docs/PRIVACY.md](docs/PRIVACY.md), [docs/SECURITY.md](docs/SECURITY.md), and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing verification or wallet behavior.

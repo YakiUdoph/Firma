@@ -5,7 +5,7 @@ const { join } = require("node:path");
 const { TypeRegistry } = require("@polkadot/types/create");
 const { Metadata } = require("@polkadot/types/metadata");
 
-const root = __dirname;
+const root = join(__dirname, "..", "..");
 const metadataHex = readFileSync(join(root, "raw", "substrate-metadata.hex"), "utf8").trim();
 const registry = new TypeRegistry();
 const metadata = new Metadata(registry, metadataHex);

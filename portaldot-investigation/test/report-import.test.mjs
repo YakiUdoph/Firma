@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { MAX_REPORT_BYTES, parseImportedReport, parseImportedReportText } from "../src/report-import.mjs";
 import { clone, validImportedReport } from "../test-support/report-fixtures.mjs";
@@ -6,6 +7,13 @@ import { clone, validImportedReport } from "../test-support/report-fixtures.mjs"
 test("strict report import accepts a complete FIRMA report", () => {
   const report = validImportedReport();
   assert.equal(parseImportedReportText(JSON.stringify(report)).schema, report.schema);
+});
+
+test("strict report import accepts the preserved authentic historical report", () => {
+  const text = readFileSync(new URL("../evidence/final-live-2026-10-31-02.json", import.meta.url), "utf8");
+  const report = parseImportedReportText(text);
+  assert.equal(report.schema, "firma.report.v1");
+  assert.equal(report.verdict.overall, "PASS");
 });
 
 test("malformed and duplicate-key JSON fail before verification", () => {
@@ -35,9 +43,17 @@ test("incomplete, internally inconsistent, and extended core schemas fail safely
   unexpected.execute = "never";
   assert.throws(() => parseImportedReport(unexpected), /not allowed/);
 
+  const transportMetadata = validImportedReport();
+  transportMetadata.requestId = "transport-only";
+  assert.throws(() => parseImportedReport(transportMetadata), /requestId is not allowed/);
+
   const nestedUnexpected = validImportedReport();
   nestedUnexpected.evidence.substrate.asset.unverifiedClaim = "trusted";
   assert.throws(() => parseImportedReport(nestedUnexpected), /not allowed/);
+
+  const tamperedCounts = validImportedReport();
+  tamperedCounts.verdict.counts.PASS -= 1;
+  assert.throws(() => parseImportedReport(tamperedCounts), /does not match the checks/);
 
   const unfinalizedOriginal = validImportedReport();
   unfinalizedOriginal.evidence.substrate.latestFinalized.number = (BigInt(unfinalizedOriginal.evidence.substrate.finalized.number) - 1n).toString();

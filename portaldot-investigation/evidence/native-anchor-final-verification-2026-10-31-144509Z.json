@@ -1,0 +1,62 @@
+{
+  "schema": "firma.native-anchor-investigation.v1",
+  "createdAt": "2026-10-31T14:45:09.159Z",
+  "subject": {
+    "reportPath": "evidence/final-live-2026-10-31-02.json",
+    "sidecarPath": "evidence/native-anchor-sidecar-2026-10-31-3b2f4eac7f1e.json",
+    "transactionHash": "0x3b2f4eac7f1e2b2cd87493ff9d60e5326584840d8572570c5f21c06ee1750702"
+  },
+  "observation": {
+    "endpoint": "wss://test-node-v3.portaldot.dev",
+    "durationMs": 10621,
+    "network": {
+      "genesisHash": "0xd4f9acbcf7f52388d8b095abe3c198d19fc510e0343e643e87cfbccb155283bd",
+      "runtimeCodeHash": "0xedc03c9dc81d39fea5c02893cc34cf2ec898d55d7ee8f8e89eb27597a724c7c2",
+      "specName": "portaldot-v3",
+      "specVersion": "3002",
+      "transactionVersion": "2"
+    },
+    "block": {
+      "number": "263713",
+      "hash": "0x645b9184955d4d3d02626b29a12f7522f8b631dc13a0046f0319fe6bd1b06ab6",
+      "canonicalAtHeight": true
+    },
+    "extrinsic": {
+      "index": "1",
+      "hash": "0x3b2f4eac7f1e2b2cd87493ff9d60e5326584840d8572570c5f21c06ee1750702",
+      "signer": "5En7dwvXVjsHA8AEjWwdLNFf1TnxiiRSE3VUXiX7S9Pr4QUz",
+      "method": "system.remarkWithEvent",
+      "callIndex": "0x0007",
+      "payload": "0x4649524d4100028f9117121abb546b289a38f1d8afe73b379e41beb3d73895ecc2d7b5ebfabc6d",
+      "execution": "system.ExtrinsicSuccess",
+      "valueBaseUnits": "0"
+    },
+    "commitment": {
+      "algorithm": "RFC8785-JCS+SHA-256",
+      "recomputed": "0x8f9117121abb546b289a38f1d8afe73b379e41beb3d73895ecc2d7b5ebfabc6d",
+      "sidecarMatches": true,
+      "onchainPayloadMatches": true
+    },
+    "finality": {
+      "transactionBlockNumber": "263713",
+      "latestFinalizedNumber": "265219",
+      "latestFinalizedHash": "0xaf9e9e82e7a2e3a9455e4afd331f6c446e2072ae49ce6cb1435e058766c679c5",
+      "finalized": true
+    },
+    "counts": {
+      "VERIFIED": 10,
+      "MISMATCH": 0,
+      "UNAVAILABLE": 0
+    }
+  },
+  "conclusion": {
+    "verdict": "VERIFIED",
+    "summary": "The canonical, successfully executed, finalized native Portaldot transaction contains the deterministic commitment for the preserved FIRMA PASS report."
+  },
+  "limitations": [
+    "RPC responses are observable evidence, not cryptographic state proofs.",
+    "The anchor proves that the transaction contains the report commitment; it does not independently prove every report claim.",
+    "Control of the signing account does not prove report authorship or real-world identity.",
+    "No transaction was signed or submitted during this verification."
+  ]
+}

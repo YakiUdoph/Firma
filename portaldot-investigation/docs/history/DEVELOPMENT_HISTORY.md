@@ -1,5 +1,7 @@
 # Development history
 
+> Historical record only. Current product and release status are maintained in [`../PROGRESS.md`](../PROGRESS.md) and [`../PRODUCTION_READINESS.md`](../PRODUCTION_READINESS.md).
+
 ## Preserved repository history
 
 | Commit | Purpose |
@@ -20,4 +22,4 @@ The final pass corrected non-object JSON error classification and documentation 
 
 ## Release history
 
-No remote push or deployment was performed during this audit. No smart contract was deployed and no blockchain transaction was submitted.
+During this 2026-10-20/21 audit, no remote push, deployment, smart-contract deployment, or blockchain transaction occurred. That statement is limited to this dated audit: FIRMA later submitted one separately authorized native Portaldot `system.remarkWithEvent` transaction, `0x3b2f4eac7f1e2b2cd87493ff9d60e5326584840d8572570c5f21c06ee1750702`, and independently verified it on 2026-10-31. No smart contract was deployed for that native anchor. See [`../PROGRESS.md`](../PROGRESS.md) for the current status.

@@ -1,0 +1,88 @@
+{
+  "schema": "firma.native-anchor-investigation.v1",
+  "createdAt": "2026-10-31T07:28:56.381Z",
+  "subject": {
+    "reportPath": "evidence/final-live-2026-10-31-02.json",
+    "sidecarPath": "evidence/native-anchor-sidecar-2026-10-31-3b2f4eac7f1e.json",
+    "transactionHash": "0x3b2f4eac7f1e2b2cd87493ff9d60e5326584840d8572570c5f21c06ee1750702"
+  },
+  "observations": {
+    "endpoint": "wss://test-node-v3.portaldot.dev",
+    "network": {
+      "genesisHash": "0xd4f9acbcf7f52388d8b095abe3c198d19fc510e0343e643e87cfbccb155283bd",
+      "runtimeCodeHash": "0xedc03c9dc81d39fea5c02893cc34cf2ec898d55d7ee8f8e89eb27597a724c7c2",
+      "specName": "portaldot-v3",
+      "specVersion": "3002",
+      "transactionVersion": "2"
+    },
+    "block": {
+      "number": "263713",
+      "recordedHash": "0x645b9184955d4d3d02626b29a12f7522f8b631dc13a0046f0319fe6bd1b06ab6",
+      "canonicalHash": "0x645b9184955d4d3d02626b29a12f7522f8b631dc13a0046f0319fe6bd1b06ab6"
+    },
+    "extrinsic": {
+      "index": "1",
+      "observedHash": "0x3b2f4eac7f1e2b2cd87493ff9d60e5326584840d8572570c5f21c06ee1750702",
+      "signer": "5En7dwvXVjsHA8AEjWwdLNFf1TnxiiRSE3VUXiX7S9Pr4QUz",
+      "section": "system",
+      "method": "remarkWithEvent",
+      "callIndex": "0x0007",
+      "payload": "0x4649524d4100028f9117121abb546b289a38f1d8afe73b379e41beb3d73895ecc2d7b5ebfabc6d",
+      "executionEvent": "system.ExtrinsicSuccess",
+      "valueBaseUnits": "0"
+    },
+    "reportCommitment": {
+      "algorithm": "RFC8785-JCS+SHA-256",
+      "domain": "FIRMA_REPORT_COMMITMENT_V1\n",
+      "recomputed": "0x8f9117121abb546b289a38f1d8afe73b379e41beb3d73895ecc2d7b5ebfabc6d",
+      "onchainPayloadMatches": true
+    },
+    "finality": {
+      "transactionBlockNumber": "263713",
+      "latestObservedFinalizedNumber": "263883",
+      "latestObservedFinalizedHash": "0x0f2d60b93356990ceaa85d33e14e7c89f0017ecfec0c8232221c7cbec47c77e2",
+      "canonicalAtTransactionHeight": true,
+      "finalized": true
+    },
+    "browserFlow": {
+      "localUrl": "http://127.0.0.1:4173/",
+      "apiStatus": 200,
+      "renderedStatus": "VERIFIED",
+      "consoleErrors": 0,
+      "pageErrors": 0
+    },
+    "verificationCounts": {
+      "VERIFIED": 10,
+      "MISMATCH": 0,
+      "UNAVAILABLE": 0
+    },
+    "unavailableEvidence": []
+  },
+  "diagnosis": {
+    "preFixResult": {
+      "checkedAt": "2026-10-31T07:24:48.797Z",
+      "overall": "UNAVAILABLE",
+      "durationMs": 15129,
+      "error": {
+        "name": "TimeoutError",
+        "message": "Native proof connection timed out after 15000 ms."
+      }
+    },
+    "isolationEvidence": {
+      "rawBlockHashRpcDurationMs": 1911,
+      "rawBlockHashRpcResult": "0x645b9184955d4d3d02626b29a12f7522f8b631dc13a0046f0319fe6bd1b06ab6"
+    },
+    "rootCause": "The native proof verifier retained the provider's internal reconnect mode behind one initialization deadline instead of using FIRMA's existing explicit bounded connection attempts. The exact API request timed out during ApiPromise initialization while a bounded raw RPC request returned the canonical block hash. Reusing the shared bounded connection path allowed the complete verification to finish without changing verdict rules.",
+    "additionalDefect": "The verifier decoded system.remarkWithEvent but did not explicitly record and enforce the reviewed call index. It now requires and exports call index 0x0007 under the already-pinned runtime profile."
+  },
+  "conclusion": {
+    "verdict": "VERIFIED",
+    "summary": "The canonical, successfully executed, finalized native Portaldot transaction contains the deterministic commitment for the preserved FIRMA PASS report."
+  },
+  "limitations": [
+    "RPC responses are observable evidence, not cryptographic state proofs.",
+    "The anchor proves that the transaction contains the exact report commitment; it does not independently prove every report claim.",
+    "Control of the signing account does not prove report authorship or real-world identity.",
+    "No transaction was signed or submitted during this investigation."
+  ]
+}

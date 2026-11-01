@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createCheckReportHandler } from "../api/check-report.mjs";
+import { createVerificationResponse } from "../api/verify.mjs";
+import { verify } from "../src/verifier.mjs";
 import { validImportedReport } from "../test-support/report-fixtures.mjs";
 
 function request(body, headers = {}) {
@@ -10,6 +12,33 @@ function request(body, headers = {}) {
     body,
   });
 }
+
+test("an exported verification response is accepted unchanged by Check a Report", async () => {
+  const fixture = validImportedReport();
+  const report = await verify(fixture.input, {
+    collectSnapshotFn: async () => ({ options: fixture.evidence.input, snapshot: fixture.evidence }),
+  });
+  const verificationResponse = createVerificationResponse(report, "11111111-1111-4111-8111-111111111111");
+  assert.equal(verificationResponse.status, 200);
+  assert.match(verificationResponse.headers.get("x-request-id"), /^[0-9a-f-]{36}$/);
+  const exportedReport = await verificationResponse.json();
+  assert.deepEqual(exportedReport, report);
+  assert.equal(Object.hasOwn(exportedReport, "requestId"), false);
+
+  const exportedText = `${JSON.stringify(exportedReport, null, 2)}\n`;
+  let received;
+  const reportHandler = createCheckReportHandler({
+    defaultsFn: () => ({ evmEndpoint: "https://trusted.example" }),
+    verifyFn: async (value) => {
+      received = value;
+      return { independent: { overall: "VERIFIED" } };
+    },
+  });
+  const response = await reportHandler.fetch(request(JSON.stringify({ reportText: exportedText })));
+  assert.equal(response.status, 200);
+  assert.deepEqual(received.report, report);
+  assert.equal(JSON.stringify(received.report, null, 2), JSON.stringify(exportedReport, null, 2));
+});
 
 test("report API parses the original JSON text and passes only validated data onward", async () => {
   let received;
@@ -81,8 +110,15 @@ test("report API classifies deadlines, endpoint unavailability, and unexpected e
   assert.equal(unavailableResponse.status, 200);
   assert.equal((await unavailableResponse.json()).independent.overall, "UNAVAILABLE");
 
-  const failed = createCheckReportHandler({ verifyFn: async () => { throw new Error("RPC implementation fault"); } });
+  const logs = [];
+  const failed = createCheckReportHandler({
+    verifyFn: async () => { throw new Error("RPC implementation fault at https://user:secret@example.invalid"); },
+    logger: (...entry) => logs.push(entry),
+  });
   const failedResponse = await failed.fetch(request(body));
   assert.equal(failedResponse.status, 500);
   assert.equal((await failedResponse.json()).error, "Independent verification failed unexpectedly.");
+  assert.equal(logs.length, 1);
+  assert.deepEqual(logs[0][1].category, "unexpected_error");
+  assert.doesNotMatch(JSON.stringify(logs), /implementation fault|user|secret|example\.invalid/i);
 });
