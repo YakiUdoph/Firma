@@ -40,3 +40,22 @@ test("broadcast calls live only in separately confirmed browser wallet modules",
   assert.match(app, /native-consent/);
   assert.match(app, /submitNativeAnchor/);
 });
+
+test("the decorative texture is a same-origin production asset allowed by the restrictive CSP", async () => {
+  const [css, texture, configurationText] = await Promise.all([
+    readFile(new URL("../public/styles.css", import.meta.url), "utf8"),
+    readFile(new URL("../public/noise.svg", import.meta.url), "utf8"),
+    readFile(new URL("../vercel.json", import.meta.url), "utf8"),
+  ]);
+  const configuration = JSON.parse(configurationText);
+  const contentSecurityPolicy = configuration.headers
+    .flatMap(({ headers = [] }) => headers)
+    .find(({ key }) => key.toLowerCase() === "content-security-policy")?.value;
+
+  assert.match(css, /background-image:\s*url\("\/noise\.svg"\)/);
+  assert.doesNotMatch(css, /url\(["']?data:/i);
+  assert.match(texture, /<svg\s+viewBox="0 0 180 180"/);
+  assert.match(texture, /<feTurbulence\s+type="fractalNoise"\s+baseFrequency="\.72"\s+numOctaves="3"\s+stitchTiles="stitch"\/>/);
+  assert.match(contentSecurityPolicy ?? "", /(?:^|;\s*)img-src 'self'(?:;|$)/);
+  assert.doesNotMatch(contentSecurityPolicy ?? "", /img-src[^;]*(?:data:|\*|'unsafe-inline')/);
+});
