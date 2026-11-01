@@ -16,6 +16,7 @@ Created on 2026-10-31 for the current release review. Earlier work is preserved 
 - [x] Add an executable judge walkthrough for the complete local candidate and label the older public deployment accurately.
 - [x] Adapt PR #7's useful privacy provisions to the implemented optional browser-only wallet authorization and native anchoring flow.
 - [x] Reproduce PR #8's Linux RPC-test cancellation and keep the pending mock request alive until the real `AbortSignal.timeout()` abort, without changing production timeout behavior.
+- [x] Reproduce the hosted export/import rejection, keep API request correlation out of `firma.report.v1`, and preserve strict rejection of unknown or tampered report fields.
 
 ## Validation completed in this review
 
@@ -31,11 +32,12 @@ Created on 2026-10-31 for the current release review. Earlier work is preserved 
 - [x] Audit all local/remote branches without deleting or rewriting history.
 - [x] Complete post-cleanup full regression validation and final inventory.
 - [x] Repeat the repaired RPC failure test 25 times on Linux Node 22, then pass the complete tests, syntax checks, browser/accessibility coverage, build, and full-tree and production-only audits in an isolated Ubuntu Node 22 environment.
+- [x] Round-trip an exact exported verification response through Check a Report, revalidate the preserved authentic report, and pass all 163 tests plus syntax, build, and both dependency audits.
 
 ## Owner-authorized work still required
 
-- [ ] Review and approve the final diff.
-- [ ] Push a reviewed commit and create a protected preview.
+- [ ] Review and approve the local export/import compatibility fix.
+- [ ] Push the approved fix to the existing PR #8 release branch.
 - [ ] Test the exact preview, including production routes, CSP, and wallet compatibility.
 - [ ] Approve production promotion only after preview acceptance.
 - [ ] Publish or update the demo video and pitch deck.

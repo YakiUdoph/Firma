@@ -28,6 +28,10 @@ function clientKey(request) {
   return (forwarded || request.headers.get("x-real-ip") || "unknown").slice(0, 128);
 }
 
+export function createVerificationResponse(report, requestId) {
+  return json(200, report, { "x-request-id": requestId });
+}
+
 export default {
   async fetch(request) {
     const requestId = randomUUID();
@@ -58,7 +62,7 @@ export default {
         account: body.account ?? defaults.account,
       }, { diagnostics });
       diagnostics.emit(report.verdict);
-      return json(200, { ...report, requestId });
+      return createVerificationResponse(report, requestId);
     } catch (error) {
       diagnostics?.emit(null, error);
       const expected = error instanceof InputError || error instanceof SyntaxError;

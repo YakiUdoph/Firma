@@ -24,10 +24,11 @@ At `2026-10-31T14:45:09.159Z`, a bounded read-only verification returned 10 `VER
 - Retained the application in `portaldot-investigation/` because CI and the existing Vercel project use it as their configured root; migration requires an authorized infrastructure change.
 - Removed an unreferenced 1.9 MB logo and restored three browser-generated screenshots to their committed historical versions.
 - Corrected the Linux-only RPC timeout test harness lifetime: the pending mock now holds a ref'ed guard until the client's real abort signal fires, then clears the guard and rejects with that signal's reason. Production RPC timeout, retry, history, and classification behavior is unchanged.
+- Corrected the hosted export/import compatibility defect observed after a 9/9 PASS asset check at finalized block 282350. `/api/verify` had appended its transport-only `requestId` to the canonical report body, so the browser faithfully exported a file that strict import correctly rejected. Successful responses now leave `firma.report.v1` unchanged and expose correlation through `X-Request-ID`; import validation remains fail-closed.
 
 ## Release boundary
 
-The release branch is published for review in PR #8. The RPC cancellation fix described here remains local and has not been pushed. No merge, production deployment, infrastructure change, video publication, or hackathon submission is authorized or claimed.
+The release branch is published for review in PR #8 through commit `5f65beed2769bd554c445ce97a609fd54a621a54`. The export/import compatibility fix described here remains local and has not been pushed. No merge, production deployment, infrastructure change, video publication, or hackathon submission is authorized or claimed.
 
 ## Remote integration preparation
 
@@ -38,8 +39,9 @@ On 2026-10-31, an isolated, uncommitted candidate was prepared from refreshed `o
 - PR #8's failing GitHub Actions logs reported 158 passing and 3 cancelled tests; the first cancellation was the pending RPC timeout test with `Promise resolution is still pending but the event loop has already resolved`. The same cancellation reproduced on Ubuntu with Node 22.23.4 because `AbortSignal.timeout()` does not keep the event loop alive and the mock supplied no other ref'ed handle.
 - After the harness-only fix, `test/rpc-failure.test.mjs` passed once and then 25 consecutive times on Ubuntu Node 22.23.4. Its timeout assertion still classified the real abort as `timeout`, and recorded history still contained no fabricated `response` field.
 - An isolated Ubuntu 24.04/Node 22.20.0/Chromium validation ran `npm ci`, `npm test`, `npm run check`, `npm run build`, `npm audit`, and `npm audit --omit=dev`. Both full test invocations passed all 161 tests with 0 failed and 0 cancelled; the build and both audits passed, with 0 vulnerabilities reported.
-- `npm test`: 161 passed, 0 failed, including real Chrome and accessibility coverage.
-- `npm run check`: syntax checks and 161 tests passed.
+- Export/import regression: the exact pretty-printed verification response passed strict Check a Report validation unchanged; `requestId`, arbitrary fields, malformed JSON, inconsistent counts, and tampered claims remained rejected; `evidence/final-live-2026-10-31-02.json` remained accepted.
+- `npm test`: 163 passed, 0 failed, including real Chrome and accessibility coverage.
+- `npm run check`: syntax checks and 163 tests passed.
 - `npm run build`: succeeded and generated `dist/`.
 - `npm audit --omit=dev`: zero vulnerabilities reported.
 - `npm ci --ignore-scripts`: succeeded. The development-only `solc@0.8.38 -> follow-redirects@1.16.1` advisory (`GHSA-mrwp-f3q8-3g9p`) was resolved with the permitted patch update to `follow-redirects@1.16.2`; post-fix full-tree and production-only audits both report zero vulnerabilities.
