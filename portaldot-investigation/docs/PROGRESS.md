@@ -12,7 +12,7 @@ At `2026-10-31T14:45:09.159Z`, a bounded read-only verification returned 10 `VER
 
 ## Finalization changes
 
-- Replaced the generated green-square F in the header and footer with the owner-supplied official FIRMA artwork. The artwork is served locally, keeps its original proportions and colors, and remains part of the existing accessible “FIRMA home” link.
+- Replaced the generated green-square F in the header with the owner-supplied official FIRMA artwork. The artwork is served locally, keeps its original proportions and colors, and remains part of the existing accessible “FIRMA home” link.
 - Replaced the SVG favicon with optimized same-origin PNG assets at 16, 32, 48, and 180 pixels plus a multi-size ICO. No external image dependency or CSP change was introduced.
 - Added explicit navigation for Check an asset, Check a report, and Save proof.
 - Moved experimental EVM proof input behind a labeled disclosure.

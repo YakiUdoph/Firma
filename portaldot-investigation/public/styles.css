@@ -60,6 +60,9 @@ code, pre { font-family: var(--mono); }
 .site-header, main, footer { width: min(1240px, calc(100% - 56px)); margin-inline: auto; }
 .site-header { min-height: 76px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(103, 108, 98, .24); }
 .brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; }
+.brand-mark { position: relative; width: 35px; height: 35px; display: grid; place-items: center; overflow: hidden; border-radius: 10px; background: var(--emerald); color: var(--lime); box-shadow: inset 0 0 0 1px rgba(255,255,255,.16); }
+.brand-mark::after { content: ""; position: absolute; width: 18px; height: 1px; right: -5px; bottom: 7px; transform: rotate(-42deg); background: var(--lime); opacity: .65; }
+.brand-mark span { font-family: var(--serif); font-size: 1.2rem; font-style: italic; transform: translateY(-1px); }
 .brand-logo { width: 40px; height: 40px; display: block; flex: 0 0 auto; border-radius: 20%; object-fit: contain; }
 .brand-name { font-size: .84rem; font-weight: 800; letter-spacing: .23em; }
 .site-header nav { display: flex; gap: 30px; }
@@ -346,7 +349,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visibl
 }
 
 @media (forced-colors: active) {
-  .brand-logo, .button-icon, .verdict-symbol, .status-badge > span { border: 1px solid currentColor; }
+  .brand-logo, .brand-mark, .button-icon, .verdict-symbol, .status-badge > span { border: 1px solid currentColor; }
   .progress-track span, .result::before { background: CanvasText; }
 }
 
