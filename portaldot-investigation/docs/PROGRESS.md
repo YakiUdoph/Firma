@@ -12,6 +12,8 @@ At `2026-10-31T14:45:09.159Z`, a bounded read-only verification returned 10 `VER
 
 ## Finalization changes
 
+- Replaced the generated green-square F in the header and footer with the owner-supplied official FIRMA artwork. The artwork is served locally, keeps its original proportions and colors, and remains part of the existing accessible “FIRMA home” link.
+- Replaced the SVG favicon with optimized same-origin PNG assets at 16, 32, 48, and 180 pixels plus a multi-size ICO. No external image dependency or CSP change was introduced.
 - Added explicit navigation for Check an asset, Check a report, and Save proof.
 - Moved experimental EVM proof input behind a labeled disclosure.
 - Collapsed long check lists behind live-count disclosures while retaining JSON evidence.
@@ -36,6 +38,8 @@ On 2026-10-31, an isolated, uncommitted candidate was prepared from refreshed `o
 
 ## Validation
 
+- Branding review on 2026-11-02: both configured test runs passed 164 tests with 0 failures or cancellations; syntax checks passed; and the production build generated dist/.
+- Headless Chrome returned the page and every branding asset with HTTP 200. The official 256×256 source rendered at 40×40 on a 1440-pixel viewport and 36×36 on a 375-pixel viewport, retained the accessible name “FIRMA home,” and introduced no horizontal overflow.
 - PR #8's failing GitHub Actions logs reported 158 passing and 3 cancelled tests; the first cancellation was the pending RPC timeout test with `Promise resolution is still pending but the event loop has already resolved`. The same cancellation reproduced on Ubuntu with Node 22.23.4 because `AbortSignal.timeout()` does not keep the event loop alive and the mock supplied no other ref'ed handle.
 - After the harness-only fix, `test/rpc-failure.test.mjs` passed once and then 25 consecutive times on Ubuntu Node 22.23.4. Its timeout assertion still classified the real abort as `timeout`, and recorded history still contained no fabricated `response` field.
 - An isolated Ubuntu 24.04/Node 22.20.0/Chromium validation ran `npm ci`, `npm test`, `npm run check`, `npm run build`, `npm audit`, and `npm audit --omit=dev`. Both full test invocations passed all 161 tests with 0 failed and 0 cancelled; the build and both audits passed, with 0 vulnerabilities reported.

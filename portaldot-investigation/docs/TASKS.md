@@ -4,6 +4,9 @@ Created on 2026-10-31 for the current release review. Earlier work is preserved 
 
 ## Completed locally
 
+- [x] Replace the generated square-F header and footer marks with the owner-supplied official FIRMA artwork.
+- [x] Generate same-origin 16, 32, 48, 180, and multi-size ICO favicon assets from the official artwork without recoloring or redrawing it.
+- [x] Verify the official branding at desktop and mobile widths, including asset loading, accessible naming, and horizontal overflow.
 - [x] Independently verify the existing native anchor transaction and preserve fresh evidence.
 - [x] Confirm the bounded native connection fix and reviewed call-index check.
 - [x] Audit documentation, experimental code, temporary files, dependencies, and evidence.
@@ -36,6 +39,7 @@ Created on 2026-10-31 for the current release review. Earlier work is preserved 
 
 ## Owner-authorized work still required
 
+- [ ] Review and approve the official branding preview before merge or production deployment.
 - [ ] Review and approve the local export/import compatibility fix.
 - [ ] Push the approved fix to the existing PR #8 release branch.
 - [ ] Test the exact preview, including production routes, CSP, and wallet compatibility.
