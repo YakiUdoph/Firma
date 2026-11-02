@@ -97,7 +97,12 @@ test("the workspace provides keyboard and responsive accessibility affordances",
   assert.match(css, /@media \(max-width: 700px\)/);
   assert.match(css, /@media \(max-width: 470px\)/);
   assert.match(css, /@media \(forced-colors: active\)/);
-  assert.match(html, /rel="icon" href="\/favicon\.svg"/);
+  assert.match(html, /<img class="brand-logo" src="\/firma-logo\.png" width="40" height="40" alt="">/);
+  assert.match(html, /rel="icon" href="\/favicon\.ico" sizes="any"/);
+  assert.match(html, /rel="icon" href="\/favicon-48x48\.png" type="image\/png" sizes="48x48"/);
+  assert.match(html, /rel="icon" href="\/favicon-32x32\.png" type="image\/png" sizes="32x32"/);
+  assert.match(html, /rel="icon" href="\/favicon-16x16\.png" type="image\/png" sizes="16x16"/);
+  assert.match(html, /rel="apple-touch-icon" href="\/apple-touch-icon\.png" sizes="180x180"/);
 });
 
 test("independent report verification keeps original and reproduced results separate", () => {
