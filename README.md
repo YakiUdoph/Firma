@@ -186,6 +186,22 @@ FIRMA is prepared for the Portaldot Hacker House 2026 **Node Operations & Toolin
 
 See [SUBMISSION.md](portaldot-investigation/docs/SUBMISSION.md) and [DEMO_SCRIPT.md](portaldot-investigation/docs/DEMO_SCRIPT.md).
 
+## Official Product Demonstration
+
+**Project:** FIRMA  
+**Competition:** Portaldot Hacker House 2026  
+**Category:** Node Operations & Tooling
+
+### Watch the Demonstration
+
+[Watch FIRMA's Official Demo](https://youtu.be/OkpS4pAajIA?si=g5NUbRaIsm-ISkuz)
+
+### Hackathon Submission
+
+[View FIRMA on DoraHacks](https://dorahacks.io/build/50537)
+
+This demonstration is part of FIRMA's official
+Portaldot Hacker House 2026 submission.
 ## Documentation
 
 - [Application development guide](portaldot-investigation/README.md)
